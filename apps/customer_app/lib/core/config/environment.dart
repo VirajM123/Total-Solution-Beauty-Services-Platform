@@ -1,1 +1,1 @@
-// TODO: Implement this module.
+enum Environment { development, production }
