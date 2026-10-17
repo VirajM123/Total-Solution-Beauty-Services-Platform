@@ -59,8 +59,22 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Montserrat-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Montserrat-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
   assets:
+    - assets/image/
     - assets/images/backgrounds/
+    - assets/images/home/
+    - assets/images/services/
     - assets/images/branding/
     - assets/images/onboarding/
     - assets/images/illustrations/

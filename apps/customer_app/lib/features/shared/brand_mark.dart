@@ -1,5 +1,5 @@
-import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import '../../core/constants/pinkora_brand.dart';
 
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.compact = false});
@@ -8,9 +8,26 @@ class BrandMark extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(Icons.spa_rounded, color: BeautyColors.pink, size: compact ? 42 : 70),
-      Text('Total Solution', style: TextStyle(color: BeautyColors.deepPink, fontSize: compact ? 20 : 26, fontWeight: FontWeight.w800, height: 1)),
-      Text('Beauty at Your Doorstep', style: TextStyle(color: BeautyColors.ink, fontSize: compact ? 10 : 12)),
+      Text(
+        PinkoraBrand.name,
+        style: TextStyle(
+          color: PinkoraBrand.berry,
+          fontFamily: 'Montserrat',
+          fontSize: compact ? 27 : 38,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -1.5,
+          height: 1.1,
+        ),
+      ),
+      SizedBox(height: compact ? 3 : 6),
+      Text(
+        PinkoraBrand.tagline,
+        style: TextStyle(
+          color: PinkoraBrand.charcoal,
+          fontSize: compact ? 11 : 13,
+          letterSpacing: 0.4,
+        ),
+      ),
     ],
   );
 }

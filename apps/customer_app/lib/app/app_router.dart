@@ -4,6 +4,7 @@ import '../features/home/development_home_screen.dart';
 import '../features/login/login_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/otp/development_otp_screen.dart';
+import '../features/register/registration_screen.dart';
 import '../features/splash/splash_screen.dart';
 import 'route_names.dart';
 
@@ -16,9 +17,19 @@ class AppRouter {
       RouteNames.splash => const SplashScreen(),
       RouteNames.onboarding => const OnboardingScreen(),
       RouteNames.login => LoginScreen(config: config),
-      RouteNames.otp when config.mockAuthEnabled && settings.arguments is String =>
+      RouteNames.register => RegistrationScreen(config: config),
+      RouteNames.otp
+          when config.mockAuthEnabled && settings.arguments is String =>
         DevelopmentOtpScreen(phone: settings.arguments! as String),
-      RouteNames.home when config.mockAuthEnabled => const DevelopmentHomeScreen(),
+      RouteNames.otp
+          when config.mockAuthEnabled &&
+              settings.arguments is DevelopmentRegistration =>
+        DevelopmentOtpScreen(
+          phone: (settings.arguments! as DevelopmentRegistration).phone,
+          registration: settings.arguments! as DevelopmentRegistration,
+        ),
+      RouteNames.home when config.mockAuthEnabled =>
+        const DevelopmentHomeScreen(),
       _ => LoginScreen(config: config),
     };
     return MaterialPageRoute<void>(builder: (_) => page, settings: settings);

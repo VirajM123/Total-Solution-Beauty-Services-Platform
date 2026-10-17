@@ -7,12 +7,14 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../app/route_names.dart';
 import '../../core/config/app_config.dart';
 import '../../core/constants/app_assets.dart';
+import '../../core/constants/pinkora_brand.dart';
+import '../shared/auth_brand_mark.dart';
 
-const _plum = Color(0xFF460621);
-const _berry = Color(0xFFB20A50);
-const _ivory = Color(0xFFFFF9F5);
-const _muted = Color(0xFF735A67);
-const _line = Color(0xFFE8C9CE);
+const _plum = PinkoraBrand.charcoal;
+const _berry = PinkoraBrand.berry;
+const _ivory = PinkoraBrand.ivory;
+const _muted = PinkoraBrand.muted;
+const _line = PinkoraBrand.line;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.config});
@@ -34,6 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _sendOtp() async {
+    if (_loading) return;
     final value = _phone.text.trim();
     if (!RegExp(r'^[6-9][0-9]{9}$').hasMatch(value)) {
       setState(() => _error = 'Enter a valid 10-digit Indian mobile number.');
@@ -53,10 +56,6 @@ class _LoginScreenState extends State<LoginScreen> {
     Navigator.of(context).pushNamed(RouteNames.otp, arguments: value);
   }
 
-  void _comingSoon(String action) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text('$action is coming soon.')));
-
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: _ivory,
@@ -70,6 +69,29 @@ class _LoginScreenState extends State<LoginScreen> {
           fit: BoxFit.cover,
           alignment: Alignment.topCenter,
           excludeFromSemantics: true,
+        ),
+        Positioned(
+          top: MediaQuery.sizeOf(context).height * .365,
+          left: 12,
+          right: 12,
+          bottom: 10,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFDFEF9F7), Color(0xF9FFF5F3)],
+              ),
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x246C2940),
+                  blurRadius: 30,
+                  offset: Offset(0, 9),
+                ),
+              ],
+            ),
+          ),
         ),
         SafeArea(
           child: LayoutBuilder(
@@ -93,23 +115,31 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Stack(
                     children: [
                       Positioned(
-                        top: 13 * scale,
-                        left: 17 * scale,
-                        child: IconButton(
-                          onPressed: () => Navigator.of(context).maybePop(),
-                          icon: Icon(
-                            Icons.arrow_back_ios_new,
-                            size: 20 * scale,
+                        top: 10 * scale,
+                        left: 23 * scale,
+                        child: Material(
+                          color: Colors.white.withValues(alpha: .91),
+                          shape: const CircleBorder(),
+                          child: IconButton(
+                            onPressed: () => Navigator.of(context).maybePop(),
+                            icon: Icon(
+                              Icons.arrow_back_ios_new,
+                              size: 21 * scale,
+                            ),
+                            constraints: BoxConstraints.tightFor(
+                              width: 46 * scale,
+                              height: 46 * scale,
+                            ),
+                            color: _berry,
+                            tooltip: 'Back',
                           ),
-                          color: _plum,
-                          tooltip: 'Back',
                         ),
                       ),
                       Positioned(
-                        top: 46 * scale,
+                        top: 82 * scale,
                         left: 0,
                         right: 0,
-                        child: _LoginBrand(scale: scale),
+                        child: const AuthBrandMark(),
                       ),
                       Positioned(
                         top: 319 * scale,
@@ -117,12 +147,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         right: inset,
                         child: Text(
                           'Welcome back',
-                          textAlign: TextAlign.center,
+                          textAlign: TextAlign.left,
                           maxLines: 1,
                           style: TextStyle(
                             color: _plum,
-                            fontFamily: 'Georgia',
-                            fontSize: 41 * scale,
+                            fontFamily: 'Montserrat',
+                            fontSize: 30 * scale,
                             fontWeight: FontWeight.w700,
                             height: 1.06,
                           ),
@@ -133,11 +163,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         left: inset,
                         right: inset,
                         child: Text(
-                          'Beauty, at your doorstep.',
-                          textAlign: TextAlign.center,
+                          'Sign in to continue your beauty journey.',
+                          textAlign: TextAlign.left,
                           style: TextStyle(
                             color: _muted,
-                            fontSize: 15 * scale,
+                            fontSize: 13 * scale,
                             letterSpacing: 0.2,
                           ),
                         ),
@@ -158,16 +188,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                             style: TextStyle(
                               color: _plum,
-                              fontSize: 16 * scale,
+                              fontSize: 14 * scale,
                             ),
                             decoration: InputDecoration(
                               hintText: 'Enter mobile number',
                               hintStyle: TextStyle(
                                 color: const Color(0xFF8D8084),
-                                fontSize: 16 * scale,
+                                fontSize: 13 * scale,
                               ),
                               filled: true,
-                              fillColor: Colors.white.withValues(alpha: 0.91),
+                              fillColor: Colors.white,
                               contentPadding: EdgeInsets.symmetric(
                                 vertical: 14 * scale,
                                 horizontal: 12 * scale,
@@ -188,44 +218,43 @@ class _LoginScreenState extends State<LoginScreen> {
                                 borderRadius: BorderRadius.circular(12 * scale),
                               ),
                               prefixIconConstraints: BoxConstraints(
-                                minWidth: 124 * scale,
+                                minWidth: 126 * scale,
+                                maxWidth: 126 * scale,
                               ),
                               prefixIcon: Padding(
                                 padding: EdgeInsets.only(
-                                  left: 16 * scale,
-                                  right: 12 * scale,
+                                  left: 11 * scale,
+                                  right: 5 * scale,
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    _IndiaFlag(
-                                      width: 28 * scale,
-                                      height: 20 * scale,
+                                    IndiaFlag(
+                                      width: 22 * scale,
+                                      height: 15 * scale,
                                     ),
-                                    SizedBox(width: 11 * scale),
-                                    SizedBox(
-                                      height: 24 * scale,
-                                      child: const VerticalDivider(
-                                        width: 1,
-                                        color: _line,
-                                      ),
-                                    ),
-                                    SizedBox(width: 11 * scale),
+                                    SizedBox(width: 8 * scale),
                                     Text(
                                       '+91',
                                       style: TextStyle(
                                         color: _plum,
-                                        fontSize: 15 * scale,
-                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13 * scale,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    SizedBox(width: 12 * scale),
+                                    SizedBox(width: 8 * scale),
                                     SizedBox(
-                                      height: 24 * scale,
+                                      height: 20 * scale,
                                       child: const VerticalDivider(
                                         width: 1,
                                         color: _line,
                                       ),
+                                    ),
+                                    SizedBox(width: 8 * scale),
+                                    Icon(
+                                      Icons.phone_outlined,
+                                      color: _muted,
+                                      size: 17 * scale,
                                     ),
                                   ],
                                 ),
@@ -260,7 +289,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [Color(0xFFD41361), Color(0xFF750034)],
+                                colors: [PinkoraBrand.rose, PinkoraBrand.berry],
                               ),
                               borderRadius: BorderRadius.circular(30 * scale),
                               boxShadow: const [
@@ -297,7 +326,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         Text(
                                           'Continue',
                                           style: TextStyle(
-                                            fontFamily: 'Georgia',
+                                            fontFamily: 'Montserrat',
                                             fontSize: 19 * scale,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -328,7 +357,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 'or continue with',
                                 style: TextStyle(
                                   color: _muted,
-                                  fontFamily: 'Georgia',
+                                  fontFamily: 'Montserrat',
                                   fontSize: 13 * scale,
                                 ),
                               ),
@@ -345,7 +374,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           scale: scale,
                           label: 'Continue with Google',
                           icon: _GoogleIcon(size: 22 * scale),
-                          onPressed: () => _comingSoon('Google sign in'),
+                          onPressed: null,
                         ),
                       ),
                       Positioned(
@@ -360,7 +389,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             size: 23 * scale,
                             color: const Color(0xFF241329),
                           ),
-                          onPressed: () => _comingSoon('Apple sign in'),
+                          onPressed: null,
                         ),
                       ),
                       Positioned(
@@ -368,42 +397,46 @@ class _LoginScreenState extends State<LoginScreen> {
                         left: inset,
                         right: inset,
                         child: Text.rich(
-                          TextSpan(
+                          const TextSpan(
                             children: [
-                              const TextSpan(
+                              TextSpan(
                                 text: 'By continuing, you agree to our\n',
                               ),
                               TextSpan(
-                                text: 'Terms & Privacy Policy',
+                                text: 'Terms of Service',
                                 style: TextStyle(
-                                  color: _plum,
+                                  color: _berry,
                                   decoration: TextDecoration.underline,
-                                  decorationColor: _berry,
                                 ),
                               ),
+                              TextSpan(text: ' and '),
+                              TextSpan(
+                                text: 'Privacy Policy',
+                                style: TextStyle(
+                                  color: _berry,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                              TextSpan(text: '.'),
                             ],
                           ),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: _muted,
-                            fontFamily: 'Georgia',
-                            fontSize: 11.5 * scale,
-                            height: 1.4,
+                            fontFamily: 'Montserrat',
+                            fontSize: 10 * scale,
+                            height: 1.5,
                           ),
                         ),
                       ),
                       Positioned(
-                        top: 735 * scale + shift,
-                        left: inset,
-                        right: inset,
-                        child: const Divider(color: _line),
-                      ),
-                      Positioned(
-                        top: 732 * scale + shift,
+                        top: 727 * scale + shift,
                         left: inset,
                         right: inset,
                         child: TextButton(
-                          onPressed: () => _comingSoon('Account creation'),
+                          onPressed: () => Navigator.of(
+                            context,
+                          ).pushNamed(RouteNames.register),
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Row(
@@ -426,7 +459,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ],
                                   ),
                                   style: TextStyle(
-                                    fontFamily: 'Georgia',
+                                    fontFamily: 'Montserrat',
                                     fontSize: 13 * scale,
                                   ),
                                 ),
@@ -453,38 +486,6 @@ class _LoginScreenState extends State<LoginScreen> {
   );
 }
 
-class _LoginBrand extends StatelessWidget {
-  const _LoginBrand({required this.scale});
-  final double scale;
-  @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(Icons.spa_rounded, color: _berry, size: 53 * scale),
-      SizedBox(height: 3 * scale),
-      Text(
-        'Total Solution',
-        style: TextStyle(
-          color: _plum,
-          fontFamily: 'Georgia',
-          fontSize: 28 * scale,
-          fontWeight: FontWeight.w700,
-          height: 1,
-        ),
-      ),
-      SizedBox(height: 4 * scale),
-      Text(
-        'Beauty, at Your Doorstep',
-        style: TextStyle(
-          color: _muted,
-          fontSize: 11 * scale,
-          letterSpacing: 0.3,
-        ),
-      ),
-    ],
-  );
-}
-
 class _SocialSignIn extends StatelessWidget {
   const _SocialSignIn({
     required this.scale,
@@ -495,7 +496,7 @@ class _SocialSignIn extends StatelessWidget {
   final double scale;
   final String label;
   final Widget icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   @override
   Widget build(BuildContext context) => SizedBox(
     height: 46 * scale,
@@ -521,7 +522,7 @@ class _SocialSignIn extends StatelessWidget {
               label,
               style: TextStyle(
                 color: const Color(0xFF28152B),
-                fontFamily: 'Georgia',
+                fontFamily: 'Montserrat',
                 fontSize: 17 * scale,
               ),
             ),
@@ -540,8 +541,8 @@ class _GoogleIcon extends StatelessWidget {
       CustomPaint(size: Size.square(size), painter: _GooglePainter());
 }
 
-class _IndiaFlag extends StatelessWidget {
-  const _IndiaFlag({required this.width, required this.height});
+class IndiaFlag extends StatelessWidget {
+  const IndiaFlag({super.key, required this.width, required this.height});
   final double width;
   final double height;
   @override

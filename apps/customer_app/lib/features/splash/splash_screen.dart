@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import '../../app/route_names.dart';
 import '../../core/constants/app_assets.dart';
+import '../../core/constants/pinkora_brand.dart';
 import '../shared/brand_mark.dart';
 import '../shared/floral_background.dart';
 
@@ -55,10 +55,10 @@ class _SplashScreenState extends State<SplashScreen> {
                   left: 0,
                   right: 0,
                   child: const Text(
-                    'Professional Beauty Services\nat Your Home',
+                    'Your beauty. Your moment.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: BeautyColors.ink,
+                      color: PinkoraBrand.charcoal,
                       fontWeight: FontWeight.w600,
                       height: 1.2,
                     ),
@@ -75,7 +75,7 @@ class _SplashScreenState extends State<SplashScreen> {
                         width: 27,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: BeautyColors.deepPink,
+                          color: PinkoraBrand.berry,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),

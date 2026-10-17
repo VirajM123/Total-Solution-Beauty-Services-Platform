@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:customer_app/app/customer_app.dart';
 import 'package:customer_app/core/config/app_config.dart';
 import 'package:customer_app/core/config/environment.dart';
+import 'package:customer_app/features/home/development_home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +16,7 @@ void main() {
   if (!captureVisuals) return;
 
   for (final size in const [
+    Size(320, 680),
     Size(360, 800),
     Size(393, 852),
     Size(400, 686),
@@ -30,7 +32,7 @@ void main() {
         });
       }
       for (final entry in <(String, String)>[
-        ('Georgia', 'C:/Windows/Fonts/georgia.ttf'),
+        ('Montserrat', 'assets/fonts/Montserrat-Regular.ttf'),
         (
           'MaterialIcons',
           'build/unit_test_assets/fonts/MaterialIcons-Regular.otf',
@@ -89,6 +91,48 @@ void main() {
       await tester.tap(find.text('Get Started'));
       await tester.pumpAndSettle();
       await capture('login');
+      await tester.ensureVisible(
+        find.textContaining('Create an account', findRichText: true),
+      );
+      await tester.tap(
+        find.textContaining('Create an account', findRichText: true),
+      );
+      await tester.pumpAndSettle();
+      await capture('registration');
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: key,
+          child: const MaterialApp(
+            debugShowCheckedModeBanner: false,
+            home: DevelopmentHomeScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await capture('home');
+      await tester.tap(find.text('View All').first);
+      await tester.pumpAndSettle();
+      await capture('all_services');
+      await tester.tap(find.text('Facial').first);
+      await tester.pumpAndSettle();
+      await capture('facial_subservices');
+      await tester.tap(find.byKey(const ValueKey('subservice-Gold Facial')));
+      await tester.pumpAndSettle();
+      await capture('facial_detail');
+      await tester.tap(find.byKey(const ValueKey('close-service-details')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('back-to-service-categories')));
+      await tester.pumpAndSettle();
+      final hairCut = find.byKey(const ValueKey('service-category-Hair Cut'));
+      await tester.scrollUntilVisible(hairCut, 250);
+      await tester.ensureVisible(hairCut);
+      await tester.pumpAndSettle();
+      await tester.tap(hairCut);
+      await tester.pumpAndSettle();
+      await capture('hair_cut_subservices');
+      await tester.tap(find.byKey(const ValueKey('subservice-Hair Trim')));
+      await tester.pumpAndSettle();
+      await capture('hair_cut_detail');
       expect(tester.takeException(), isNull);
     });
   }
