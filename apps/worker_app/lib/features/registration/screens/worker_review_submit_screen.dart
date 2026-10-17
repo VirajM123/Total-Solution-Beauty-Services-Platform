@@ -3,6 +3,9 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../app/slide_page_route.dart';
+import 'worker_application_status_screen.dart';
+
 // Step 4 is intentionally a DEBUG-ONLY local review preview.
 // No application, identity document or verification result is transmitted.
 const _plum = Color(0xFF460621);
@@ -67,22 +70,12 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
       );
       return;
     }
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        icon: const Icon(Icons.fact_check_outlined, color: _berry, size: 36),
-        title: const Text('Preview completed'),
-        content: const Text(
-          'Your registration screens are ready for UI testing. '
-          'This is NOT an application submission. No files were uploaded, '
-          'no OTP was actually verified, and no admin approval has occurred.',
+    if (!mounted) return;
+    await Navigator.of(context).push<void>(
+      SlidePageRoute<void>(
+        page: const WorkerApplicationStatusScreen(
+          stage: WorkerApplicationStage.preview,
         ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Continue reviewing'),
-          ),
-        ],
       ),
     );
   }
