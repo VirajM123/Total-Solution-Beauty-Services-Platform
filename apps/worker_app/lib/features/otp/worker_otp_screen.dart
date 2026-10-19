@@ -89,7 +89,7 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 250));
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      SlidePageRoute<void>(page: const WorkerHomeScreen()),
+      SlidePageRoute<void>(page: WorkerHomeScreen(phoneNumber: widget.phone)),
       (_) => false,
     );
   }
@@ -121,7 +121,11 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
         ),
         title: const Text(
           'Verify mobile number',
-          style: TextStyle(color: _plum, fontSize: 17, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: _plum,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       body: SafeArea(
@@ -130,7 +134,9 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight - 24),
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - 24,
+              ),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
@@ -143,9 +149,12 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
                         child: Image.asset(
                           'assets/images/illustrations/worker_customer_otp_phone.png',
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => const Center(
-                            child: Icon(Icons.mark_email_read_outlined,
-                                size: 92, color: _berry),
+                          errorBuilder: (_, _, _) => const Center(
+                            child: Icon(
+                              Icons.mark_email_read_outlined,
+                              size: 92,
+                              color: _berry,
+                            ),
                           ),
                         ),
                       ),
@@ -164,7 +173,11 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
                       Text(
                         'Enter the 6-digit development code for\n+91 ${widget.phone}',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 14, height: 1.5, color: _muted),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: _muted,
+                        ),
                       ),
                       const SizedBox(height: 32),
                       const Text(
@@ -190,7 +203,9 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
                                 focusNode: _otpFocus,
                                 keyboardType: TextInputType.number,
                                 textInputAction: TextInputAction.done,
-                                autofillHints: const [AutofillHints.oneTimeCode],
+                                autofillHints: const [
+                                  AutofillHints.oneTimeCode,
+                                ],
                                 inputFormatters: [
                                   FilteringTextInputFormatter.digitsOnly,
                                   LengthLimitingTextInputFormatter(6),
@@ -208,12 +223,16 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
                             child: Row(
                               children: List.generate(6, (index) {
                                 final filled = index < code.length;
-                                final isActive = _otpFocus.hasFocus &&
-                                    index == activeIndex && code.length < 6;
+                                final isActive =
+                                    _otpFocus.hasFocus &&
+                                    index == activeIndex &&
+                                    code.length < 6;
                                 return Expanded(
                                   child: Container(
                                     height: 55,
-                                    margin: EdgeInsets.only(right: index == 5 ? 0 : 7),
+                                    margin: EdgeInsets.only(
+                                      right: index == 5 ? 0 : 7,
+                                    ),
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
                                       color: Colors.white,
@@ -251,7 +270,10 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
                         const SizedBox(height: 10),
                         Text(
                           _error!,
-                          style: const TextStyle(fontSize: 12, color: Color(0xFFB3261E)),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFFB3261E),
+                          ),
                         ),
                       ],
                       const SizedBox(height: 25),
@@ -295,7 +317,8 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
                                     Text(
                                       'Verify & Continue',
                                       style: TextStyle(
-                                        fontFamily: 'Georgia', fontSize: 18,
+                                        fontFamily: 'Georgia',
+                                        fontSize: 18,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -310,12 +333,20 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
                         child: _remainingSeconds == 0
                             ? TextButton(
                                 onPressed: _restartDemoCountdown,
-                                child: const Text('Restart demo timer',
-                                    style: TextStyle(color: _berry, fontWeight: FontWeight.w700)),
+                                child: const Text(
+                                  'Restart demo timer',
+                                  style: TextStyle(
+                                    color: _berry,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               )
                             : Text(
                                 'Retry available in ${_remainingSeconds}s',
-                                style: const TextStyle(fontSize: 13, color: _muted),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: _muted,
+                                ),
                               ),
                       ),
                       const SizedBox(height: 26),
@@ -324,7 +355,11 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
                       const Text(
                         'DEVELOPMENT PREVIEW  •  CODE: 123456\nNo SMS is sent and no worker session is created.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 11, color: _muted, height: 1.7),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: _muted,
+                          height: 1.7,
+                        ),
                       ),
                     ],
                   ),

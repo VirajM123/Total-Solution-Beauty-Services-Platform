@@ -12,6 +12,8 @@ class WorkerDemoBookingStore {
       WorkerBookingStateRepository(SecureDemoBookingStorage(), demoMode: true);
   static Future<void>? _loading;
 
+  static List<WorkerDashboardOrder> get bookings => repository.bookings;
+
   static Future<void> initialize() {
     if (!kDebugMode) return Future<void>.value();
     return _loading ??= repository.initialize().catchError((Object error) {
@@ -36,6 +38,7 @@ class WorkerDemoBookingStore {
   static WorkerDashboardOrder resolve(WorkerDashboardOrder order) =>
       order.copyWith(status: displayStatus(order));
 
-  static List<WorkerDashboardOrder> resolveAll(List<WorkerDashboardOrder> orders) =>
-      List.unmodifiable(orders.map(resolve));
+  static List<WorkerDashboardOrder> resolveAll(
+    List<WorkerDashboardOrder> orders,
+  ) => List.unmodifiable(orders.map(resolve));
 }

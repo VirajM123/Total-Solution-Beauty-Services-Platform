@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-/// Shared frontend representation of a booking.
-/// customerPayable is the customer's bill, never the worker's payout.
+/// Shared frontend booking display model. customerPayable is NOT worker earnings.
 @immutable
 class WorkerDashboardOrder {
   const WorkerDashboardOrder({
@@ -13,7 +12,10 @@ class WorkerDashboardOrder {
     required this.customerPayable,
     required this.status,
     this.duration = '60 min',
+    this.appointmentDate,
+    this.completedAt,
   });
+
   final String id;
   final String customer;
   final String service;
@@ -23,26 +25,73 @@ class WorkerDashboardOrder {
   final String status;
   final String duration;
 
-  WorkerDashboardOrder copyWith({String? status}) => WorkerDashboardOrder(
-        id: id, customer: customer, service: service, time: time,
-        location: location, customerPayable: customerPayable,
-        status: status ?? this.status, duration: duration,
+  /// Nullable until the booking backend supplies a real scheduled calendar date.
+  /// Never infer a date from a time-of-day string.
+  final DateTime? appointmentDate;
+
+  /// Optional authoritative service completion time; customer bill data cannot
+  /// be used to infer either the date or the worker's earnings.
+  final DateTime? completedAt;
+
+  WorkerDashboardOrder copyWith({String? status, DateTime? appointmentDate}) =>
+      WorkerDashboardOrder(
+        id: id,
+        customer: customer,
+        service: service,
+        time: time,
+        location: location,
+        customerPayable: customerPayable,
+        status: status ?? this.status,
+        duration: duration,
+        appointmentDate: appointmentDate ?? this.appointmentDate,
+        completedAt: completedAt,
       );
 }
 
-/// One source of UI preview data for both Dashboard and Bookings.
-/// Production callers must supply authenticated worker-specific bookings.
-const previewWorkerOrders = <WorkerDashboardOrder>[
-  WorkerDashboardOrder(id: 'P-001', customer: 'Rutuja More', service: 'Hair Spa', time: '10:00 AM', location: 'MIDC, Latur', customerPayable: 999, status: 'Completed'),
-  WorkerDashboardOrder(id: 'P-002', customer: 'Sneha Patil', service: 'Gold Facial', time: '11:00 AM', location: 'Mangalwar Peth, Latur', customerPayable: 1200, status: 'Accepted'),
-  WorkerDashboardOrder(id: 'P-003', customer: 'Pooja Jadhav', service: 'Bridal Makeup', time: '4:00 PM', location: 'Ring Road, Latur', customerPayable: 1500, status: 'Scheduled'),
-];
+/// Explicit, deterministic demo dates keep every worker preview on one dataset.
+/// Production API records continue to use their authoritative scheduled dates.
+final previewWorkerOrders = List<WorkerDashboardOrder>.unmodifiable([
+  WorkerDashboardOrder(
+    id: 'P-001',
+    customer: 'Rutuja More',
+    service: 'Hair Spa',
+    time: '10:00 AM',
+    location: 'MIDC, Latur',
+    customerPayable: 999,
+    status: 'Completed',
+    appointmentDate: DateTime(2026, 10, 19),
+    completedAt: DateTime(2026, 10, 19, 10, 15),
+  ),
+  WorkerDashboardOrder(
+    id: 'P-002',
+    customer: 'Sneha Patil',
+    service: 'Gold Facial',
+    time: '11:00 AM',
+    location: 'Mangalwar Peth, Latur',
+    customerPayable: 1200,
+    status: 'Accepted',
+    appointmentDate: DateTime(2026, 10, 19),
+  ),
+  WorkerDashboardOrder(
+    id: 'P-003',
+    customer: 'Pooja Jadhav',
+    service: 'Bridal Makeup',
+    time: '4:00 PM',
+    location: 'Ring Road, Latur',
+    customerPayable: 1500,
+    status: 'Scheduled',
+    appointmentDate: DateTime(2026, 10, 20),
+  ),
+]);
 
 String formatCustomerRupees(int amount) {
   final raw = amount.toString();
   if (raw.length <= 3) return '₹$raw';
   final last = raw.substring(raw.length - 3);
   final first = raw.substring(0, raw.length - 3);
-  final prefix = first.replaceAllMapped(RegExp(r'\B(?=(\d{2})+(?!\d))'), (_) => ',');
+  final prefix = first.replaceAllMapped(
+    RegExp(r'\B(?=(\d{2})+(?!\d))'),
+    (_) => ',',
+  );
   return '₹$prefix,$last';
 }

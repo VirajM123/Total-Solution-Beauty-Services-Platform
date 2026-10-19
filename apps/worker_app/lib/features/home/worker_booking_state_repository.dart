@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'worker_booking_data.dart';
 import 'worker_booking_session.dart';
 
 /// Storage seam: a future API repository can implement the same workflow API.
@@ -15,7 +16,7 @@ abstract interface class WorkerBookingSessionStorage {
 /// This key stores DEMO booking state only, isolated from registration drafts.
 class SecureDemoBookingStorage implements WorkerBookingSessionStorage {
   SecureDemoBookingStorage({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   static const key = 'pinkora.worker.demo_booking_sessions.v1';
   final FlutterSecureStorage _storage;
@@ -38,36 +39,51 @@ class WorkerBookingStateException implements Exception {
 /// Debug-only, listenable booking-session state. No payment or OTP authorization.
 /// Instantiate once at the app's composition root in a later integration step.
 class WorkerBookingStateRepository extends ChangeNotifier {
-  WorkerBookingStateRepository(this._storage, {required this.demoMode});
+  WorkerBookingStateRepository(
+    this._storage, {
+    required this.demoMode,
+    List<WorkerDashboardOrder>? bookings,
+  }) : _bookings = List.unmodifiable(bookings ?? previewWorkerOrders);
 
   final WorkerBookingSessionStorage _storage;
   final bool demoMode;
+  final List<WorkerDashboardOrder> _bookings;
   Map<String, WorkerBookingSession> _sessions = {};
   bool _initialized = false;
   bool _busy = false;
 
   bool get isInitialized => _initialized;
+  List<WorkerDashboardOrder> get bookings => _bookings;
   List<WorkerBookingSession> get sessions =>
       List.unmodifiable(_sessions.values);
   WorkerBookingSession? byId(String bookingId) => _sessions[bookingId];
   bool get hasActivePhysicalService => _sessions.values.any(
-      (session) => session.serviceStage == WorkerServiceStage.inProgress);
+    (session) => session.serviceStage == WorkerServiceStage.inProgress,
+  );
 
   void _ensureReady() {
     if (!kDebugMode || !demoMode) {
-      throw const WorkerBookingStateException('Demo repository is unavailable in release mode');
+      throw const WorkerBookingStateException(
+        'Demo repository is unavailable in release mode',
+      );
     }
     if (!_initialized) {
-      throw const WorkerBookingStateException('Booking repository has not loaded');
+      throw const WorkerBookingStateException(
+        'Booking repository has not loaded',
+      );
     }
     if (_busy) {
-      throw const WorkerBookingStateException('Another booking operation is in progress');
+      throw const WorkerBookingStateException(
+        'Another booking operation is in progress',
+      );
     }
   }
 
   Future<void> initialize() async {
     if (!kDebugMode || !demoMode) {
-      throw const WorkerBookingStateException('Demo repository is unavailable in release mode');
+      throw const WorkerBookingStateException(
+        'Demo repository is unavailable in release mode',
+      );
     }
     if (_initialized) return;
     if (_busy) throw const WorkerBookingStateException('Repository is busy');
@@ -77,7 +93,8 @@ class WorkerBookingStateRepository extends ChangeNotifier {
       final restored = <String, WorkerBookingSession>{};
       if (raw != null) {
         final decoded = jsonDecode(raw);
-        if (decoded is! Map<String, dynamic> || decoded['version'] != 1 ||
+        if (decoded is! Map<String, dynamic> ||
+            decoded['version'] != 1 ||
             decoded['sessions'] is! List) {
           throw const FormatException('Unknown booking session format');
         }
@@ -134,17 +151,23 @@ class WorkerBookingStateRepository extends ChangeNotifier {
       throw const WorkerBookingStateException('Invalid booking details');
     }
     if (hasActivePhysicalService) {
-      throw const WorkerBookingStateException('Another service is already in progress');
+      throw const WorkerBookingStateException(
+        'Another service is already in progress',
+      );
     }
     if (_sessions.containsKey(bookingId)) {
-      throw const WorkerBookingStateException('This booking has already started');
+      throw const WorkerBookingStateException(
+        'This booking has already started',
+      );
     }
-    return _commit(WorkerBookingSession(
-      bookingId: bookingId,
-      baseCustomerPayable: baseCustomerPayable,
-      serviceStage: WorkerServiceStage.inProgress,
-      startedAt: at ?? DateTime.now(),
-    ));
+    return _commit(
+      WorkerBookingSession(
+        bookingId: bookingId,
+        baseCustomerPayable: baseCustomerPayable,
+        serviceStage: WorkerServiceStage.inProgress,
+        startedAt: at ?? DateTime.now(),
+      ),
+    );
   }
 
   Future<WorkerBookingSession> updateExtras({
@@ -154,11 +177,15 @@ class WorkerBookingStateRepository extends ChangeNotifier {
     _ensureReady();
     final old = _sessions[bookingId];
     if (old == null || old.serviceStage != WorkerServiceStage.inProgress) {
-      throw const WorkerBookingStateException('No active service for this booking');
+      throw const WorkerBookingStateException(
+        'No active service for this booking',
+      );
     }
     final ids = extras.map((e) => e.id).toSet();
     if (ids.length != extras.length || extras.any((e) => e.customerPrice < 0)) {
-      throw const WorkerBookingStateException('Invalid or duplicate extra services');
+      throw const WorkerBookingStateException(
+        'Invalid or duplicate extra services',
+      );
     }
     return _commit(old.copyWith(extras: List.unmodifiable(extras)));
   }
@@ -174,13 +201,17 @@ class WorkerBookingStateRepository extends ChangeNotifier {
     }
     final finishedAt = at ?? DateTime.now();
     if (old.startedAt != null && finishedAt.isBefore(old.startedAt!)) {
-      throw const WorkerBookingStateException('Finish time precedes start time');
+      throw const WorkerBookingStateException(
+        'Finish time precedes start time',
+      );
     }
-    return _commit(old.copyWith(
-      serviceStage: WorkerServiceStage.finished,
-      paymentStage: WorkerPaymentStage.pending,
-      finishedAt: finishedAt,
-    ));
+    return _commit(
+      old.copyWith(
+        serviceStage: WorkerServiceStage.finished,
+        paymentStage: WorkerPaymentStage.pending,
+        finishedAt: finishedAt,
+      ),
+    );
   }
 
   /// Local visual marker only. Never sets the authoritative paymentStage to paid.
