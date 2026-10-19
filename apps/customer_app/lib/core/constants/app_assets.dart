@@ -82,6 +82,7 @@ abstract final class AppAssets {
       'assets/images/backgrounds/customer_onboarding_background.png';
   static const splashPortrait =
       'assets/images/branding/customer_splash_beauty_portrait.png';
+  static const hiBeautyLogo = 'assets/images/branding/hi_beauty_logo.png';
   static const onboardingPortrait =
       'assets/images/onboarding/customer_onboarding_beauty_portrait.png';
   static const workerSearching =

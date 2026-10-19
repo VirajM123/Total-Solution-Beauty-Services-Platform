@@ -17,9 +17,8 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(const CustomerApp(config: config));
-    expect(find.text('Hi Beauty'), findsOneWidget);
+    expect(find.byKey(const ValueKey('hi-beauty-logo')), findsOneWidget);
     expect(find.text('Beauty, on your terms.'), findsOneWidget);
-    expect(find.byType(Image), findsOneWidget);
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
     expect(find.text('Get Started'), findsOneWidget);

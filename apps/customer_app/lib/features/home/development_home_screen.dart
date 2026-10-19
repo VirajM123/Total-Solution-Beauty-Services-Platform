@@ -898,6 +898,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   }
 
   void _add(_Service service) {
+    if (_checkoutPreview != null) _startNewBooking(showCategories: false);
     if (_plan.any((item) => item.id == service.id)) {
       _message('${service.name} is already in your cart.');
       return;
@@ -944,7 +945,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     });
   }
 
-  void _startNewBooking() {
+  void _startNewBooking({bool showCategories = true, bool openHome = false}) {
     _confirmationTimer?.cancel();
     _stopServiceTimer();
     _serviceOtpController.clear();
@@ -957,8 +958,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       _cartQuantities.clear();
       _checkoutPreview = null;
       _checkoutStep = 0;
-      _tab = 1;
-      _showServiceCategories = true;
+      _tab = openHome ? 0 : 1;
+      _showServiceCategories = showCategories;
       _selectedServiceCategory = null;
       _serviceOtp = '';
       _serviceOtpError = null;
@@ -5109,11 +5110,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
           height: 48,
           child: FilledButton(
             key: const ValueKey('booking-back-home'),
-            onPressed: () => setState(() {
-              _tab = 0;
-              _checkoutStep = 0;
-              _checkoutPreview = null;
-            }),
+            onPressed: () =>
+                _startNewBooking(showCategories: false, openHome: true),
             style: FilledButton.styleFrom(
               backgroundColor: _bookingPink,
               shape: RoundedRectangleBorder(
@@ -5700,6 +5698,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   }
 
   void _addOfferPackage(List<_Service> services) {
+    if (_checkoutPreview != null) _startNewBooking(showCategories: false);
     final newServices = services
         .where((service) => !_plan.any((item) => item.id == service.id))
         .toList();

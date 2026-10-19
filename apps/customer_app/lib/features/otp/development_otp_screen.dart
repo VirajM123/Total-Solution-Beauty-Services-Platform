@@ -32,6 +32,7 @@ class DevelopmentOtpScreen extends StatefulWidget {
 
 class _DevelopmentOtpScreenState extends State<DevelopmentOtpScreen> {
   final _code = TextEditingController();
+  final _codeFocus = FocusNode();
   Timer? _cooldown;
   int _remaining = 30;
   String? _error;
@@ -102,28 +103,43 @@ class _DevelopmentOtpScreenState extends State<DevelopmentOtpScreen> {
               }),
             ),
             Positioned.fill(
-              child: Semantics(
-                label: '6-digit verification code',
-                child: TextField(
-                  key: const ValueKey('otp-input'),
-                  controller: _code,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.done,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(6),
-                  ],
-                  style: const TextStyle(color: Colors.transparent),
-                  cursorColor: Colors.transparent,
-                  showCursor: false,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                    counterText: '',
-                    isCollapsed: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _codeFocus.requestFocus,
+              ),
+            ),
+            Positioned(
+              left: 0,
+              top: 0,
+              width: 1,
+              height: 1,
+              child: Opacity(
+                opacity: 0,
+                alwaysIncludeSemantics: true,
+                child: Semantics(
+                  label: '6-digit verification code',
+                  child: TextField(
+                    key: const ValueKey('otp-input'),
+                    controller: _code,
+                    focusNode: _codeFocus,
+                    keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.done,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
+                    style: const TextStyle(color: Colors.transparent),
+                    cursorColor: Colors.transparent,
+                    showCursor: false,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      counterText: '',
+                      isCollapsed: true,
+                    ),
+                    onSubmitted: (_) => _verify(),
+                    onChanged: (_) => setState(() => _error = null),
                   ),
-                  onSubmitted: (_) => _verify(),
-                  onChanged: (_) => setState(() => _error = null),
                 ),
               ),
             ),
@@ -137,6 +153,7 @@ class _DevelopmentOtpScreenState extends State<DevelopmentOtpScreen> {
   void dispose() {
     _cooldown?.cancel();
     _code.dispose();
+    _codeFocus.dispose();
     super.dispose();
   }
 

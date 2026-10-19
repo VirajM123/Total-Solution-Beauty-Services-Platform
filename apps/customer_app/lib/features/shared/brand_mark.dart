@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/app_assets.dart';
 import '../../core/constants/pinkora_brand.dart';
 
 class BrandMark extends StatelessWidget {
@@ -8,18 +9,15 @@ class BrandMark extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Text(
-        PinkoraBrand.name,
-        style: TextStyle(
-          color: PinkoraBrand.berry,
-          fontFamily: 'Montserrat',
-          fontSize: compact ? 27 : 38,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -1.5,
-          height: 1.1,
-        ),
+      Image.asset(
+        AppAssets.hiBeautyLogo,
+        key: const ValueKey('hi-beauty-logo'),
+        width: compact ? 132 : 190,
+        height: compact ? 132 : 190,
+        fit: BoxFit.contain,
+        semanticLabel: PinkoraBrand.name,
       ),
-      SizedBox(height: compact ? 3 : 6),
+      SizedBox(height: compact ? 2 : 6),
       Text(
         PinkoraBrand.tagline,
         style: TextStyle(
