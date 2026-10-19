@@ -10,7 +10,7 @@ class WorkerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Pinkora | Partner',
+      title: 'Hi Beauty | Partner',
       debugShowCheckedModeBanner: false,
 
       theme: ThemeData(

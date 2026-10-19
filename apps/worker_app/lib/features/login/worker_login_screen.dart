@@ -136,18 +136,19 @@ colors: [
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.spa_rounded, color: _berry, size: 43),
-                                  const SizedBox(height: 2),
-                                  const Text(
-                                   'Pinkora',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontFamily: 'Georgia',
-                                 fontSize: 31,
-fontWeight: FontWeight.w800,
-                                      color: _plum,
+                                  Image.asset(
+                                    'assets/images/logo/logo.png',
+                                    width: keyboardOpen ? 88 : 108,
+                                    height: keyboardOpen ? 88 : 108,
+                                    fit: BoxFit.contain,
+                                    semanticLabel: 'Hi Beauty',
+                                    errorBuilder: (_, _, _) => const Icon(
+                                      Icons.spa_rounded,
+                                      color: _berry,
+                                      size: 43,
                                     ),
                                   ),
+                                  const SizedBox(height: 2),
                                   const Text(
                                     'BEAUTY PROFESSIONALS',
                                     textAlign: TextAlign.center,

@@ -187,30 +187,23 @@ class _WorkerSplashScreenState extends State<WorkerSplashScreen>
                         opacity: _brandFade,
                         child: SlideTransition(
                           position: _brandSlide,
-                          child: const Column(
+                          child: Column(
                             children: [
-                              Icon(
-                                Icons.spa_rounded,
-                                color: Color(0xFFB20A50),
-                                size: 52,
-                              ),
-
-                              SizedBox(height: 12),
-
-                              Text(
-                                'Total Solution',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontFamily: 'Georgia',
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF460621),
+                              Image.asset(
+                                'assets/images/logo/logo.png',
+                                width: compact ? 190 : 230,
+                                height: compact ? 190 : 230,
+                                fit: BoxFit.contain,
+                                semanticLabel: 'Hi Beauty',
+                                errorBuilder: (_, _, _) => const Icon(
+                                  Icons.spa_rounded,
+                                  color: Color(0xFFB20A50),
+                                  size: 52,
                                 ),
                               ),
+                              const SizedBox(height: 18),
 
-                              SizedBox(height: 8),
-
-                              Text(
+                              const Text(
                                 'BEAUTY PROFESSIONALS',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
@@ -221,9 +214,9 @@ class _WorkerSplashScreenState extends State<WorkerSplashScreen>
                                 ),
                               ),
 
-                              SizedBox(height: 18),
+                              const SizedBox(height: 18),
 
-                              Text(
+                              const Text(
                                 'Your services. Your success.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(

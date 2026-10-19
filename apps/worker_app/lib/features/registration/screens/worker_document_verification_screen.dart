@@ -347,7 +347,7 @@ Future<WorkerSelectedDocument?> _selectDocument() async {
     return Scaffold(
       backgroundColor: _ivory,
       appBar: AppBar(
-        title: const Text('Join Pinkora',
+        title: const Text('Join Hi Beauty',
           style: TextStyle(fontFamily: 'Georgia', fontSize: 20,
             fontWeight: FontWeight.w700, color: _plum)),
         centerTitle: true,
@@ -380,7 +380,7 @@ Future<WorkerSelectedDocument?> _selectDocument() async {
                     style: TextStyle(fontFamily: 'Georgia', color: _plum,
                       fontWeight: FontWeight.w700, fontSize: 27, height: 1.2)),
                   const SizedBox(height: 7),
-                  const Text('Share your identity proof for manual review by the Pinkora team.',
+                  const Text('Share your identity proof for manual review by the Hi Beauty team.',
                     style: TextStyle(color: _muted, fontSize: 13.5, height: 1.4)),
                   const SizedBox(height: 16),
                   Container(
@@ -458,7 +458,7 @@ Future<WorkerSelectedDocument?> _selectDocument() async {
                     activeColor: _berry,
                     contentPadding: EdgeInsets.zero,
                     controlAffinity: ListTileControlAffinity.leading,
-                    title: const Text('I agree to share these documents with Pinkora for worker application review.',
+                    title: const Text('I agree to share these documents with Hi Beauty for worker application review.',
                       style: TextStyle(color: _plum, fontSize: 12.5, height: 1.35)),
                     subtitle: const Text('Consent is for the planned review process. No upload occurs in this preview.',
                       style: TextStyle(color: _muted, fontSize: 11.5)),

@@ -81,11 +81,11 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
       case WorkerApplicationStage.submitted:
       case WorkerApplicationStage.underReview:
       case WorkerApplicationStage.adminVerification:
-        return 'Thank you for joining Pinkora. We’ll notify you after admin review.';
+        return 'Thank you for joining Hi Beauty. We’ll notify you after admin review.';
       case WorkerApplicationStage.actionRequired:
         return reviewMessage ?? 'Some information needs updating before review can continue.';
       case WorkerApplicationStage.approved:
-        return 'Your registration has been approved by the Pinkora team.';
+        return 'Your registration has been approved by the Hi Beauty team.';
       case WorkerApplicationStage.rejected:
         return reviewMessage ?? 'Your application could not be approved at this time.';
     }

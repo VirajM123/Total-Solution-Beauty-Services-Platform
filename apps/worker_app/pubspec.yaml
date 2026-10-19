@@ -37,6 +37,7 @@ dependencies:
   image_picker: ^1.2.4
   flutter_secure_storage: ^11.2.0
   file_picker: ^13.1.0
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:
@@ -60,6 +61,7 @@ flutter:
     - assets/images/backgrounds/
     - assets/images/branding/
     - assets/images/illustrations/
+    - assets/images/logo/logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
