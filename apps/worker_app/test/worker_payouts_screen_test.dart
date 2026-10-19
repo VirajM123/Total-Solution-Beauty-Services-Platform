@@ -158,7 +158,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Pinkora'), findsOneWidget);
+    expect(find.text('Hi Beauty'), findsOneWidget);
     expect(find.text('My Earnings / Payouts'), findsNothing);
   });
 

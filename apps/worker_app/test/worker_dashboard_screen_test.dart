@@ -45,7 +45,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Pinkora'), findsOneWidget);
+        expect(find.text('Hi Beauty'), findsOneWidget);
         expect(find.text('Incoming Bookings'), findsOneWidget);
         expect(find.text("Today's Customer Payable"), findsOneWidget);
         expect(find.text('₹1,200'), findsNWidgets(2));

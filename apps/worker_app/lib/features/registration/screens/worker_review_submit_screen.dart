@@ -203,7 +203,7 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
       backgroundColor: _ivory,
       appBar: AppBar(
         title: const Text(
-          'Join Pinkora',
+          'Join Hi Beauty',
           style: TextStyle(
             fontFamily: 'Georgia',
             color: _plum,

@@ -868,17 +868,29 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Container(
-                                    width: 42,
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFFEAF2),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: const Icon(
-                                      Icons.local_florist_rounded,
-                                      color: _pink,
-                                      size: 29,
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.asset(
+                                      'assets/images/logo/logo.png',
+                                      width: 44,
+                                      height: 44,
+                                      fit: BoxFit.cover,
+                                      semanticLabel: 'Hi Beauty',
+                                      errorBuilder: (_, _, _) => Container(
+                                        width: 42,
+                                        height: 42,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFFEAF2),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.local_florist_rounded,
+                                          color: _pink,
+                                          size: 29,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
@@ -888,7 +900,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'Pinkora',
+                                          'Hi Beauty',
                                           style: TextStyle(
                                             color: _pink,
                                             fontSize: 24,
