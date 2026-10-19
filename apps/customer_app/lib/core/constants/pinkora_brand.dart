@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 abstract final class PinkoraBrand {
-  static const name = 'Pinkora';
+  static const name = 'Hi Beauty';
   static const tagline = 'Beauty, on your terms.';
   static const berry = Color(0xFF8D214D);
   static const rose = Color(0xFFE96C91);

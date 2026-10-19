@@ -17,13 +17,13 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(const CustomerApp(config: config));
-    expect(find.text('Pinkora'), findsOneWidget);
+    expect(find.text('Hi Beauty'), findsOneWidget);
     expect(find.text('Beauty, on your terms.'), findsOneWidget);
     expect(find.byType(Image), findsOneWidget);
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
     expect(find.text('Get Started'), findsOneWidget);
-    expect(find.text('Pinkora'), findsOneWidget);
+    expect(find.text('Hi Beauty'), findsOneWidget);
     expect(find.textContaining('Total Solution'), findsNothing);
   });
 
@@ -35,7 +35,7 @@ void main() {
     await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle();
     expect(find.text('Welcome back'), findsOneWidget);
-    expect(find.text('Pinkora'), findsOneWidget);
+    expect(find.text('Hi Beauty'), findsOneWidget);
     expect(find.textContaining('Total Solution'), findsNothing);
   });
 
@@ -64,15 +64,17 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
-    expect(find.text('Development OTP'), findsOneWidget);
-    expect(find.text('Pinkora'), findsOneWidget);
+    expect(find.text('Verify mobile number'), findsOneWidget);
+    expect(find.text('One step closer'), findsOneWidget);
+    expect(find.text('VERIFICATION CODE'), findsOneWidget);
+    expect(find.byKey(const ValueKey('otp-input')), findsOneWidget);
     expect(find.textContaining('Total Solution'), findsNothing);
     await tester.enterText(find.byType(TextField), '111111');
-    await tester.tap(find.text('Verify mock code'));
+    await tester.tap(find.text('Verify & Continue'));
     await tester.pump();
     expect(find.textContaining('Incorrect development code'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '123456');
-    await tester.tap(find.text('Verify mock code'));
+    await tester.tap(find.text('Verify & Continue'));
     await tester.pumpAndSettle();
     expect(find.text('Glow Beautiful\nat Home'), findsOneWidget);
     expect(find.text('Popular Services'), findsOneWidget);
@@ -87,7 +89,20 @@ void main() {
     navigator.pushNamed(RouteNames.otp, arguments: '9876543210');
     await tester.pumpAndSettle();
     expect(find.text('Welcome back'), findsOneWidget);
-    expect(find.text('Development OTP'), findsNothing);
+    expect(find.text('Verify mobile number'), findsNothing);
+  });
+
+  testWidgets('production cannot open development checkout preview', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const CustomerApp(config: AppConfig(Environment.production)),
+    );
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    navigator.pushNamed(RouteNames.home);
+    await tester.pumpAndSettle();
+    expect(find.byType(DevelopmentHomeScreen), findsNothing);
+    expect(find.text('Welcome back'), findsOneWidget);
   });
 
   testWidgets('registration validates fields and reaches distinct mock OTP', (
@@ -106,7 +121,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(RegistrationScreen), findsOneWidget);
-    expect(find.text('Pinkora'), findsOneWidget);
+    expect(find.text('Hi Beauty'), findsOneWidget);
     expect(find.textContaining('Total Solution'), findsNothing);
 
     await tester.ensureVisible(find.text('Continue'));
@@ -148,7 +163,7 @@ void main() {
     expect(otp.registration?.name, 'Asha Patil');
     expect(otp.phone, '9876543210');
     await tester.enterText(find.byType(TextField), '123456');
-    await tester.tap(find.text('Verify mock code'));
+    await tester.tap(find.text('Verify & Continue'));
     await tester.pumpAndSettle();
     expect(find.text('Glow Beautiful\nat Home'), findsOneWidget);
   });
@@ -354,23 +369,116 @@ void main() {
     expect(find.text('Subtotal'), findsOneWidget);
     await tester.tap(find.text('Offers').last);
     await tester.pumpAndSettle();
-    final promoSwitch = find.byKey(const ValueKey('promo-switch'));
-    expect(tester.widget<Switch>(promoSwitch).value, isFalse);
-    await tester.tap(promoSwitch);
-    await tester.pump();
-    expect(tester.widget<Switch>(promoSwitch).value, isTrue);
-    await tester.tap(promoSwitch);
-    await tester.pump();
-    expect(tester.widget<Switch>(promoSwitch).value, isFalse);
+    final applyOffer = find.byKey(const ValueKey('offers-apply-beauty20'));
+    await tester.tap(applyOffer);
+    await tester.pumpAndSettle();
+    await tester.tap(applyOffer);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Packages'));
+    await tester.pumpAndSettle();
+    expect(find.text('Offers & Packages'), findsOneWidget);
+    expect(find.text('Facial Beauty Package'), findsOneWidget);
     await tester.tap(find.text('Profile').last);
     await tester.pumpAndSettle();
-    expect(find.text('Welcome to Pinkora'), findsOneWidget);
+    expect(find.text('My Profile'), findsOneWidget);
     final cartLayoutException = tester.takeException();
     if (cartLayoutException != null) {
       // ignore: avoid_print
       print(cartLayoutException);
     }
     expect(cartLayoutException, isNull);
+  });
+
+  testWidgets('offers add a discounted package and profile actions work', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(393, 852);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    await tester.pumpWidget(const MaterialApp(home: DevelopmentHomeScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Offers').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Offers & Packages'), findsOneWidget);
+    expect(find.byKey(const ValueKey('offers-category-All')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('offer-service-deal-facial::gold facial')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('offers-category-Hair Care')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('offer-service-deal-hair spa::hair spa')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('offer-service-deal-facial::gold facial')),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(const ValueKey('offers-category-All')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('toggle-offers-search')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('offers-search')), 'Gold');
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('offer-service-deal-facial::gold facial')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('offer-service-deal-hair spa::hair spa')),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(const ValueKey('toggle-offers-search')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Packages'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('add-package-facial')));
+    await tester.pumpAndSettle();
+    expect(find.text('My Cart (3)'), findsOneWidget);
+    expect(find.text('BEAUTY20 applied'), findsOneWidget);
+
+    await tester.tap(find.text('Profile').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('edit-customer-profile')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('profile-name-input')),
+      'Asha Patil',
+    );
+    await tester.tap(find.byKey(const ValueKey('save-profile-name')));
+    await tester.pumpAndSettle();
+    expect(find.text('Asha Patil'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('profile-menu-My Bookings')));
+    await tester.pumpAndSettle();
+    expect(find.text('My Cart (3)'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('offers screen remains usable on a compact phone', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    await tester.pumpWidget(const MaterialApp(home: DevelopmentHomeScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Offers').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Offers & Packages'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('offer-service-deal-facial::gold facial')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('cart is compact, supports quantity and booking payment choices', (
@@ -419,6 +527,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('proceed-to-booking')));
     await tester.pumpAndSettle();
     expect(find.text('Select Date & Time'), findsOneWidget);
+    expect(find.text('Step 1 of 3'), findsOneWidget);
     final tomorrow = DateUtils.dateOnly(
       DateTime.now().add(const Duration(days: 1)),
     );
@@ -438,6 +547,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('booking-period-Afternoon')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('booking-time-1:00 PM')));
+    await tester.drag(
+      find.byKey(const ValueKey('checkout-step-0')),
+      const Offset(0, -180),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey('booking-preference-Schedule Later')),
     );
@@ -479,20 +593,259 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Booking Summary'), findsOneWidget);
     expect(find.textContaining('1:00 PM'), findsOneWidget);
-    expect(find.text('Schedule Later'), findsOneWidget);
+    expect(find.textContaining('Schedule Later'), findsOneWidget);
     expect(find.text('Studio'), findsOneWidget);
-    expect(find.byKey(const ValueKey('proceed-to-payment')), findsOneWidget);
-    expect(find.byKey(const ValueKey('pay-later')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('pay-later')));
+    expect(
+      find.byKey(const ValueKey('continue-to-payment-method')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('continue-to-payment-method')));
+    await tester.pumpAndSettle();
+    expect(find.text('Payment Method'), findsOneWidget);
+    expect(find.text('UPI (Recommended)'), findsOneWidget);
+    expect(find.text('Credit / Debit Card'), findsOneWidget);
+    expect(find.text('Cash on Service'), findsOneWidget);
+    expect(find.text('₹2,450'), findsOneWidget);
+    expect(
+      find.textContaining('Online payment is not connected'),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('checkout-back')));
+    await tester.pumpAndSettle();
+    expect(find.text('Booking Summary'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('continue-to-payment-method')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('payment-method-card')));
+    await tester.pumpAndSettle();
+    expect(find.text('Pay Securely · Preview'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('payment-method-upi')));
+    await tester.pumpAndSettle();
+    expect(find.text('UPI (Recommended)'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('confirm-booking')));
+    await tester.tap(find.byKey(const ValueKey('confirm-booking')));
+    await tester.pumpAndSettle();
+    expect(find.text('Booking Confirmation'), findsOneWidget);
+    expect(find.text('Sample booking · Development preview'), findsOneWidget);
+    expect(find.text('Pending'), findsOneWidget);
+    expect(find.text('Not issued in preview'), findsOneWidget);
+    expect(find.text('₹2,450'), findsOneWidget);
+    expect(find.text('Studio'), findsOneWidget);
+    expect(find.text('Paid'), findsNothing);
+    expect(find.byKey(const ValueKey('confirm-booking')), findsNothing);
+    expect(find.text('Finding your professional next…'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    expect(find.text('Finding Professional'), findsOneWidget);
+    expect(find.text('Finding the Best Professional for You'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('continue-to-professional-assigned')),
+      findsNothing,
+    );
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    expect(find.text('Professional Assigned'), findsWidgets);
+    expect(find.text('Priya Shinde'), findsOneWidget);
+    expect(find.text('Booking Timeline'), findsOneWidget);
+    expect(find.text('On the Way'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('professional-call')));
     await tester.pumpAndSettle();
     expect(
-      find.textContaining(
-        'Pay later selected. Booking checkout is not connected',
-      ),
+      find.text('Calling is unavailable in this development preview.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('professional-chat')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Messaging is unavailable in this development preview.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('professional-assignment-back')),
+    );
+    await tester.pump();
+    expect(find.text('Finding Professional'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    expect(find.text('Professional Assigned'), findsWidgets);
+    await tester.tap(find.byKey(const ValueKey('track-professional')));
+    await tester.pumpAndSettle();
+    expect(find.text('Professional On The Way'), findsOneWidget);
+    expect(find.text('En route'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('verify-service-otp-open')));
+    await tester.pumpAndSettle();
+    expect(find.text('DEMO SERVICE OTP'), findsOneWidget);
+    final serviceOtp = tester
+        .widget<Text>(find.byKey(const ValueKey('demo-service-otp')))
+        .data!;
+    await tester.enterText(
+      find.byKey(const ValueKey('service-start-otp')),
+      '0',
+    );
+    await tester.tap(find.byKey(const ValueKey('verify-service-otp')));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter the 4-digit code shown above.'), findsOneWidget);
+    expect(find.text('Verify OTP to Start Service'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('service-start-otp')),
+      serviceOtp,
+    );
+    await tester.tap(find.byKey(const ValueKey('verify-service-otp')));
+    await tester.pump();
+    expect(find.text('Service In Progress'), findsWidgets);
+    expect(find.text('00:00:00'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.text('00:00:03'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('complete-service')));
+    await tester.pumpAndSettle();
+    expect(find.text('Service Completed!'), findsOneWidget);
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    final stoppedElapsed = tester
+        .widget<Text>(find.byKey(const ValueKey('service-elapsed-time')))
+        .data;
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('service-elapsed-time')))
+          .data,
+      stoppedElapsed,
+    );
+    await tester.tap(find.byKey(const ValueKey('continue-to-review')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('view-service-bill')));
+    await tester.pumpAndSettle();
+    expect(find.text('Service Bill · Preview'), findsOneWidget);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rate-service')));
+    await tester.pumpAndSettle();
+    expect(find.text('Rate Your Experience'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('experience-rating-5')));
+    await tester.enterText(
+      find.byKey(const ValueKey('experience-review-text')),
+      'Excellent service',
+    );
+    await tester.tap(find.byKey(const ValueKey('submit-experience-review')));
+    await tester.pumpAndSettle();
+    expect(find.text('My Bookings'), findsOneWidget);
+    expect(find.textContaining('Gold Facial'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('booking-history-filter-Upcoming')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('No upcoming bookings'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('booking-history-filter-Completed')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('booking-view-details')));
+    await tester.pumpAndSettle();
+    expect(find.text('Excellent service'), findsNothing);
+    expect(find.textContaining('5 stars · Submitted'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('booking-again')));
+    await tester.pumpAndSettle();
+    expect(find.text('All Services'), findsOneWidget);
+    expect(find.text('My Cart (1)'), findsNothing);
+    expect(find.text('Gold Facial'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('cash after service remains pending in development preview', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(393, 852);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    await tester.pumpWidget(const MaterialApp(home: DevelopmentHomeScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('add-Gold Facial')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('My Cart').last);
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('proceed-to-booking')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('checkout-continue')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('checkout-continue')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('continue-to-payment-method')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('payment-method-cashOnService')),
+    );
+    await tester.tap(find.byKey(const ValueKey('confirm-booking')));
+    await tester.pumpAndSettle();
+    expect(find.text('Sample booking · Development preview'), findsOneWidget);
+    expect(find.text('Cash on Service'), findsOneWidget);
+    expect(find.text('Pending'), findsOneWidget);
+    expect(find.text('Paid'), findsNothing);
+    expect(find.text('₹1,250'), findsOneWidget);
+    expect(
+      find.text('No real booking was created. No payment was collected.'),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
   });
+
+  for (final size in const [
+    Size(360, 800),
+    Size(393, 852),
+    Size(400, 686),
+    Size(412, 915),
+  ]) {
+    testWidgets('checkout payment fits ${size.width}x${size.height}', (
+      tester,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      await tester.pumpWidget(const MaterialApp(home: DevelopmentHomeScreen()));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('add-Gold Facial')));
+      await tester.tap(find.byKey(const ValueKey('add-Hair Spa')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('My Cart').last);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      expect(find.text('My Cart (2)'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('proceed-to-booking')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('checkout-continue')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('checkout-continue')));
+      await tester.pumpAndSettle();
+      expect(find.text('Gold Facial'), findsOneWidget);
+      expect(find.text('Hair Spa'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey('continue-to-payment-method')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('₹2,149'), findsOneWidget);
+      expect(find.text('Payment Method'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const ValueKey('payment-method-upi')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const ValueKey('confirm-booking')));
+      await tester.pumpAndSettle();
+      expect(find.text('Sample booking · Development preview'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('home location, filters, hero, and professional controls work', (
     tester,
@@ -724,7 +1077,17 @@ void main() {
         ((hero.image as ResizeImage).imageProvider as AssetImage).assetName,
         mainImage,
       );
-      expect(find.text('Photo coming soon'), findsWidgets);
+      expect(find.text('Photo coming soon'), findsNothing);
+      final servicePhoto = find.byKey(
+        ValueKey(
+          'category-service-image-${category.toLowerCase()}::${firstService.toLowerCase()}',
+        ),
+      );
+      expect(servicePhoto, findsOneWidget);
+      expect(
+        find.descendant(of: servicePhoto, matching: find.byType(Image)),
+        findsOneWidget,
+      );
 
       if (category == 'Hair Cut') {
         final addButton = find.byKey(ValueKey('add-to-cart-$firstService'));
@@ -812,7 +1175,7 @@ void main() {
           .data,
       'Root Touch-Up',
     );
-    expect(find.text('Photo coming soon'), findsOneWidget);
+    expect(find.text('Photo coming soon'), findsNothing);
     await tester.tap(find.byKey(const ValueKey('close-service-details')));
     await tester.pumpAndSettle();
     await tester.enterText(search, 'no-such-treatment');
