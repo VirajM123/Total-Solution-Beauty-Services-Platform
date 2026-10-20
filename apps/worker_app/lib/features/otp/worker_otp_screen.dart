@@ -27,6 +27,7 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
   final _otpFocus = FocusNode();
   Timer? _resendTimer;
   int _remainingSeconds = 30;
+  String _lastOtpInput = '';
   bool _verifying = false;
   String? _error;
 
@@ -210,7 +211,15 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
                                   FilteringTextInputFormatter.digitsOnly,
                                   LengthLimitingTextInputFormatter(6),
                                 ],
-                                onChanged: (_) => setState(() => _error = null),
+                                onChanged: (value) {
+                                  if (value.length > _lastOtpInput.length ||
+                                      (value.length == _lastOtpInput.length &&
+                                          value != _lastOtpInput)) {
+                                    HapticFeedback.lightImpact();
+                                  }
+                                  _lastOtpInput = value;
+                                  setState(() => _error = null);
+                                },
                                 onSubmitted: (_) => _verify(),
                                 decoration: const InputDecoration(
                                   border: InputBorder.none,

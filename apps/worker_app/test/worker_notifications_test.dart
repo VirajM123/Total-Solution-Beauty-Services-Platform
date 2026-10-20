@@ -27,4 +27,28 @@ void main() {
     );
     expect(find.text('No notifications here'), findsOneWidget);
   });
+
+  testWidgets('notification layout fits supported phone widths', (
+    tester,
+  ) async {
+    for (final width in [320.0, 360.0, 390.0, 430.0]) {
+      tester.view.physicalSize = Size(width, 800);
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: WorkerNotificationsScreen(
+            orders: previewWorkerOrders,
+            demoMode: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Notifications'), findsOneWidget);
+      expect(find.text('3 unread'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  });
 }

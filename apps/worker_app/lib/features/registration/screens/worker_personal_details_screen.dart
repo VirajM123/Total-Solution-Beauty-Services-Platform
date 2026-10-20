@@ -525,7 +525,7 @@ class _WorkerPersonalDetailsScreenState
         filled: true,
         fillColor: Colors.white.withValues(alpha: 0.96),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(13),
           borderSide: const BorderSide(color: _line),
@@ -545,7 +545,7 @@ class _WorkerPersonalDetailsScreenState
       );
 
   Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 7),
+        padding: const EdgeInsets.only(bottom: 5),
         child: Text(text,
             style: const TextStyle(
                 fontSize: 13, fontWeight: FontWeight.w700, color: _plum)),
@@ -607,7 +607,7 @@ class _WorkerPersonalDetailsScreenState
                 children: [
                   Expanded(
                     child: ListView(
-                      padding: const EdgeInsets.fromLTRB(22, 12, 22, 12),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
                       children: [
@@ -647,13 +647,13 @@ class _WorkerPersonalDetailsScreenState
                         const SizedBox(height: 12),
                         const Text('Tell us about yourself',
                             style: TextStyle(fontFamily: 'Georgia',
-                                fontSize: 29, fontWeight: FontWeight.w700,
+                                fontSize: 23, fontWeight: FontWeight.w700,
                                 color: _plum)),
                         const SizedBox(height: 6),
                         const Text('Create your professional profile to apply as a Hi Beauty partner.',
                             style: TextStyle(fontSize: 13.5,
                                 height: 1.45, color: _muted)),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 14),
                         _label('Full name *'),
                         TextFormField(
                           controller: _name,
@@ -763,7 +763,7 @@ class _WorkerPersonalDetailsScreenState
                         _label('Profile photograph'),
                          Row(children: [
                            CircleAvatar(
-                             radius: 33,
+                             radius: 27,
                              backgroundColor: const Color(0xFFF4DDE5),
                              foregroundImage: _photoPreview,
                              child: _photoPreview == null
@@ -784,7 +784,7 @@ class _WorkerPersonalDetailsScreenState
                              style: OutlinedButton.styleFrom(
                                foregroundColor: _berry,
                                side: const BorderSide(color: _line),
-                               minimumSize: const Size(0, 46),
+                               minimumSize: const Size(0, 40),
                              ),
                            )),
                          ]),                        const SizedBox(height: 10),
@@ -795,14 +795,14 @@ class _WorkerPersonalDetailsScreenState
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.fromLTRB(22, 12, 22, 14),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 9),
                     decoration: const BoxDecoration(
                       color: _ivory,
                       border: Border(top: BorderSide(color: _line)),
                     ),
                     child: SizedBox(
                       width: double.infinity,
-                      height: 52,
+                      height: 46,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
@@ -830,7 +830,7 @@ class _WorkerPersonalDetailsScreenState
                   if (kDebugMode) ...[
                     const SizedBox(height: 8),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(22, 0, 22, 10),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                       child: OutlinedButton.icon(
                         onPressed: _previewProfessionalDetails,
                         icon: const Icon(Icons.visibility_outlined, size: 18),

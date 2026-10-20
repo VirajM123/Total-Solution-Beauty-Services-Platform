@@ -119,6 +119,8 @@ void main() {
       find.byType(ListView),
       const Offset(0, -300),
     );
+    await tester.ensureVisible(demoAcknowledgement);
+    await tester.pumpAndSettle();
     await tester.tap(demoAcknowledgement);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Preview submission'));
@@ -219,7 +221,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Maya Joshi'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is RichText && widget.text.toPlainText().contains('Maya'),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
@@ -227,7 +235,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Full name'),
-      'Maya Updated',
+      'Nisha Updated',
     );
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
@@ -236,7 +244,13 @@ void main() {
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Maya Updated'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is RichText && widget.text.toPlainText().contains('Nisha'),
+      ),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 

@@ -29,6 +29,7 @@ class _WorkerRegistrationEmailOtpScreenState
   int _secondsRemaining = 30;
   String? _error;
   bool _verifying = false;
+  String _lastOtpInput = '';
 
   @override
   void initState() {
@@ -56,7 +57,9 @@ class _WorkerRegistrationEmailOtpScreenState
   Future<void> _verify() async {
     if (_verifying) return;
     if (!kDebugMode) {
-      setState(() => _error = 'Demo verification is unavailable in this build.');
+      setState(
+        () => _error = 'Demo verification is unavailable in this build.',
+      );
       return;
     }
     final code = _codeController.text.trim();
@@ -91,8 +94,10 @@ class _WorkerRegistrationEmailOtpScreenState
       appBar: AppBar(
         backgroundColor: _ivory,
         foregroundColor: _plum,
-        title: const Text('Email verification',
-            style: TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Email verification',
+          style: TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -101,45 +106,57 @@ class _WorkerRegistrationEmailOtpScreenState
             constraints: const BoxConstraints(maxWidth: 460),
             child: SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Center(
                     child: Container(
-                      width: 112,
-                      height: 112,
+                      width: 82,
+                      height: 82,
                       decoration: const BoxDecoration(
                         shape: BoxShape.circle,
                         color: Color(0xFFFBE4EE),
                       ),
-                      child: const Icon(Icons.mark_email_unread_outlined,
-                          size: 56, color: _berry),
+                      child: const Icon(
+                        Icons.mark_email_unread_outlined,
+                        size: 42,
+                        color: _berry,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 16),
                   const Text(
                     'Verify your email',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: _plum,
                       fontFamily: 'Georgia',
-                      fontSize: 29,
+                      fontSize: 23,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const Text('Development preview for',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: _muted, fontSize: 14)),
+                  const Text(
+                    'Development preview for',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: _muted, fontSize: 12),
+                  ),
                   const SizedBox(height: 5),
-                  SelectableText(widget.email,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: _plum, fontSize: 15, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 26),
-                  const Text('6-digit development code',
-                      style: TextStyle(color: _plum, fontWeight: FontWeight.bold)),
+                  SelectableText(
+                    widget.email,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: _plum,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '6-digit development code',
+                    style: TextStyle(color: _plum, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 10),
                   TextField(
                     key: const Key('worker-registration-email-code'),
@@ -151,8 +168,11 @@ class _WorkerRegistrationEmailOtpScreenState
                     maxLength: 6,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     style: const TextStyle(
-                      color: _plum, fontSize: 24, letterSpacing: 9,
-                      fontWeight: FontWeight.w700),
+                      color: _plum,
+                      fontSize: 24,
+                      letterSpacing: 9,
+                      fontWeight: FontWeight.w700,
+                    ),
                     decoration: InputDecoration(
                       counterText: '',
                       hintText: '••••••',
@@ -167,20 +187,29 @@ class _WorkerRegistrationEmailOtpScreenState
                         borderRadius: BorderRadius.circular(14),
                         borderSide: const BorderSide(color: _berry, width: 1.6),
                       ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
-                    onChanged: (_) {
+                    onChanged: (value) {
+                      if (value.length > _lastOtpInput.length ||
+                          (value.length == _lastOtpInput.length &&
+                              value != _lastOtpInput)) {
+                        HapticFeedback.lightImpact();
+                      }
+                      _lastOtpInput = value;
                       if (_error != null) setState(() => _error = null);
                     },
                     onSubmitted: (_) => _verify(),
                   ),
                   const SizedBox(height: 22),
                   SizedBox(
-                    height: 52,
+                    height: 46,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFD41361), Color(0xFF750034)]),
+                          colors: [Color(0xFFD41361), Color(0xFF750034)],
+                        ),
                         borderRadius: BorderRadius.circular(28),
                       ),
                       child: FilledButton(
@@ -190,14 +219,24 @@ class _WorkerRegistrationEmailOtpScreenState
                           disabledBackgroundColor: Colors.transparent,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28)),
+                            borderRadius: BorderRadius.circular(28),
+                          ),
                         ),
                         child: _verifying
-                            ? const SizedBox.square(dimension: 20,
+                            ? const SizedBox.square(
+                                dimension: 20,
                                 child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white))
-                            : const Text('Verify demo code',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Verify demo code',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                       ),
                     ),
                   ),
@@ -212,7 +251,8 @@ class _WorkerRegistrationEmailOtpScreenState
                   Center(
                     child: TextButton(
                       onPressed: !kDebugMode || _secondsRemaining > 0
-                          ? null : _startTimer,
+                          ? null
+                          : _startTimer,
                       child: const Text('Restart demo timer'),
                     ),
                   ),

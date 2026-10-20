@@ -340,7 +340,7 @@ class _WorkerProfessionalDetailsScreenState
   }
 
   Widget _sectionTitle(String title, {String? hint}) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.only(bottom: 7),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -366,7 +366,7 @@ class _WorkerProfessionalDetailsScreenState
     prefixIcon: Icon(icon, color: _muted, size: 20),
     filled: true,
     fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(13),
       borderSide: const BorderSide(color: _line),
@@ -412,7 +412,7 @@ class _WorkerProfessionalDetailsScreenState
                 children: [
                   Expanded(
                     child: ListView(
-                      padding: const EdgeInsets.fromLTRB(22, 12, 22, 26),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
                       children: [
@@ -479,8 +479,8 @@ class _WorkerProfessionalDetailsScreenState
                           style: TextStyle(
                             fontFamily: 'Georgia',
                             fontWeight: FontWeight.w700,
-                            fontSize: 27,
-                            height: 1.16,
+                            fontSize: 22,
+                            height: 1.15,
                             color: _plum,
                           ),
                         ),
@@ -489,11 +489,11 @@ class _WorkerProfessionalDetailsScreenState
                           'Tell us which beauty services you love providing.',
                           style: TextStyle(
                             color: _muted,
-                            fontSize: 13.5,
-                            height: 1.45,
+                            fontSize: 12,
+                            height: 1.35,
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 14),
                         _sectionTitle(
                           'Primary expertise *',
                           hint:
@@ -520,7 +520,7 @@ class _WorkerProfessionalDetailsScreenState
                             _onDraftChanged();
                           }),
                         ),
-                        const SizedBox(height: 21),
+                        const SizedBox(height: 14),
                         _sectionTitle(
                           'Services you provide *',
                           hint:
@@ -562,14 +562,17 @@ class _WorkerProfessionalDetailsScreenState
                                       ? FontWeight.w700
                                       : FontWeight.w500,
                                 ),
-                                onSelected: (value) => setState(() {
-                                  if (value) {
-                                    _services.add(name);
-                                  } else {
-                                    _services.remove(name);
-                                  }
-                                  _onDraftChanged();
-                                }),
+                                onSelected: (value) {
+                                  HapticFeedback.lightImpact();
+                                  setState(() {
+                                    if (value) {
+                                      _services.add(name);
+                                    } else {
+                                      _services.remove(name);
+                                    }
+                                    _onDraftChanged();
+                                  });
+                                },
                               );
                             }).toList(),
                           ),
@@ -718,14 +721,17 @@ class _WorkerProfessionalDetailsScreenState
                               side: BorderSide(
                                 color: selected ? _berry : _line,
                               ),
-                              onSelected: (value) => setState(() {
-                                if (value) {
-                                  _spokenLanguages.add(language);
-                                } else {
-                                  _spokenLanguages.remove(language);
-                                }
-                                _onDraftChanged();
-                              }),
+                              onSelected: (value) {
+                                HapticFeedback.lightImpact();
+                                setState(() {
+                                  if (value) {
+                                    _spokenLanguages.add(language);
+                                  } else {
+                                    _spokenLanguages.remove(language);
+                                  }
+                                  _onDraftChanged();
+                                });
+                              },
                             );
                           }).toList(),
                         ),
@@ -777,7 +783,7 @@ class _WorkerProfessionalDetailsScreenState
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.fromLTRB(22, 12, 22, 14),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 9),
                     decoration: const BoxDecoration(
                       color: _ivory,
                       border: Border(top: BorderSide(color: _line)),
@@ -789,7 +795,7 @@ class _WorkerProfessionalDetailsScreenState
                           style: OutlinedButton.styleFrom(
                             foregroundColor: _plum,
                             side: const BorderSide(color: _line),
-                            minimumSize: const Size(90, 50),
+                            minimumSize: const Size(82, 44),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25),
                             ),
@@ -799,7 +805,7 @@ class _WorkerProfessionalDetailsScreenState
                         const SizedBox(width: 12),
                         Expanded(
                           child: SizedBox(
-                            height: 52,
+                            height: 46,
                             child: DecoratedBox(
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
@@ -816,6 +822,9 @@ class _WorkerProfessionalDetailsScreenState
                                   foregroundColor: Colors.white,
                                   backgroundColor: Colors.transparent,
                                   shadowColor: Colors.transparent,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(26),
                                   ),

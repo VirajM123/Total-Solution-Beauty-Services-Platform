@@ -117,12 +117,12 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
   }
 
   Widget _detail(String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 7),
+    padding: const EdgeInsets.symmetric(vertical: 5),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 105,
+          width: 96,
           child: Text(
             label,
             style: const TextStyle(color: _muted, fontSize: 12),
@@ -149,8 +149,8 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
     required List<Widget> children,
     String? note,
   }) => Container(
-    margin: const EdgeInsets.only(bottom: 16),
-    padding: const EdgeInsets.all(16),
+    margin: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(17),
@@ -224,7 +224,7 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
               children: [
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(22, 14, 22, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                     children: [
                       const Row(
                         children: [
@@ -255,14 +255,14 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                           color: _berry,
                         ),
                       ),
-                      const SizedBox(height: 23),
+                      const SizedBox(height: 14),
                       const Text(
                         'Almost there, beautiful',
                         style: TextStyle(
                           fontFamily: 'Georgia',
                           color: _plum,
                           fontWeight: FontWeight.w700,
-                          fontSize: 27,
+                          fontSize: 22,
                         ),
                       ),
                       const SizedBox(height: 7),
@@ -412,7 +412,7 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 14),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 9),
                   decoration: const BoxDecoration(
                     color: _ivory,
                     border: Border(top: BorderSide(color: _line)),
@@ -424,14 +424,15 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: _plum,
                           side: const BorderSide(color: _line),
-                          minimumSize: const Size(90, 50),
+                          minimumSize: const Size(76, 44),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
                         ),
                         child: const Text('Back'),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: SizedBox(
-                          height: 52,
+                          height: 46,
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
@@ -447,6 +448,9 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                                 backgroundColor: Colors.transparent,
                                 foregroundColor: Colors.white,
                                 shadowColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
                               ),
                               icon: const Icon(
                                 Icons.visibility_outlined,
@@ -458,6 +462,7 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                                     : 'Preview submission',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
+                                  fontSize: 12,
                                 ),
                               ),
                             ),

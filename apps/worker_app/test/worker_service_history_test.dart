@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:worker_app/features/home/worker_booking_data.dart';
 import 'package:worker_app/features/home/worker_service_history_screen.dart';
@@ -71,5 +72,43 @@ void main() {
       filterWorkerServiceHistory(orders, query: ' d-404 ').single.id,
       'D-404',
     );
+  });
+
+  testWidgets('compact history preserves search, filters and order selection', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    WorkerDashboardOrder? selected;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WorkerServiceHistoryScreen(
+          orders: orders,
+          demoMode: false,
+          onOrderTap: (order) => selected = order,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Facial'), findsOneWidget);
+    expect(find.text('Hair Spa'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const Key('history-filter-Completed')));
+    await tester.pumpAndSettle();
+    expect(find.text('Facial'), findsOneWidget);
+    expect(find.text('Hair Spa'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('history-order-A')));
+    expect(selected?.id, 'A');
+
+    await tester.enterText(find.byKey(const Key('history-search')), 'Rutuja');
+    await tester.pumpAndSettle();
+    expect(find.text('No matching history'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

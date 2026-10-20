@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:worker_app/features/home/worker_dashboard_screen.dart';
 import 'package:worker_app/features/home/worker_payout_data.dart';
 import 'package:worker_app/features/home/worker_payouts_screen.dart';
+import 'package:worker_app/features/widgets/worker_design.dart';
 
 void main() {
   testWidgets('unconfigured payout source shows an intentional empty state', (
@@ -12,6 +13,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('My Earnings / Payouts'), findsOneWidget);
+    expect(find.byType(WorkerPageBanner), findsOneWidget);
     expect(find.text('Waiting for payout records'), findsOneWidget);
     expect(find.text('Your payout space is ready'), findsOneWidget);
     expect(find.text('PAYOUT DATA NOT CONNECTED'), findsOneWidget);
@@ -70,7 +72,7 @@ void main() {
     expect(find.textContaining('PAY-20261018-01'), findsOneWidget);
     expect(find.textContaining('PAY-20261019-01'), findsNothing);
 
-    await tester.tap(find.text('View details'));
+    await tester.tap(find.text('Details'));
     await tester.pumpAndSettle();
     expect(find.text('Payout details'), findsOneWidget);
     expect(find.text('Payout ID'), findsOneWidget);
@@ -158,7 +160,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Hi Beauty'), findsOneWidget);
+    expect(find.textContaining('Worker'), findsOneWidget);
     expect(find.text('My Earnings / Payouts'), findsNothing);
   });
 

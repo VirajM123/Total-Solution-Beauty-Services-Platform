@@ -118,7 +118,7 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
                     children: [
                       const SizedBox(height: 8),
                       _hero(isPositive: isPositive),
@@ -129,7 +129,7 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
                         style: const TextStyle(
                           color: _plum,
                           fontFamily: 'Georgia',
-                          fontSize: 29,
+                          fontSize: 23,
                           fontWeight: FontWeight.bold,
                           height: 1.18,
                         ),
@@ -140,8 +140,8 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: _muted,
-                          fontSize: 13,
-                          height: 1.5,
+                          fontSize: 12,
+                          height: 1.35,
                         ),
                       ),
                       if (_isPreview) ...[
@@ -157,7 +157,7 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 16),
                       _timeline(),
                       const SizedBox(height: 22),
                       _notificationInfo(),
@@ -169,7 +169,7 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
                     color: _ivory,
                     border: Border(top: BorderSide(color: _line)),
                   ),
-                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 14),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 9),
                   child: SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -198,7 +198,7 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
 
   Widget _hero({required bool isPositive}) {
     return SizedBox(
-      height: 195,
+      height: 145,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -208,7 +208,7 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
             child: Transform.rotate(
               angle: -.35,
               child: const Icon(Icons.spa_rounded,
-                  color: Color(0xFF97AA80), size: 70),
+                  color: Color(0xFF97AA80), size: 54),
             ),
           ),
           Positioned(
@@ -217,7 +217,7 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
             child: Transform.rotate(
               angle: .45,
               child: const Icon(Icons.local_florist_rounded,
-                  color: Color(0xFFEAA0B5), size: 70),
+                  color: Color(0xFFEAA0B5), size: 54),
             ),
           ),
           Positioned(
@@ -329,8 +329,8 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     Container(
-                      width: 26,
-                      height: 26,
+                      width: 23,
+                      height: 23,
                       decoration: BoxDecoration(
                         color: completed && !active ? _berry :
                           active ? const Color(0xFFFFF1F5) : const Color(0xFFC4B9BE),
@@ -359,7 +359,7 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
               const SizedBox(width: 9),
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.only(bottom: last ? 0 : 27, top: 2),
+                  padding: EdgeInsets.only(bottom: last ? 0 : 18, top: 1),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

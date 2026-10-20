@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'worker_booking_data.dart';
 import 'worker_demo_booking_store.dart';
 import '../widgets/worker_design.dart';
@@ -122,7 +123,7 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 16),
               children: [
                 const WorkerPageBanner(
                   eyebrow: 'Stay in the loop',
@@ -130,38 +131,45 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                   subtitle: 'Booking updates and activity in one place.',
                   icon: Icons.notifications_active_outlined,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 if (widget.demoMode)
                   Container(
-                    padding: const EdgeInsets.all(11),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFEDF3),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(11),
                     ),
                     child: const Row(
                       children: [
                         Icon(
                           Icons.info_outline_rounded,
-                          size: 17,
+                          size: 15,
                           color: _pink,
                         ),
-                        SizedBox(width: 8),
+                        SizedBox(width: 7),
                         Expanded(
                           child: Text(
-                            'Preview alerts from existing bookings. No push notifications or server inbox are connected.',
-                            style: TextStyle(fontSize: 11, color: _deep),
+                            'Preview alerts from bookings. Push notifications and a server inbox are not connected.',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: _deep,
+                              height: 1.2,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 9),
                 Row(
                   children: [
                     const Text(
                       'Your activity',
                       style: TextStyle(
-                        fontSize: 17,
+                        fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: _deep,
                       ),
@@ -170,14 +178,14 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                     Text(
                       '$unread unread',
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: _pink,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 7),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -189,42 +197,49 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                         padding: const EdgeInsets.only(right: 7),
                         child: ChoiceChip(
                           label: Text(filter),
+                          visualDensity: const VisualDensity(
+                            horizontal: -3,
+                            vertical: -3,
+                          ),
                           selected: active,
                           selectedColor: _pink,
                           backgroundColor: Colors.white,
                           side: BorderSide(color: active ? _pink : _border),
                           labelStyle: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: active ? Colors.white : _muted,
                           ),
                           showCheckmark: false,
-                          onSelected: (_) => setState(() => _filter = filter),
+                          onSelected: (_) {
+                            HapticFeedback.lightImpact();
+                            setState(() => _filter = filter);
+                          },
                         ),
                       );
                     }).toList(),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 7),
                 if (_visible.isEmpty)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      vertical: 55,
+                      vertical: 30,
                       horizontal: 18,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: _border),
                     ),
                     child: Column(
                       children: [
                         const Icon(
                           Icons.notifications_none_rounded,
-                          size: 44,
+                          size: 34,
                           color: _pink,
                         ),
-                        const SizedBox(height: 9),
+                        const SizedBox(height: 7),
                         const Text(
                           'No notifications here',
                           style: TextStyle(
@@ -232,13 +247,13 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                             color: _deep,
                           ),
                         ),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 4),
                         Text(
                           _filter == 'Unread'
                               ? 'All visible alerts are marked as read.'
                               : 'Booking updates will appear here when available.',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 12, color: _muted),
+                          style: const TextStyle(fontSize: 11, color: _muted),
                         ),
                       ],
                     ),
@@ -247,17 +262,20 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                   ..._visible.map(
                     (alert) => Padding(
                       key: ValueKey('alert-${alert.id}'),
-                      padding: const EdgeInsets.only(bottom: 9),
+                      padding: const EdgeInsets.only(bottom: 7),
                       child: Material(
                         color: Colors.white,
-                        elevation: 3,
-                        shadowColor: const Color(0x18C74776),
-                        borderRadius: BorderRadius.circular(15),
+                        elevation: 1,
+                        shadowColor: const Color(0x12C74776),
+                        borderRadius: BorderRadius.circular(14),
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(15),
+                          borderRadius: BorderRadius.circular(14),
                           onTap: () => _open(alert),
                           child: Container(
-                            padding: const EdgeInsets.all(13),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 11,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               border: Border.all(color: _border),
                               borderRadius: BorderRadius.circular(15),
@@ -266,19 +284,19 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  width: 39,
-                                  height: 39,
+                                  width: 34,
+                                  height: 34,
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFFFEDF3),
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Icon(
                                     alert.icon,
                                     color: _pink,
-                                    size: 21,
+                                    size: 18,
                                   ),
                                 ),
-                                const SizedBox(width: 11),
+                                const SizedBox(width: 9),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -289,9 +307,11 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                                           Expanded(
                                             child: Text(
                                               alert.title,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
                                                 color: _deep,
-                                                fontSize: 13,
+                                                fontSize: 12,
                                                 fontWeight: FontWeight.w800,
                                               ),
                                             ),
@@ -307,20 +327,22 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                                             ),
                                         ],
                                       ),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 3),
                                       Text(
                                         alert.message,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
-                                          fontSize: 12,
+                                          fontSize: 11,
                                           color: _muted,
-                                          height: 1.35,
+                                          height: 1.25,
                                         ),
                                       ),
-                                      const SizedBox(height: 7),
+                                      const SizedBox(height: 5),
                                       Text(
                                         'Booking ${alert.order.id}  ·  ${alert.group}',
                                         style: const TextStyle(
-                                          fontSize: 10,
+                                          fontSize: 9,
                                           color: _pink,
                                           fontWeight: FontWeight.w700,
                                         ),
@@ -332,7 +354,7 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                                 const Icon(
                                   Icons.chevron_right_rounded,
                                   color: _muted,
-                                  size: 18,
+                                  size: 17,
                                 ),
                               ],
                             ),

@@ -10,7 +10,6 @@ const _pink = WorkerDesign.pink;
 const _deep = WorkerDesign.deep;
 const _muted = WorkerDesign.muted;
 const _cream = WorkerDesign.cream;
-const _border = WorkerDesign.border;
 
 /// Appointment with a calendar day.
 @immutable
@@ -215,7 +214,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
         !_day(date).isAfter(_day(request.to)),
   );
 
-  Widget _card(Widget child, {EdgeInsets padding = const EdgeInsets.all(15)}) =>
+  Widget _card(Widget child, {EdgeInsets padding = const EdgeInsets.all(12)}) =>
       Container(
         width: double.infinity,
         padding: padding,
@@ -240,9 +239,9 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, update) => Padding(
           padding: EdgeInsets.fromLTRB(
-            20,
-            18,
-            20,
+            16,
+            14,
+            16,
             MediaQuery.viewInsetsOf(context).bottom + 24,
           ),
           child: Column(
@@ -257,12 +256,12 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                   fontSize: 19,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 5),
               const Text(
                 'Saved locally as a draft. No admin is notified.',
                 style: TextStyle(color: _muted, fontSize: 12),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               OutlinedButton.icon(
                 icon: const Icon(Icons.date_range_outlined),
                 label: Text(
@@ -279,7 +278,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                   if (selected != null) update(() => range = selected);
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: reason,
                 decoration: const InputDecoration(
@@ -313,7 +312,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                 style: FilledButton.styleFrom(
                   backgroundColor: _pink,
                   foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(46),
+                  minimumSize: const Size.fromHeight(42),
                 ),
                 onPressed: () => Navigator.pop(
                   sheetContext,
@@ -366,6 +365,11 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
           Row(
             children: [
               IconButton(
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints.tightFor(
+                  width: 36,
+                  height: 36,
+                ),
                 tooltip: 'Previous month',
                 onPressed: () => setState(
                   () => _month = DateTime(_month.year, _month.month - 1),
@@ -378,12 +382,17 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: _deep,
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
               IconButton(
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints.tightFor(
+                  width: 36,
+                  height: 36,
+                ),
                 tooltip: 'Next month',
                 onPressed: () => setState(
                   () => _month = DateTime(_month.year, _month.month + 1),
@@ -405,15 +414,15 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 3),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
-              childAspectRatio: 0.94,
+              mainAxisSpacing: 2,
+              crossAxisSpacing: 2,
+              childAspectRatio: 1.08,
             ),
             itemCount: cells,
             itemBuilder: (context, index) {
@@ -428,7 +437,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
               );
               final hasLeave = _isOnLeave(date);
               return InkWell(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 onTap: () => setState(() => _selected = date),
                 child: Container(
                   decoration: BoxDecoration(
@@ -437,7 +446,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                         : hasLeave
                         ? const Color(0xFFFFE9EE)
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -446,13 +455,13 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                         '$dateNumber',
                         style: TextStyle(
                           color: selected ? Colors.white : _deep,
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: selected
                               ? FontWeight.w800
                               : FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 2),
                       Container(
                         width: 4,
                         height: 4,
@@ -490,7 +499,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _calendar(),
-        const SizedBox(height: 15),
+        const SizedBox(height: 10),
         Row(
           children: [
             Expanded(
@@ -499,7 +508,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                 style: const TextStyle(
                   fontWeight: FontWeight.w800,
                   color: _deep,
-                  fontSize: 14,
+                  fontSize: 13,
                 ),
               ),
             ),
@@ -509,11 +518,11 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 6),
         if (matches.isEmpty)
           _card(
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
+              padding: EdgeInsets.symmetric(vertical: 9),
               child: Center(
                 child: Text(
                   'No preview appointments on this date.',
@@ -529,13 +538,13 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                 children: [
                   Container(
                     width: 4,
-                    height: 66,
+                    height: 54,
                     decoration: BoxDecoration(
                       color: _pink,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 9),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -548,24 +557,20 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
                           item.booking.service,
                           style: const TextStyle(
                             color: _deep,
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                         Text(
-                          item.booking.customer,
-                          style: const TextStyle(color: _muted, fontSize: 12),
-                        ),
-                        Text(
-                          item.booking.location,
+                          '${item.booking.customer} · ${item.booking.location}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: _muted, fontSize: 11),
+                          style: const TextStyle(color: _muted, fontSize: 10),
                         ),
                       ],
                     ),
@@ -605,11 +610,11 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
           fontWeight: FontWeight.w800,
         ),
       ),
-      const SizedBox(height: 9),
+      const SizedBox(height: 6),
       if (_requests.isEmpty)
         _card(
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 18),
+            padding: EdgeInsets.symmetric(vertical: 12),
             child: Center(
               child: Text(
                 'No demo leave requests yet.',
@@ -641,12 +646,12 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 5),
                 Text(
                   '${_dateLabel(request.from)}  →  ${_dateLabel(request.to)}',
                   style: const TextStyle(color: _muted, fontSize: 12),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 const Text(
                   'Local demo only. No admin action or booking reassignment occurred.',
                   style: TextStyle(color: _muted, fontSize: 11),
@@ -654,7 +659,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 7),
         ],
     ],
   );
@@ -678,23 +683,58 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
           constraints: const BoxConstraints(maxWidth: 520),
           child: Column(
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(17, 4, 17, 14),
-                child: WorkerPageBanner(
-                  eyebrow: 'Plan your week',
-                  title: 'My Schedule',
-                  subtitle: 'Appointments and time away, together.',
-                  icon: Icons.event_available_outlined,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(17, 7, 17, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFE5EF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.event_available_outlined,
+                        color: _pink,
+                        size: 21,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Plan your week',
+                            style: TextStyle(
+                              color: _pink,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: .8,
+                            ),
+                          ),
+                          SizedBox(height: 1),
+                          Text(
+                            'Appointments and time away, together.',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: _muted, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (widget.demoMode)
                 const Padding(
-                  padding: EdgeInsets.fromLTRB(17, 3, 17, 9),
+                  padding: EdgeInsets.fromLTRB(17, 0, 17, 7),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'DEVELOPMENT PREVIEW · Appointments and leave are not connected to admin',
-                      style: TextStyle(color: _muted, fontSize: 10),
+                      'DEMO PREVIEW · Changes are not sent to admin',
+                      style: TextStyle(color: _muted, fontSize: 9),
                     ),
                   ),
                 ),
@@ -720,19 +760,19 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 13),
+              const SizedBox(height: 8),
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(17, 3, 17, 16),
+                  padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
                   children: [if (_leaveTab) _leaveHistory() else _schedule()],
                 ),
               ),
               if (_previewAllowed)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(17, 8, 17, 14),
+                  padding: const EdgeInsets.fromLTRB(14, 5, 14, 9),
                   child: SizedBox(
                     width: double.infinity,
-                    height: 47,
+                    height: 42,
                     child: OutlinedButton.icon(
                       onPressed:
                           _savingLeave || _leaveLoading || _leaveError != null
@@ -767,7 +807,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
       backgroundColor: selected ? _pink : const Color(0xFFF5EFF1),
       foregroundColor: selected ? Colors.white : _muted,
       elevation: 0,
-      minimumSize: const Size(0, 42),
+      minimumSize: const Size(0, 38),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
     ),
     child: Text(label),

@@ -170,7 +170,7 @@ class _WorkerProfileSettingsScreenState
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Padding(
-        padding: const EdgeInsets.fromLTRB(4, 0, 0, 9),
+        padding: const EdgeInsets.fromLTRB(4, 0, 0, 6),
         child: Text(
           title,
           style: const TextStyle(
@@ -182,10 +182,10 @@ class _WorkerProfileSettingsScreenState
       ),
       Material(
         color: Colors.white,
-        elevation: 3,
-        shadowColor: const Color(0x18C74776),
+        elevation: 1,
+        shadowColor: const Color(0x12C74776),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           side: const BorderSide(color: _border),
         ),
         clipBehavior: Clip.antiAlias,
@@ -195,8 +195,8 @@ class _WorkerProfileSettingsScreenState
               if (i > 0)
                 const Divider(
                   height: 1,
-                  indent: 52,
-                  endIndent: 12,
+                  indent: 48,
+                  endIndent: 10,
                   color: _border,
                 ),
               children[i],
@@ -215,7 +215,7 @@ class _WorkerProfileSettingsScreenState
     Widget? trailing,
   }) => ListTile(
     dense: true,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 1),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 0),
     leading: Container(
       width: 33,
       height: 33,
@@ -235,7 +235,12 @@ class _WorkerProfileSettingsScreenState
     ),
     subtitle: subtitle == null
         ? null
-        : Text(subtitle, style: const TextStyle(color: _muted, fontSize: 11)),
+        : Text(
+            subtitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: _muted, fontSize: 10, height: 1.2),
+          ),
     trailing:
         trailing ??
         const Icon(Icons.chevron_right_rounded, color: _muted, size: 19),
@@ -271,7 +276,7 @@ class _WorkerProfileSettingsScreenState
             : _loadError != null
             ? _LoadError(error: _loadError!, onRetry: _load)
             : ListView(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 25),
+                padding: const EdgeInsets.fromLTRB(14, 6, 14, 16),
                 children: [
                   const WorkerPageBanner(
                     eyebrow: 'Your space',
@@ -279,12 +284,12 @@ class _WorkerProfileSettingsScreenState
                     subtitle: 'Keep your details and preferences in one place.',
                     icon: Icons.person_outline_rounded,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   if (widget.demoMode) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
-                        vertical: 8,
+                        vertical: 6,
                       ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFEDF3),
@@ -292,49 +297,53 @@ class _WorkerProfileSettingsScreenState
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.info_outline, color: _pink, size: 17),
-                          SizedBox(width: 8),
+                          Icon(Icons.info_outline, color: _pink, size: 15),
+                          SizedBox(width: 7),
                           Expanded(
                             child: Text(
-                              'Local preview profile. Changes stay on this device and are not synced to a server.',
-                              style: TextStyle(fontSize: 11, color: _deep),
+                              'Preview only. Changes stay on this device and are not synced.',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: _deep,
+                                height: 1.2,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 8),
                   ],
                   Container(
-                    padding: const EdgeInsets.all(17),
-                    decoration: WorkerDesign.surface(radius: 20),
+                    padding: const EdgeInsets.all(12),
+                    decoration: WorkerDesign.surface(radius: 16),
                     child: Row(
                       children: [
                         CircleAvatar(
-                          radius: 29,
+                          radius: 24,
                           backgroundColor: Color(0xFFFFE2EC),
                           child: _profile?.profilePhotoPath == null
                               ? const Icon(
                                   Icons.person_rounded,
                                   color: _pink,
-                                  size: 34,
+                                  size: 29,
                                 )
                               : ClipOval(
                                   child: Image.file(
                                     File(_profile!.profilePhotoPath!),
-                                    width: 58,
-                                    height: 58,
+                                    width: 48,
+                                    height: 48,
                                     fit: BoxFit.cover,
                                     errorBuilder: (context, error, stack) =>
                                         const Icon(
                                           Icons.person_rounded,
                                           color: _pink,
-                                          size: 34,
+                                          size: 29,
                                         ),
                                   ),
                                 ),
                         ),
-                        const SizedBox(width: 13),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -346,33 +355,33 @@ class _WorkerProfileSettingsScreenState
                                 style: const TextStyle(
                                   color: _deep,
                                   fontWeight: FontWeight.w800,
-                                  fontSize: 17,
+                                  fontSize: 15,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 2),
                               Text(
                                 phone.isEmpty ? 'Mobile not provided' : phone,
                                 style: const TextStyle(
                                   color: _muted,
-                                  fontSize: 12,
+                                  fontSize: 11,
                                 ),
                               ),
-                              const SizedBox(height: 7),
+                              const SizedBox(height: 4),
                               const Row(
                                 children: [
                                   Icon(
                                     Icons.info_outline_rounded,
                                     color: _muted,
-                                    size: 15,
+                                    size: 13,
                                   ),
-                                  SizedBox(width: 5),
+                                  SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
                                       'Server verification unavailable',
-                                      maxLines: 2,
+                                      maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        fontSize: 11,
+                                        fontSize: 10,
                                         fontWeight: FontWeight.w600,
                                         color: _muted,
                                       ),
@@ -386,7 +395,7 @@ class _WorkerProfileSettingsScreenState
                       ],
                     ),
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 12),
                   _section('My Account', [
                     _item(
                       Icons.badge_outlined,
@@ -407,13 +416,13 @@ class _WorkerProfileSettingsScreenState
                       onTap: _editSpecializations,
                     ),
                   ]),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   _section('Preferences & Security', [
                     _item(
                       Icons.notifications_none_rounded,
                       'Notifications',
                       subtitle:
-                          'Saved locally only. Push delivery is not configured; booking alerts remain visible.',
+                          'Saved locally; push delivery is not configured.',
                       trailing: Switch.adaptive(
                         value: notifications,
                         activeTrackColor: _pink,
@@ -427,7 +436,7 @@ class _WorkerProfileSettingsScreenState
                       onTap: _openSecurity,
                     ),
                   ]),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   _section('Support & Legal', [
                     _item(
                       Icons.help_outline_rounded,
@@ -452,7 +461,7 @@ class _WorkerProfileSettingsScreenState
                       ),
                     ),
                   ]),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   OutlinedButton.icon(
                     onPressed: widget.onLogoutTap == null
                         ? null
@@ -599,151 +608,162 @@ class _WorkerPersonalInformationScreenState
     body: SafeArea(
       child: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(18),
-          children: [
-            const Text(
-              'Saved registration details · editable changes are local preview data.',
-              style: TextStyle(color: _muted),
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            inputDecorationTheme: const InputDecorationTheme(
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
             ),
-            const SizedBox(height: 16),
-            Center(
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 34,
-                    backgroundColor: const Color(0xFFFFE2EC),
-                    child: _currentProfile.profilePhotoPath == null
-                        ? const Icon(
-                            Icons.person_rounded,
-                            color: _pink,
-                            size: 38,
-                          )
-                        : ClipOval(
-                            child: Image.file(
-                              File(_currentProfile.profilePhotoPath!),
-                              width: 68,
-                              height: 68,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stack) =>
-                                  const Icon(
-                                    Icons.person_rounded,
-                                    color: _pink,
-                                    size: 38,
-                                  ),
+          ),
+          child: ListView(
+            padding: const EdgeInsets.all(14),
+            children: [
+              const Text(
+                'Saved registration details · editable changes are local preview data.',
+                style: TextStyle(color: _muted, fontSize: 11, height: 1.25),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: const Color(0xFFFFE2EC),
+                      child: _currentProfile.profilePhotoPath == null
+                          ? const Icon(
+                              Icons.person_rounded,
+                              color: _pink,
+                              size: 32,
+                            )
+                          : ClipOval(
+                              child: Image.file(
+                                File(_currentProfile.profilePhotoPath!),
+                                width: 56,
+                                height: 56,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stack) =>
+                                    const Icon(
+                                      Icons.person_rounded,
+                                      color: _pink,
+                                      size: 32,
+                                    ),
+                              ),
                             ),
-                          ),
-                  ),
-                  TextButton.icon(
-                    onPressed: _saving ? null : _choosePhoto,
-                    icon: const Icon(Icons.photo_library_outlined),
-                    label: const Text('Change profile photo'),
-                  ),
-                ],
+                    ),
+                    TextButton.icon(
+                      onPressed: _saving ? null : _choosePhoto,
+                      icon: const Icon(Icons.photo_library_outlined),
+                      label: const Text('Change profile photo'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            TextFormField(
-              controller: _name,
-              decoration: const InputDecoration(labelText: 'Full name'),
-              validator: (value) =>
-                  (value?.trim().isEmpty ?? true) ? 'Enter your name.' : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              initialValue: widget.profile.mobile,
-              readOnly: true,
-              decoration: const InputDecoration(
-                labelText: 'Registered mobile',
-                helperText:
-                    'Changing the registered mobile requires verified backend support.',
+              TextFormField(
+                controller: _name,
+                decoration: const InputDecoration(labelText: 'Full name'),
+                validator: (value) =>
+                    (value?.trim().isEmpty ?? true) ? 'Enter your name.' : null,
               ),
-            ),
-            const SizedBox(height: 12),
-            InputDecorator(
-              decoration: const InputDecoration(
-                labelText: 'Primary service category',
+              const SizedBox(height: 8),
+              TextFormField(
+                initialValue: widget.profile.mobile,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Registered mobile',
+                  helperText:
+                      'Changing the registered mobile requires verified backend support.',
+                ),
               ),
-              child: Text(widget.profile.primaryCategory),
-            ),
-            const SizedBox(height: 12),
-            InputDecorator(
-              decoration: const InputDecoration(labelText: 'Experience'),
-              child: Text('${widget.profile.yearsOfExperience} year(s)'),
-            ),
-            const SizedBox(height: 12),
-            InputDecorator(
-              decoration: const InputDecoration(labelText: 'Work mode'),
-              child: Text(widget.profile.workMode),
-            ),
-            if (widget.profile.workMode != 'Salon-based') ...[
-              const SizedBox(height: 12),
-              InputDecorator(
-                decoration: const InputDecoration(labelText: 'Travel radius'),
-                child: Text('${widget.profile.travelRadiusKm} km'),
-              ),
-            ],
-            const SizedBox(height: 12),
-            InputDecorator(
-              decoration: const InputDecoration(labelText: 'Languages'),
-              child: Text(widget.profile.languages.join(', ')),
-            ),
-            if (widget.profile.about.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              InputDecorator(
-                decoration: const InputDecoration(labelText: 'About'),
-                child: Text(widget.profile.about),
-              ),
-            ],
-            if (widget.profile.certificateDetails.isNotEmpty) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               InputDecorator(
                 decoration: const InputDecoration(
-                  labelText: 'Training details',
+                  labelText: 'Primary service category',
                 ),
-                child: Text(widget.profile.certificateDetails),
+                child: Text(widget.profile.primaryCategory),
+              ),
+              const SizedBox(height: 8),
+              InputDecorator(
+                decoration: const InputDecoration(labelText: 'Experience'),
+                child: Text('${widget.profile.yearsOfExperience} year(s)'),
+              ),
+              const SizedBox(height: 8),
+              InputDecorator(
+                decoration: const InputDecoration(labelText: 'Work mode'),
+                child: Text(widget.profile.workMode),
+              ),
+              if (widget.profile.workMode != 'Salon-based') ...[
+                const SizedBox(height: 8),
+                InputDecorator(
+                  decoration: const InputDecoration(labelText: 'Travel radius'),
+                  child: Text('${widget.profile.travelRadiusKm} km'),
+                ),
+              ],
+              const SizedBox(height: 8),
+              InputDecorator(
+                decoration: const InputDecoration(labelText: 'Languages'),
+                child: Text(widget.profile.languages.join(', ')),
+              ),
+              if (widget.profile.about.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                InputDecorator(
+                  decoration: const InputDecoration(labelText: 'About'),
+                  child: Text(widget.profile.about),
+                ),
+              ],
+              if (widget.profile.certificateDetails.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Training details',
+                  ),
+                  child: Text(widget.profile.certificateDetails),
+                ),
+              ],
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'Email'),
+                validator: (value) {
+                  final email = value?.trim() ?? '';
+                  if (email.isNotEmpty &&
+                      !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+                    return 'Enter a valid email address.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _city,
+                decoration: const InputDecoration(
+                  labelText: 'City or service area',
+                ),
+              ),
+              const SizedBox(height: 8),
+              InputDecorator(
+                decoration: const InputDecoration(labelText: 'Date of birth'),
+                child: Text(
+                  MaterialLocalizations.of(
+                    context,
+                  ).formatMediumDate(widget.profile.dateOfBirth),
+                ),
+              ),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Save changes'),
               ),
             ],
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _email,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email'),
-              validator: (value) {
-                final email = value?.trim() ?? '';
-                if (email.isNotEmpty &&
-                    !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
-                  return 'Enter a valid email address.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _city,
-              decoration: const InputDecoration(
-                labelText: 'City or service area',
-              ),
-            ),
-            const SizedBox(height: 12),
-            InputDecorator(
-              decoration: const InputDecoration(labelText: 'Date of birth'),
-              child: Text(
-                MaterialLocalizations.of(
-                  context,
-                ).formatMediumDate(widget.profile.dateOfBirth),
-              ),
-            ),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Save changes'),
-            ),
-          ],
+          ),
         ),
       ),
     ),
@@ -805,18 +825,21 @@ class _WorkerServiceSpecializationScreenState
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(14),
           children: [
             const Text(
               'Changes are saved locally and do not change booking assignments or approval.',
-              style: TextStyle(color: _muted),
+              style: TextStyle(color: _muted, fontSize: 11, height: 1.25),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             DropdownButtonFormField<String>(
               initialValue: workerServiceOptions.containsKey(_category)
                   ? _category
                   : null,
-              decoration: const InputDecoration(labelText: 'Primary category'),
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'Primary category',
+              ),
               items: workerServiceOptions.keys
                   .map(
                     (category) => DropdownMenuItem(
@@ -836,7 +859,7 @@ class _WorkerServiceSpecializationScreenState
                 });
               },
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 10),
             Text(
               'Select services (${_services.length} selected)',
               style: const TextStyle(fontWeight: FontWeight.w700, color: _deep),
@@ -846,6 +869,8 @@ class _WorkerServiceSpecializationScreenState
               CheckboxListTile(
                 value: _services.contains(service),
                 activeColor: _pink,
+                dense: true,
+                visualDensity: const VisualDensity(vertical: -2),
                 contentPadding: EdgeInsets.zero,
                 title: Text(service),
                 onChanged: (selected) => setState(() {
@@ -861,7 +886,7 @@ class _WorkerServiceSpecializationScreenState
                 'Select at least one service before saving.',
                 style: TextStyle(color: _pink),
               ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             FilledButton(
               onPressed: _saving || _services.isEmpty ? null : _save,
               child: _saving
@@ -919,9 +944,11 @@ class WorkerAccountSecurityScreen extends StatelessWidget {
       title: const Text('Account Security'),
     ),
     body: ListView(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       children: [
         const ListTile(
+          dense: true,
+          visualDensity: VisualDensity(vertical: -2),
           leading: Icon(Icons.phonelink_lock_outlined, color: _pink),
           title: Text('Sign-in method'),
           subtitle: Text(
@@ -929,16 +956,20 @@ class WorkerAccountSecurityScreen extends StatelessWidget {
           ),
         ),
         ListTile(
+          dense: true,
+          visualDensity: const VisualDensity(vertical: -2),
           leading: const Icon(Icons.phone_outlined, color: _pink),
           title: const Text('Mobile number'),
           subtitle: Text(phoneNumber.isEmpty ? 'Not available' : phoneNumber),
         ),
         const ListTile(
+          dense: true,
+          visualDensity: VisualDensity(vertical: -2),
           leading: Icon(Icons.verified_user_outlined, color: _pink),
           title: Text('Verification'),
           subtitle: Text('OTP preview is not server verification.'),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         OutlinedButton.icon(
           onPressed: onExitPreview == null ? null : () => _confirmExit(context),
           icon: const Icon(Icons.logout_rounded),
@@ -1061,16 +1092,19 @@ class _WorkerHelpSupportScreenState extends State<WorkerHelpSupportScreen> {
       child: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(14),
           children: [
             const Text(
               'FAQ: For booking changes, open the booking from My Bookings. For account details, use Personal Information. No company support service is connected in this preview.',
-              style: TextStyle(color: _muted, height: 1.4),
+              style: TextStyle(color: _muted, height: 1.25, fontSize: 11),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 10),
             DropdownButtonFormField<String>(
               initialValue: _category,
-              decoration: const InputDecoration(labelText: 'Issue category'),
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'Issue category',
+              ),
               items: const [
                 DropdownMenuItem(value: 'Booking', child: Text('Booking')),
                 DropdownMenuItem(
@@ -1081,19 +1115,21 @@ class _WorkerHelpSupportScreenState extends State<WorkerHelpSupportScreen> {
               onChanged: (value) =>
                   setState(() => _category = value ?? 'General account'),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             TextFormField(
               controller: _booking,
               decoration: const InputDecoration(
+                isDense: true,
                 labelText: 'Booking reference (optional)',
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             TextFormField(
               controller: _description,
               maxLines: 5,
               maxLength: 1000,
               decoration: const InputDecoration(
+                isDense: true,
                 labelText: 'Describe the issue',
                 alignLabelWithHint: true,
               ),
@@ -1101,7 +1137,7 @@ class _WorkerHelpSupportScreenState extends State<WorkerHelpSupportScreen> {
                   ? 'Describe your issue.'
                   : null,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             FilledButton(
               onPressed: _saving ? null : _saveDraft,
               child: _saving
@@ -1131,18 +1167,18 @@ class WorkerTermsPrivacyScreen extends StatelessWidget {
     body: const SafeArea(
       child: Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: EdgeInsets.all(18),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.description_outlined, color: _pink, size: 42),
-              SizedBox(height: 14),
+              Icon(Icons.description_outlined, color: _pink, size: 36),
+              SizedBox(height: 10),
               Text(
                 'Approved terms and privacy content is not configured.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: _deep,
-                  fontSize: 17,
+                  fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
               ),

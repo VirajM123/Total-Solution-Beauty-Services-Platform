@@ -283,15 +283,15 @@ Future<WorkerSelectedDocument?> _selectDocument() async {
         border: Border.all(color: file == null ? _line : const Color(0xFFB6909F)),
         borderRadius: BorderRadius.circular(16),
       ),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(11),
       child: file == null
           ? InkWell(
               onTap: _busy ? null : () => _pick(slot),
               borderRadius: BorderRadius.circular(12),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 5),
                 child: Column(children: [
-                  Container(width: 49, height: 49,
+                  Container(width: 40, height: 40,
                     decoration: BoxDecoration(color: const Color(0xFFF9E6EC),
                       borderRadius: BorderRadius.circular(15)),
                     child: const Icon(Icons.cloud_upload_outlined, color: _berry, size: 25)),
@@ -362,7 +362,7 @@ Future<WorkerSelectedDocument?> _selectDocument() async {
             child: Column(children: [
               Expanded(child: ListView(
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                 children: [
                   const Row(children: [
                     Expanded(child: Text('STEP 3 OF 4',
@@ -375,13 +375,13 @@ Future<WorkerSelectedDocument?> _selectDocument() async {
                     child: const LinearProgressIndicator(
                       value: .75, minHeight: 5,
                       backgroundColor: Color(0xFFF3DFE5), color: _berry)),
-                  const SizedBox(height: 23),
+                  const SizedBox(height: 13),
                   const Text('Your documents, securely',
                     style: TextStyle(fontFamily: 'Georgia', color: _plum,
-                      fontWeight: FontWeight.w700, fontSize: 27, height: 1.2)),
+                      fontWeight: FontWeight.w700, fontSize: 22, height: 1.15)),
                   const SizedBox(height: 7),
                   const Text('Share your identity proof for manual review by the Hi Beauty team.',
-                    style: TextStyle(color: _muted, fontSize: 13.5, height: 1.4)),
+                    style: TextStyle(color: _muted, fontSize: 12, height: 1.3)),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(13),
@@ -468,7 +468,7 @@ Future<WorkerSelectedDocument?> _selectDocument() async {
                 ],
               )),
               Container(
-                padding: const EdgeInsets.fromLTRB(22, 12, 22, 14),
+                padding: const EdgeInsets.fromLTRB(16, 7, 16, 8),
                 decoration: const BoxDecoration(color: _ivory,
                   border: Border(top: BorderSide(color: _line))),
                 child: Row(children: [
@@ -477,12 +477,12 @@ Future<WorkerSelectedDocument?> _selectDocument() async {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _plum,
                       side: const BorderSide(color: _line),
-                      minimumSize: const Size(90, 50),
+                      minimumSize: const Size(82, 44),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
                     child: const Text('Back'),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(child: SizedBox(height: 52,
+                  Expanded(child: SizedBox(height: 46,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(colors: [Color(0xFFD41361), Color(0xFF750034)]),
@@ -493,6 +493,7 @@ Future<WorkerSelectedDocument?> _selectDocument() async {
                           foregroundColor: Colors.white,
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26))),
                         child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                           Text('Continue', style: TextStyle(fontWeight: FontWeight.w700)),

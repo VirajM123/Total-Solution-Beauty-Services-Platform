@@ -19,6 +19,7 @@ class _WorkerRegistrationMobileOtpScreenState
   final _focus = FocusNode();
   String? _error;
   bool _busy = false;
+  String _lastOtpInput = '';
 
   @override
   void dispose() {
@@ -58,28 +59,42 @@ class _WorkerRegistrationMobileOtpScreenState
       appBar: AppBar(
         backgroundColor: ivory,
         foregroundColor: plum,
-        title: const Text('Mobile verification',
-            style: TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Mobile verification',
+          style: TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.bold),
+        ),
       ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(22, 22, 22, 32),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.phonelink_lock_rounded, color: berry, size: 66),
+                  const Icon(
+                    Icons.phonelink_lock_rounded,
+                    color: berry,
+                    size: 48,
+                  ),
                   const SizedBox(height: 18),
-                  const Text('Verify your mobile',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontFamily: 'Georgia', fontSize: 28,
-                          fontWeight: FontWeight.bold, color: plum)),
+                  const Text(
+                    'Verify your mobile',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Georgia',
+                      fontSize: 23,
+                      fontWeight: FontWeight.bold,
+                      color: plum,
+                    ),
+                  ),
                   const SizedBox(height: 10),
-                  Text('Development preview for +91 ${widget.mobile}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 14, color: muted)),
+                  Text(
+                    'Development preview for +91 ${widget.mobile}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12, color: muted),
+                  ),
                   const SizedBox(height: 24),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -104,8 +119,10 @@ class _WorkerRegistrationMobileOtpScreenState
                     keyboardType: TextInputType.number,
                     textInputAction: TextInputAction.done,
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 26,
-                      letterSpacing: 14, color: plum,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 26,
+                      letterSpacing: 14,
+                      color: plum,
                     ),
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
@@ -113,11 +130,14 @@ class _WorkerRegistrationMobileOtpScreenState
                     ],
                     decoration: InputDecoration(
                       hintText: '••••••',
-                      hintStyle: const TextStyle(color: Color(0xFFBFA5B1), letterSpacing: 14),
+                      hintStyle: const TextStyle(
+                        color: Color(0xFFBFA5B1),
+                        letterSpacing: 14,
+                      ),
                       errorText: _error,
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 19),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: const BorderSide(color: Color(0xFFE8C9CE)),
@@ -128,13 +148,20 @@ class _WorkerRegistrationMobileOtpScreenState
                       ),
                     ),
                     onChanged: (_) {
+                      final value = _controller.text;
+                      if (value.length > _lastOtpInput.length ||
+                          (value.length == _lastOtpInput.length &&
+                              value != _lastOtpInput)) {
+                        HapticFeedback.lightImpact();
+                      }
+                      _lastOtpInput = value;
                       if (_error != null) setState(() => _error = null);
                     },
                     onSubmitted: (_) => _verify(),
                   ),
                   const SizedBox(height: 24),
                   SizedBox(
-                    height: 52,
+                    height: 46,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
@@ -150,17 +177,29 @@ class _WorkerRegistrationMobileOtpScreenState
                           foregroundColor: Colors.white,
                         ),
                         child: _busy
-                            ? const SizedBox.square(dimension: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Text('Verify demo code',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Verify demo code',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text('Real SMS verification will be implemented later.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: muted, fontSize: 12)),
+                  const Text(
+                    'Real SMS verification will be implemented later.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: muted, fontSize: 12),
+                  ),
                 ],
               ),
             ),

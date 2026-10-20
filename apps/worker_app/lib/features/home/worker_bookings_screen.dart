@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'worker_booking_data.dart';
 import 'worker_demo_booking_store.dart';
 import 'worker_booking_details_screen.dart';
@@ -231,7 +232,7 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                   child: Column(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(17, 10, 17, 4),
+                        padding: const EdgeInsets.fromLTRB(14, 6, 14, 2),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -243,13 +244,17 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                               icon: Icons.calendar_month_outlined,
                               photo: true,
                             ),
-                            const SizedBox(height: 15),
+                            const SizedBox(height: 8),
                             if (widget.demoMode) ...[
-                              const Text(
-                                'DEVELOPMENT PREVIEW · Sample bookings · No live dispatch or payments',
-                                style: TextStyle(color: _muted, fontSize: 10),
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 6),
+                                child: Text(
+                                  'DEVELOPMENT PREVIEW · Sample bookings · No live dispatch or payments',
+                                  style: TextStyle(color: _muted, fontSize: 9),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                              const SizedBox(height: 12),
                             ],
                             TextField(
                               controller: _search,
@@ -273,20 +278,21 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                                       ),
                                 filled: true,
                                 fillColor: Colors.white,
+                                isDense: true,
                                 contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 12,
+                                  vertical: 9,
                                 ),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(15),
+                                  borderRadius: BorderRadius.circular(13),
                                   borderSide: const BorderSide(color: _border),
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(15),
+                                  borderRadius: BorderRadius.circular(13),
                                   borderSide: const BorderSide(color: _border),
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 11),
+                            const SizedBox(height: 6),
                             SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               child: Row(
@@ -294,13 +300,17 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                                   for (final name in _filters) ...[
                                     ChoiceChip(
                                       label: Text(name),
+                                      visualDensity: const VisualDensity(
+                                        horizontal: -3,
+                                        vertical: -3,
+                                      ),
                                       selected: _filter == name,
                                       selectedColor: const Color(0xFFFFDAE8),
                                       backgroundColor: Colors.white,
                                       labelStyle: TextStyle(
                                         color: _filter == name ? _pink : _deep,
                                         fontWeight: FontWeight.w700,
-                                        fontSize: 12,
+                                        fontSize: 10,
                                       ),
                                       side: BorderSide(
                                         color: _filter == name
@@ -308,49 +318,61 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                                             : _border,
                                       ),
                                       showCheckmark: false,
-                                      onSelected: (_) =>
-                                          setState(() => _filter = name),
+                                      onSelected: (_) {
+                                        HapticFeedback.lightImpact();
+                                        setState(() => _filter = name);
+                                      },
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 5),
                                   ],
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 7),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  '${visible.length} booking${visible.length == 1 ? '' : 's'}',
-                                  style: const TextStyle(
-                                    color: _deep,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 16,
+                                Expanded(
+                                  child: Text(
+                                    '${visible.length} booking${visible.length == 1 ? '' : 's'}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: _deep,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    const Text(
-                                      'Customer payable',
-                                      style: TextStyle(
-                                        color: _muted,
-                                        fontSize: 10,
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerRight,
+                                    child: Text.rich(
+                                      TextSpan(
+                                        style: const TextStyle(
+                                          color: _muted,
+                                          fontSize: 10,
+                                        ),
+                                        children: [
+                                          const TextSpan(text: 'Payable  '),
+                                          TextSpan(
+                                            text: formatCustomerRupees(total),
+                                            style: const TextStyle(
+                                              color: _deep,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    Text(
-                                      formatCustomerRupees(total),
-                                      style: const TextStyle(
-                                        color: _deep,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 5),
                           ],
                         ),
                       ),
@@ -403,14 +425,14 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                                 keyboardDismissBehavior:
                                     ScrollViewKeyboardDismissBehavior.onDrag,
                                 padding: const EdgeInsets.fromLTRB(
-                                  17,
-                                  4,
-                                  17,
-                                  20,
+                                  14,
+                                  3,
+                                  14,
+                                  16,
                                 ),
                                 itemCount: visible.length,
                                 separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 11),
+                                    const SizedBox(height: 7),
                                 itemBuilder: (context, index) {
                                   final o = visible[index];
                                   final statusColor = _statusColor(o.status);
@@ -422,17 +444,17 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                                           WorkerServiceStage.inProgress;
                                   return Material(
                                     color: Colors.white,
-                                    elevation: 3,
-                                    shadowColor: const Color(0x18C74776),
+                                    elevation: 1,
+                                    shadowColor: const Color(0x12C74776),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(18),
+                                      borderRadius: BorderRadius.circular(15),
                                       side: const BorderSide(color: _border),
                                     ),
                                     clipBehavior: Clip.antiAlias,
                                     child: InkWell(
                                       onTap: () => _open(o),
                                       child: Padding(
-                                        padding: const EdgeInsets.all(15),
+                                        padding: const EdgeInsets.all(11),
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -463,8 +485,8 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                                                   ),
                                                   padding:
                                                       const EdgeInsets.symmetric(
-                                                        horizontal: 10,
-                                                        vertical: 5,
+                                                        horizontal: 8,
+                                                        vertical: 3,
                                                       ),
                                                   child: Text(
                                                     o.status,
@@ -478,30 +500,30 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 12),
+                                            const SizedBox(height: 7),
                                             Row(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
                                                 Container(
-                                                  width: 54,
-                                                  height: 58,
+                                                  width: 42,
+                                                  height: 44,
                                                   decoration: BoxDecoration(
                                                     color: const Color(
                                                       0xFFFFE4EE,
                                                     ),
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                          13,
+                                                          11,
                                                         ),
                                                   ),
                                                   child: const Icon(
                                                     Icons.spa_rounded,
                                                     color: _pink,
-                                                    size: 27,
+                                                    size: 22,
                                                   ),
                                                 ),
-                                                const SizedBox(width: 12),
+                                                const SizedBox(width: 10),
                                                 Expanded(
                                                   child: Column(
                                                     crossAxisAlignment:
@@ -510,44 +532,51 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                                                     children: [
                                                       Text(
                                                         o.service,
-                                                        maxLines: 2,
+                                                        maxLines: 1,
                                                         overflow: TextOverflow
                                                             .ellipsis,
                                                         style: const TextStyle(
                                                           color: _deep,
                                                           fontWeight:
                                                               FontWeight.w800,
-                                                          fontSize: 15,
+                                                          fontSize: 14,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 1),
+                                                      Text(
+                                                        o.customer,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: const TextStyle(
+                                                          color: _muted,
+                                                          fontSize: 11,
                                                         ),
                                                       ),
                                                       const SizedBox(height: 3),
-                                                      Text(
-                                                        o.customer,
-                                                        style: const TextStyle(
-                                                          color: _muted,
-                                                          fontSize: 12,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 7),
                                                       Row(
                                                         children: [
                                                           const Icon(
                                                             Icons.access_time,
-                                                            size: 14,
+                                                            size: 12,
                                                             color: _pink,
                                                           ),
                                                           const SizedBox(
-                                                            width: 4,
+                                                            width: 3,
                                                           ),
                                                           Expanded(
                                                             child: Text(
                                                               '${o.time}  ·  ${o.duration}',
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
                                                               style:
                                                                   const TextStyle(
                                                                     color:
                                                                         _muted,
                                                                     fontSize:
-                                                                        11,
+                                                                        10,
                                                                   ),
                                                             ),
                                                           ),
@@ -558,15 +587,15 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 11),
+                                            const SizedBox(height: 6),
                                             Row(
                                               children: [
                                                 const Icon(
                                                   Icons.location_on_outlined,
-                                                  size: 15,
+                                                  size: 13,
                                                   color: _pink,
                                                 ),
-                                                const SizedBox(width: 4),
+                                                const SizedBox(width: 3),
                                                 Expanded(
                                                   child: Text(
                                                     o.location,
@@ -575,46 +604,39 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                                                         TextOverflow.ellipsis,
                                                     style: const TextStyle(
                                                       color: _muted,
-                                                      fontSize: 11,
+                                                      fontSize: 10,
                                                     ),
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 12),
+                                            const SizedBox(height: 7),
                                             const Divider(
                                               height: 1,
                                               color: _border,
                                             ),
-                                            const SizedBox(height: 10),
+                                            const SizedBox(height: 7),
                                             Row(
                                               children: [
+                                                const Text(
+                                                  'Payable',
+                                                  style: TextStyle(
+                                                    color: _muted,
+                                                    fontSize: 10,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
                                                 Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      const Text(
-                                                        'Customer payable',
-                                                        style: TextStyle(
-                                                          color: _muted,
-                                                          fontSize: 10,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 2),
-                                                      Text(
-                                                        formatCustomerRupees(
-                                                          o.customerPayable,
-                                                        ),
-                                                        style: const TextStyle(
-                                                          color: _deep,
-                                                          fontWeight:
-                                                              FontWeight.w800,
-                                                          fontSize: 17,
-                                                        ),
-                                                      ),
-                                                    ],
+                                                  child: Text(
+                                                    formatCustomerRupees(
+                                                      o.customerPayable,
+                                                    ),
+                                                    style: const TextStyle(
+                                                      color: _deep,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      fontSize: 15,
+                                                    ),
                                                   ),
                                                 ),
                                                 Text(

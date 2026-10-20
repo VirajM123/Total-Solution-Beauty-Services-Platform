@@ -224,7 +224,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                padding: const EdgeInsets.fromLTRB(14, 4, 14, 16),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     const WorkerPageBanner(
@@ -234,13 +234,13 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                       icon: Icons.currency_rupee_rounded,
                       photo: true,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
                     _adminNotice(),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 8),
                     _summaryCard(isConfigured: isConfigured, loaded: loaded),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 8),
                     _filters(),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     Row(
                       children: [
                         const Expanded(
@@ -248,7 +248,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                             'Payout History',
                             style: TextStyle(
                               color: _deep,
-                              fontSize: 19,
+                              fontSize: 16,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -257,11 +257,12 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                           IconButton(
                             tooltip: 'Refresh payouts',
                             onPressed: _isLoading ? null : _refresh,
+                            visualDensity: VisualDensity.compact,
                             icon: const Icon(Icons.refresh, color: _pink),
                           ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     if (_isLoading)
                       const _StateCard(
                         icon: Icons.hourglass_top_rounded,
@@ -307,7 +308,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                     else
                       for (final record in filteredRecords) ...[
                         _payoutCard(record),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 7),
                       ],
                   ]),
                 ),
@@ -320,7 +321,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
         top: false,
         child: NavigationBarTheme(
           data: NavigationBarThemeData(
-            height: 64,
+            height: 60,
             backgroundColor: Colors.white,
             indicatorColor: const Color(0xFFFFE2EC),
             labelTextStyle: WidgetStateProperty.resolveWith(
@@ -377,16 +378,16 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
   }
 
   Widget _adminNotice() => Container(
-    padding: const EdgeInsets.all(15),
+    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
     decoration: BoxDecoration(
       color: const Color(0xFFFFEDF3),
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(14),
     ),
     child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const _PayoutIcon(icon: Icons.account_balance_wallet_outlined),
-        const SizedBox(width: 13),
+        const Icon(Icons.info_outline_rounded, color: _pink, size: 19),
+        const SizedBox(width: 8),
         const Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -396,17 +397,21 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                 style: TextStyle(
                   color: _deep,
                   fontWeight: FontWeight.w800,
-                  fontSize: 14,
+                  fontSize: 11,
                 ),
               ),
-              SizedBox(height: 4),
               Text(
-                'This screen shows your payout records for reference. '
-                'For payment-related questions, please contact Admin.',
-                style: TextStyle(color: _muted, height: 1.35, fontSize: 13),
+                'For payment questions, contact Admin.',
+                style: TextStyle(color: _muted, height: 1.2, fontSize: 10),
               ),
             ],
           ),
+        ),
+        IconButton(
+          tooltip: 'Payout help',
+          visualDensity: VisualDensity.compact,
+          onPressed: _showHelp,
+          icon: const Icon(Icons.chevron_right_rounded, color: _pink, size: 20),
         ),
       ],
     ),
@@ -418,14 +423,14 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
       return _awaitingPayoutSummary();
     }
     return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: WorkerDesign.surface(radius: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      decoration: WorkerDesign.surface(radius: 16),
       child: Column(
         children: [
           Row(
             children: [
-              const _PayoutIcon(icon: Icons.payments_outlined),
-              const SizedBox(width: 12),
+              const Icon(Icons.payments_outlined, color: _pink, size: 18),
+              const SizedBox(width: 8),
               const Expanded(
                 child: Text(
                   'Total Payouts (All Time)',
@@ -433,7 +438,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: _deep,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -445,7 +450,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 7),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -460,7 +465,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: _deep,
-                    fontSize: 25,
+                    fontSize: 22,
                     height: 1.05,
                     fontWeight: FontWeight.w900,
                   ),
@@ -504,20 +509,20 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
   }
 
   Widget _awaitingPayoutSummary() => Container(
-    padding: const EdgeInsets.all(17),
+    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
     decoration: BoxDecoration(
       gradient: const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [Color(0xFFFFEAF2), Colors.white, Color(0xFFFFF6F9)],
       ),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       border: Border.all(color: const Color(0xFFF5D5E1)),
       boxShadow: const [
         BoxShadow(
           color: Color(0x0DF50070),
-          blurRadius: 16,
-          offset: Offset(0, 6),
+          blurRadius: 12,
+          offset: Offset(0, 4),
         ),
       ],
     ),
@@ -527,8 +532,8 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
         Row(
           children: [
             Container(
-              width: 50,
-              height: 50,
+              width: 38,
+              height: 38,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
@@ -538,10 +543,10 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
               child: const Icon(
                 Icons.account_balance_wallet_rounded,
                 color: Colors.white,
-                size: 24,
+                size: 19,
               ),
             ),
-            const SizedBox(width: 13),
+            const SizedBox(width: 9),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -560,7 +565,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                     'Waiting for payout records',
                     style: TextStyle(
                       color: _deep,
-                      fontSize: 16,
+                      fontSize: 13,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -570,27 +575,27 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
             const Icon(Icons.hourglass_top_rounded, color: _pink, size: 21),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 8),
         const Text(
           'Your paid total and latest payout will appear here when Pinkora Admin shares payout data.',
-          style: TextStyle(color: _muted, height: 1.4, fontSize: 12),
+          style: TextStyle(color: _muted, height: 1.25, fontSize: 10),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 7),
         Container(
-          padding: const EdgeInsets.only(top: 12),
+          padding: const EdgeInsets.only(top: 5),
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: _border)),
           ),
           child: Row(
             children: [
-              const Icon(Icons.shield_outlined, color: _pink, size: 17),
-              const SizedBox(width: 7),
+              const Icon(Icons.shield_outlined, color: _pink, size: 15),
+              const SizedBox(width: 5),
               const Expanded(
                 child: Text(
                   'Verified payout amounts only',
                   style: TextStyle(
                     color: _deep,
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -600,12 +605,12 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                 style: TextButton.styleFrom(
                   foregroundColor: _pink,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
-                  minimumSize: const Size(0, 34),
+                  minimumSize: const Size(0, 30),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: const Text(
                   'How it works',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -621,17 +626,17 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
     required String message,
   }) => Container(
     width: double.infinity,
-    padding: const EdgeInsets.fromLTRB(20, 23, 20, 20),
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
     decoration: BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       border: Border.all(color: _border),
     ),
     child: Column(
       children: [
         Container(
-          width: 68,
-          height: 68,
+          width: 48,
+          height: 48,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
@@ -641,10 +646,10 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
           child: Icon(
             connected ? Icons.receipt_long_rounded : Icons.wallet_rounded,
             color: _pink,
-            size: 31,
+            size: 23,
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 9),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
@@ -661,24 +666,24 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 7),
         Text(
           title,
           textAlign: TextAlign.center,
           style: const TextStyle(
             color: _deep,
-            fontSize: 17,
+            fontSize: 15,
             fontWeight: FontWeight.w800,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Text(
           message,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: _muted, height: 1.45, fontSize: 12),
+          style: const TextStyle(color: _muted, height: 1.3, fontSize: 11),
         ),
         if (!connected) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: _showHelp,
             icon: const Icon(Icons.info_outline, size: 17),
@@ -687,7 +692,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
               foregroundColor: _pink,
               side: const BorderSide(color: _border),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
@@ -717,25 +722,25 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
 
   Widget _payoutCard(WorkerPayoutRecord record) => Material(
     color: Colors.white,
-    borderRadius: BorderRadius.circular(17),
+    borderRadius: BorderRadius.circular(15),
     child: InkWell(
-      borderRadius: BorderRadius.circular(17),
+      borderRadius: BorderRadius.circular(15),
       onTap: () => _showDetails(record),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 102),
-        padding: const EdgeInsets.all(12),
+        constraints: const BoxConstraints(minHeight: 84),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(17),
+          borderRadius: BorderRadius.circular(15),
           border: Border.all(color: _border),
         ),
         child: Row(
           children: [
             Container(
-              width: 64,
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              width: 54,
+              padding: const EdgeInsets.symmetric(vertical: 6),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFEDF3),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Column(
                 children: [
@@ -743,19 +748,19 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                     '${record.date.toLocal().day}',
                     style: const TextStyle(
                       color: _deep,
-                      fontSize: 19,
+                      fontSize: 17,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   Text(
                     _monthYear(record.date.toLocal()),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: _deep, fontSize: 11),
+                    style: const TextStyle(color: _deep, fontSize: 10),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -767,16 +772,16 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: _deep,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     '${record.serviceCount} ${record.serviceCount == 1 ? 'service' : 'services'}',
-                    style: const TextStyle(color: _muted, fontSize: 12),
+                    style: const TextStyle(color: _muted, fontSize: 11),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   Text(
                     'Payout ID: ${record.payoutId}',
                     maxLines: 1,
@@ -788,29 +793,29 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
             ),
             const SizedBox(width: 8),
             SizedBox(
-              width: 72,
+              width: 68,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   _StatusBadge(status: record.status),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 5),
                   const Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Flexible(
                         child: Text(
-                          'View details',
+                          'Details',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: _pink,
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      Icon(Icons.chevron_right, size: 18, color: _pink),
+                      Icon(Icons.chevron_right, size: 17, color: _pink),
                     ],
                   ),
                 ],
@@ -840,22 +845,6 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
         ),
       ],
     ),
-  );
-}
-
-class _PayoutIcon extends StatelessWidget {
-  const _PayoutIcon({required this.icon});
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 52,
-    height: 52,
-    decoration: const BoxDecoration(
-      color: Color(0xFFFFDCE8),
-      shape: BoxShape.circle,
-    ),
-    child: Icon(icon, color: _pink, size: 25),
   );
 }
 
@@ -899,7 +888,7 @@ class _FilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    height: 42,
+    height: 36,
     child: OutlinedButton(
       onPressed: onTap,
       style: OutlinedButton.styleFrom(
@@ -907,8 +896,8 @@ class _FilterButton extends StatelessWidget {
         backgroundColor: selected ? _pink : Colors.white,
         foregroundColor: selected ? Colors.white : _deep,
         side: BorderSide(color: selected ? _pink : _border),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
       ),
       child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
     ),
