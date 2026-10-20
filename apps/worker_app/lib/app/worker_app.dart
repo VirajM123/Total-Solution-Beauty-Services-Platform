@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -15,16 +14,12 @@ class WorkerApp extends StatelessWidget {
 
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFB20A50),
-        ),
-        scaffoldBackgroundColor:
-            const Color(0xFFFFF9F5),
+        fontFamily: 'Montserrat',
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFB20A50)),
+        scaffoldBackgroundColor: const Color(0xFFFFF9F5),
       ),
 
-      home: const WorkerSplashScreen(
-        demoEnabled: kDebugMode,
-      ),
+      home: const WorkerSplashScreen(demoEnabled: kDebugMode),
     );
   }
 }

@@ -26,6 +26,7 @@ class CheckoutPreview {
     required this.subtotal,
     required this.discount,
     required this.convenienceFee,
+    this.tip = 0,
     required this.total,
     required this.paymentMethod,
   });
@@ -39,6 +40,7 @@ class CheckoutPreview {
   final int subtotal;
   final int discount;
   final int convenienceFee;
+  final int tip;
   final int total;
   final CheckoutPaymentMethod paymentMethod;
 

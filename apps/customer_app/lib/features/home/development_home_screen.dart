@@ -825,6 +825,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   String _selectedPeriod = 'Morning';
   String _bookingPreference = 'Book Instantly';
   String _selectedAddressId = 'home';
+  int _tipAmount = 0;
   CheckoutPaymentMethod _paymentMethod = CheckoutPaymentMethod.upi;
   CheckoutPreview? _checkoutPreview;
   Timer? _confirmationTimer;
@@ -937,6 +938,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
 
   int get _cartTotal => _cartSubtotal - _cartDiscount + 50;
 
+  int get _checkoutTotal => _cartTotal + _tipAmount;
+
   void _openAddServices() {
     setState(() {
       _checkoutStep = 0;
@@ -977,6 +980,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       _bookingTime = '10:00 AM';
       _selectedPeriod = 'Morning';
       _bookingPreference = 'Book Instantly';
+      _tipAmount = 0;
       _paymentMethod = CheckoutPaymentMethod.upi;
     });
   }
@@ -1033,7 +1037,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       subtotal: _cartSubtotal,
       discount: _cartDiscount,
       convenienceFee: 50,
-      total: _cartTotal,
+      tip: _tipAmount,
+      total: _checkoutTotal,
       paymentMethod: _paymentMethod,
     );
     setState(() {
@@ -4612,6 +4617,10 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
               const SizedBox(height: 7),
             ],
             _bookingTotalLine('Convenience Fee', 50),
+            if (_tipAmount > 0) ...[
+              const SizedBox(height: 7),
+              _bookingTotalLine('Tip', _tipAmount),
+            ],
             const Divider(height: 20, color: _bookingLine),
             Row(
               children: [
@@ -4626,7 +4635,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                   ),
                 ),
                 Text(
-                  '₹${_formatServicePrice(_cartTotal)}',
+                  '₹${_formatServicePrice(_checkoutTotal)}',
                   style: const TextStyle(
                     color: _bookingBerry,
                     fontSize: 17,
@@ -4739,6 +4748,55 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     ),
   );
 
+  Future<void> _enterCustomTip() async {
+    var tipText = _tipAmount > 0 ? '$_tipAmount' : '';
+    final formKey = GlobalKey<FormState>();
+    final amount = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Enter tip amount'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            key: const ValueKey('checkout-custom-tip-input'),
+            initialValue: tipText,
+            onChanged: (value) => tipText = value,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Tip amount',
+              prefixText: '₹ ',
+              helperText: 'Enter a whole rupee amount',
+            ),
+            validator: (value) {
+              final parsed = int.tryParse(value?.trim() ?? '');
+              return parsed == null || parsed < 0
+                  ? 'Enter a valid amount of 0 or more'
+                  : null;
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(dialogContext, int.parse(tipText.trim()));
+              }
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+    if (mounted && amount != null) {
+      setState(() => _tipAmount = amount);
+    }
+  }
+
   Widget _paymentMethodStep() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -4770,6 +4828,61 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       const SizedBox(height: 18),
       Container(
         width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _bookingLine),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Add a tip (optional)',
+              style: TextStyle(
+                color: _ink,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'A little extra appreciation for your professional.',
+              style: TextStyle(color: _muted, fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final amount in const [0, 20, 30, 50])
+                  ChoiceChip(
+                    key: ValueKey('checkout-tip-$amount'),
+                    label: Text(amount == 0 ? 'No tip' : '₹$amount'),
+                    selected: _tipAmount == amount,
+                    selectedColor: _bookingBlush,
+                    onSelected: (selected) =>
+                        setState(() => _tipAmount = selected ? amount : 0),
+                  ),
+                ChoiceChip(
+                  key: const ValueKey('checkout-tip-custom'),
+                  label: const Text('Custom amount'),
+                  selected: !const [0, 20, 30, 50].contains(_tipAmount),
+                  selectedColor: _bookingBlush,
+                  onSelected: (_) => _enterCustomTip(),
+                ),
+              ],
+            ),
+            if (_tipAmount > 0) ...[
+              const SizedBox(height: 10),
+              _bookingTotalLine('Tip', _tipAmount),
+            ],
+          ],
+        ),
+      ),
+      const SizedBox(height: 18),
+      Container(
+        width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
         decoration: BoxDecoration(
           color: _bookingBlush,
@@ -4777,7 +4890,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
         ),
         child: _paymentDetailRow(
           'Payable Amount',
-          '₹${_formatServicePrice(_cartTotal)}',
+          '₹${_formatServicePrice(_checkoutTotal)}',
           emphasize: true,
         ),
       ),
@@ -5093,6 +5206,10 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                 preview.addressDetails,
                 style: const TextStyle(color: _muted, fontSize: 11),
               ),
+              if (preview.tip > 0) ...[
+                const SizedBox(height: 10),
+                _bookingTotalLine('Tip', preview.tip),
+              ],
               const Divider(height: 24, color: _bookingLine),
               _paymentDetailRow(
                 preview.paymentMethod == CheckoutPaymentMethod.cashOnService

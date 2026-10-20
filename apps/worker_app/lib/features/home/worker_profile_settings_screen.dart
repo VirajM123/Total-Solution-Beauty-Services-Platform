@@ -8,12 +8,13 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../app/slide_page_route.dart';
 import 'worker_profile_data.dart';
+import '../widgets/worker_design.dart';
 
-const _pink = Color(0xFFE91368);
-const _deep = Color(0xFF460621);
-const _muted = Color(0xFF735866);
-const _border = Color(0xFFF0D6DF);
-const _background = Color(0xFFFFF9F7);
+const _pink = WorkerDesign.pink;
+const _deep = WorkerDesign.deep;
+const _muted = WorkerDesign.muted;
+const _border = WorkerDesign.border;
+const _background = WorkerDesign.cream;
 
 class WorkerProfileSettingsScreen extends StatefulWidget {
   const WorkerProfileSettingsScreen({
@@ -181,6 +182,8 @@ class _WorkerProfileSettingsScreenState
       ),
       Material(
         color: Colors.white,
+        elevation: 3,
+        shadowColor: const Color(0x18C74776),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: _border),
@@ -270,6 +273,13 @@ class _WorkerProfileSettingsScreenState
             : ListView(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 25),
                 children: [
+                  const WorkerPageBanner(
+                    eyebrow: 'Your space',
+                    title: 'My Profile',
+                    subtitle: 'Keep your details and preferences in one place.',
+                    icon: Icons.person_outline_rounded,
+                  ),
+                  const SizedBox(height: 16),
                   if (widget.demoMode) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -297,11 +307,7 @@ class _WorkerProfileSettingsScreenState
                   ],
                   Container(
                     padding: const EdgeInsets.all(17),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(17),
-                      border: Border.all(color: _border),
-                    ),
+                    decoration: WorkerDesign.surface(radius: 20),
                     child: Row(
                       children: [
                         CircleAvatar(

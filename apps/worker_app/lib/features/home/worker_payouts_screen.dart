@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import 'worker_payout_data.dart';
+import '../widgets/worker_design.dart';
 
-const _pink = Color(0xFFF50070);
-const _deep = Color(0xFF5D1237);
-const _muted = Color(0xFF667085);
-const _background = Color(0xFFFFF8FA);
-const _border = Color(0xFFF3DCE5);
+const _pink = WorkerDesign.pink;
+const _deep = WorkerDesign.deep;
+const _muted = WorkerDesign.muted;
+const _background = WorkerDesign.cream;
+const _border = WorkerDesign.border;
 
 enum _PayoutFilter { all, paid, pending, adjusted }
 
@@ -226,6 +227,14 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
+                    const WorkerPageBanner(
+                      eyebrow: 'Your earnings',
+                      title: 'Payouts',
+                      subtitle: 'A clear view of payments from Pinkora Admin.',
+                      icon: Icons.currency_rupee_rounded,
+                      photo: true,
+                    ),
+                    const SizedBox(height: 16),
                     _adminNotice(),
                     const SizedBox(height: 14),
                     _summaryCard(isConfigured: isConfigured, loaded: loaded),
@@ -410,11 +419,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
     }
     return Container(
       padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _border),
-      ),
+      decoration: WorkerDesign.surface(radius: 18),
       child: Column(
         children: [
           Row(

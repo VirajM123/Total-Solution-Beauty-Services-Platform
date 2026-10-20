@@ -604,6 +604,26 @@ void main() {
     expect(find.text('UPI (Recommended)'), findsOneWidget);
     expect(find.text('Credit / Debit Card'), findsOneWidget);
     expect(find.text('Cash on Service'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('checkout-tip-custom')));
+    await tester.tap(find.byKey(const ValueKey('checkout-tip-custom')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('checkout-custom-tip-input')),
+      '-1',
+    );
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter a valid amount of 0 or more'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('checkout-custom-tip-input')),
+      '125',
+    );
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+    expect(find.text('₹2,575'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('checkout-tip-0')));
+    await tester.tap(find.byKey(const ValueKey('checkout-tip-0')));
+    await tester.pumpAndSettle();
     expect(find.text('₹2,450'), findsOneWidget);
     expect(
       find.textContaining('Online payment is not connected'),

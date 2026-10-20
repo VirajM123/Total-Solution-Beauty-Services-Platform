@@ -45,8 +45,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Hi Beauty'), findsOneWidget);
-        expect(find.text('Incoming Bookings'), findsOneWidget);
+        expect(find.text('Pinkora'), findsOneWidget);
+        expect(find.text('Incoming\nBookings'), findsOneWidget);
         expect(find.text("Today's Customer Payable"), findsOneWidget);
         expect(find.text('₹1,200'), findsNWidgets(2));
         expect(find.text('A Customer'), findsNWidgets(2));
@@ -303,13 +303,13 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Incoming Bookings'));
+    await tester.tap(find.text('Incoming\nBookings'));
     await tester.pumpAndSettle();
     expect(find.text('My Bookings'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('My Schedule / Leave'));
+    await tester.tap(find.text('My Schedule'));
     await tester.pumpAndSettle();
     expect(
       find.descendant(
@@ -375,7 +375,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('My Schedule / Leave'));
+    await tester.tap(find.text('My Schedule'));
     await tester.pumpAndSettle();
 
     expect(find.text('Shared Service'), findsOneWidget);

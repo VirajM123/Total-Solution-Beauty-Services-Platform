@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 
 import '../home/worker_booking_data.dart';
 import '../home/worker_demo_booking_store.dart';
+import '../widgets/worker_design.dart';
 import 'worker_leave_repository.dart';
 
-const _pink = Color(0xFFE91368);
-const _deep = Color(0xFF460621);
-const _muted = Color(0xFF735866);
-const _cream = Color(0xFFFFF9F7);
-const _border = Color(0xFFF0D6DF);
+const _pink = WorkerDesign.pink;
+const _deep = WorkerDesign.deep;
+const _muted = WorkerDesign.muted;
+const _cream = WorkerDesign.cream;
+const _border = WorkerDesign.border;
 
 /// Appointment with a calendar day.
 @immutable
@@ -135,9 +136,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
             WorkerDemoBookingStore.repository.bookings,
           )
         : WorkerDemoBookingStore.bookings;
-    final dated = source
-        .where((o) => o.appointmentDate != null)
-        .toList();
+    final dated = source.where((o) => o.appointmentDate != null).toList();
     if (dated.isNotEmpty) {
       return [
         for (final order in dated)
@@ -220,11 +219,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
       Container(
         width: double.infinity,
         padding: padding,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: _border),
-          borderRadius: BorderRadius.circular(17),
-        ),
+        decoration: WorkerDesign.surface(radius: 17),
         child: child,
       );
 
@@ -683,6 +678,15 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
           constraints: const BoxConstraints(maxWidth: 520),
           child: Column(
             children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(17, 4, 17, 14),
+                child: WorkerPageBanner(
+                  eyebrow: 'Plan your week',
+                  title: 'My Schedule',
+                  subtitle: 'Appointments and time away, together.',
+                  icon: Icons.event_available_outlined,
+                ),
+              ),
               if (widget.demoMode)
                 const Padding(
                   padding: EdgeInsets.fromLTRB(17, 3, 17, 9),
