@@ -1,3 +1,5 @@
+import '../../integration/worker_api.dart';
+import '../../integration/worker_environment.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -48,8 +50,12 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
       setState(() => _error = 'Enter a valid 10-digit Indian mobile number.');
       return;
     }
-    if (!widget.demoEnabled) {
-      setState(() => _error = 'Worker sign-in is not yet connected to the server.');
+    if (!widget.demoEnabled || !WorkerEnvironment.developmentPreview) {
+      try {
+        await const PendingWorkerApi().requestOtp(phone);
+      } on WorkerIntegrationPending catch (error) {
+        if (mounted) setState(() => _error = error.toString());
+      }
       return;
     }
     setState(() {
@@ -321,6 +327,10 @@ style: TextStyle(
                               onGoogle: () => _comingSoon('Google sign-in'),
                               onApple: () => _comingSoon('Apple sign-in'),
                            onRegister: () {
+  if (!WorkerEnvironment.developmentPreview) {
+    setState(() => _error = 'Registration requires worker OTP, private document upload and application APIs.');
+    return;
+  }
   Navigator.of(context).push(
     SlidePageRoute<void>(
       page: WorkerPersonalDetailsScreen(

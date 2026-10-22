@@ -1,6 +1,7 @@
+import '../../../integration/worker_environment.dart';
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -56,7 +57,7 @@ class _WorkerRegistrationEmailOtpScreenState
 
   Future<void> _verify() async {
     if (_verifying) return;
-    if (!kDebugMode) {
+    if (!WorkerEnvironment.developmentPreview) {
       setState(
         () => _error = 'Demo verification is unavailable in this build.',
       );
@@ -161,7 +162,7 @@ class _WorkerRegistrationEmailOtpScreenState
                   TextField(
                     key: const Key('worker-registration-email-code'),
                     controller: _codeController,
-                    enabled: kDebugMode && !_verifying,
+                    enabled: WorkerEnvironment.developmentPreview && !_verifying,
                     keyboardType: TextInputType.number,
                     textInputAction: TextInputAction.done,
                     textAlign: TextAlign.center,
@@ -213,7 +214,7 @@ class _WorkerRegistrationEmailOtpScreenState
                         borderRadius: BorderRadius.circular(28),
                       ),
                       child: FilledButton(
-                        onPressed: !kDebugMode || _verifying ? null : _verify,
+                        onPressed: !WorkerEnvironment.developmentPreview || _verifying ? null : _verify,
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           disabledBackgroundColor: Colors.transparent,
@@ -250,7 +251,7 @@ class _WorkerRegistrationEmailOtpScreenState
                   ),
                   Center(
                     child: TextButton(
-                      onPressed: !kDebugMode || _secondsRemaining > 0
+                      onPressed: !WorkerEnvironment.developmentPreview || _secondsRemaining > 0
                           ? null
                           : _startTimer,
                       child: const Text('Restart demo timer'),

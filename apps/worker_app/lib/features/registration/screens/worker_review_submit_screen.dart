@@ -1,3 +1,4 @@
+import '../../../integration/worker_environment.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -66,7 +67,7 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
   bool _savingPreview = false;
 
   Future<void> _previewSubmission() async {
-    if (!kDebugMode || _savingPreview) return;
+    if (!WorkerEnvironment.developmentPreview || _savingPreview) return;
     if (!_confirmedAccurate || !_understandsDemo) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please confirm both statements first.')),
@@ -441,7 +442,7 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                               borderRadius: BorderRadius.circular(26),
                             ),
                             child: FilledButton.icon(
-                              onPressed: kDebugMode && !_savingPreview
+                              onPressed: WorkerEnvironment.developmentPreview && !_savingPreview
                                   ? _previewSubmission
                                   : null,
                               style: FilledButton.styleFrom(

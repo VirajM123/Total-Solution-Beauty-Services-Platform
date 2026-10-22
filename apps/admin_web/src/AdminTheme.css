@@ -1,0 +1,77 @@
+﻿/* Shared admin design tokens. Update this file to theme every section. */
+:root {
+  --admin-primary: #1477f8;
+  --admin-primary-hover: #0864dc;
+  --admin-accent: #ec3981;
+  --admin-ink: #132b50;
+  --admin-muted: #70819a;
+  --admin-border: #dbe5f1;
+  --admin-control-height: 38px;
+  --admin-control-radius: 7px;
+  --admin-control-font: 12px;
+  --admin-heading-size: 24px;
+}
+.final-admin :is(.bp-button,.export-button) {
+  height: var(--admin-control-height); min-height: var(--admin-control-height);
+  padding: 0 14px; border: 1px solid var(--admin-border); border-radius: var(--admin-control-radius);
+  background: white; color: var(--admin-ink); font-size: var(--admin-control-font); font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: none; transition: background .15s, border-color .15s;
+}
+.final-admin :is(.bp-button,.export-button):hover { background: #f0f6ff; border-color: #9fc6fc; }
+.final-admin :is(.bp-primary,.export-button) { background: var(--admin-primary); color: white; border-color: var(--admin-primary); }
+.final-admin :is(.bp-primary,.export-button):hover { background: var(--admin-primary-hover); border-color: var(--admin-primary-hover); }
+.final-admin .bp-export { color: var(--admin-primary); border-color: #a8cbfb; }
+.final-admin .bp-export svg { color: currentColor; }
+.final-admin :is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]),select,textarea) {
+  box-sizing: border-box; height: var(--admin-control-height); min-height: var(--admin-control-height);
+  border: 1px solid var(--admin-border); border-radius: var(--admin-control-radius);
+  padding: 0 11px; background: #fff; color: var(--admin-ink); font: inherit; font-size: var(--admin-control-font); min-width: 0;
+}
+.final-admin textarea { height: auto; min-height: 96px; padding: 10px 11px; resize: vertical; line-height: 1.6; }
+.final-admin :is(.search-box,.bp-search,.select-control) { height: var(--admin-control-height); min-height: var(--admin-control-height); border-color: var(--admin-border); border-radius: var(--admin-control-radius); background: white; }
+.final-admin :is(.search-box,.bp-search,.select-control) :is(input,select) { border: 0; background: transparent; box-shadow: none; height: 100%; min-height: 0; padding: 0; }
+.final-admin :is(input,select,textarea,button,a):focus-visible { outline: 3px solid #1477f84d; outline-offset: 2px; }
+.final-admin :is(input[type=checkbox],input[type=radio]) { accent-color: var(--admin-primary); }
+.final-admin :is(button,input,select,textarea):disabled { cursor: not-allowed; opacity: .5; }
+.final-admin :is(.bp-heading,.page-heading) { gap: 16px; margin-bottom: 16px; align-items: center; }
+.final-admin :is(.bp-heading,.page-heading) h1 { font-size: var(--admin-heading-size); color: var(--admin-ink); letter-spacing: -.6px; line-height: 1.25; margin: 0; }
+.final-admin :is(.bp-heading,.page-heading) p { font-size: 12px; color: var(--admin-muted); line-height: 1.5; margin: 4px 0 0; }
+.final-admin :is(.bp-heading-actions,.heading-actions) { gap: 8px; flex-wrap: wrap; }
+.final-admin :is(.bp-form-grid,.final-form-grid) { gap: 16px; }
+.final-admin :is(.bp-form-grid,.final-form-grid) label { font-size: 12px; color: #405877; }
+.final-admin :is(.bp-tabs button,.final-module-tabs button)[aria-pressed=true] { color: var(--admin-primary); border-bottom-color: var(--admin-primary); }
+.final-admin :is(.bp-pagination,.booking-pagination) button[aria-current] { background: var(--admin-primary); border-color: var(--admin-primary); color: white; }
+.final-admin .reports-page { height: auto; min-height: 100%; }
+.report-filter-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 650; color: var(--admin-ink); margin-right: auto; }
+.report-stats article { position: relative; overflow: hidden; border-top: 3px solid var(--admin-primary); }
+.report-stats article:nth-child(3) { border-top-color: var(--admin-accent); }
+.report-stats article:nth-child(4) { border-top-color: #17b77c; background: linear-gradient(135deg,#fff,#f1fcf7); }
+.report-stats article > svg { position: absolute; right: 16px; top: 17px; color: #99bced; }
+.report-insights { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; margin-bottom: 16px; flex-shrink: 0; }
+.report-insights > section { padding: 18px; }
+.report-insights h2,.report-table-heading h2 { font-size: 14px; color: var(--admin-ink); margin: 0 0 5px; }
+.report-insights p,.report-table-heading p { font-size: 11px; color: var(--admin-muted); margin: 0 0 18px; line-height: 1.5; }
+.report-bar-row { display: grid; grid-template-columns: minmax(85px,1fr) 2fr 90px; align-items: center; gap: 12px; margin: 15px 0; font-size: 11px; }
+.report-bar-row > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-bar-row > i { height: 8px; border-radius: 9px; overflow: hidden; background: #edf3fb; }
+.report-bar-row em { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#1477f8,#78affc); }
+.report-bar-row b { text-align: right; font-weight: 600; }
+.report-insights section:nth-child(2) em { background: linear-gradient(90deg,#ed3981,#f6a1c3); }
+.report-table-heading { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 17px 3px 0; }
+.report-table-heading > span { font-size: 11px; color: var(--admin-muted); background: #f0f5fc; padding: 7px 10px; border-radius: 6px; }
+.reports-page .final-table-panel { flex: none; min-height: 260px; }
+.reports-page .final-scroll { max-height: 440px; }
+.reports-page .final-scroll tbody tr:hover { background: #f6faff; }
+@media(max-width:700px) {
+  .final-admin :is(.bp-heading,.page-heading) { flex-wrap: wrap; }
+  .final-admin :is(.bp-heading,.page-heading) h1 { font-size: 23px; }
+  .report-insights { grid-template-columns: 1fr; }
+  .report-filter-title { flex-basis: 100%; }
+  .reports-page .final-toolbar > label:not(.bp-search) { flex: 1; flex-wrap: wrap; gap: 5px; }
+  .reports-page .final-toolbar input { width: 100%; }
+  .report-bar-row { grid-template-columns: minmax(70px,1fr) 1fr 85px; gap: 8px; }
+}
+/* Compound search/date controls have one shared outer border. */
+.final-admin :is(.search-box,.bp-search,.select-control) input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]),
+.final-admin .select-control select { border: 0; background: transparent; height: 100%; min-height: 0; padding: 0; border-radius: 0; }

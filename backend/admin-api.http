@@ -1,0 +1,58 @@
+@base = http://localhost:5000/api/v1
+@csrf = REPLACE_WITH_SESSION_CSRF
+@customerId = REPLACE_WITH_CUSTOMER_ID
+@areaId = REPLACE_WITH_AREA_ID
+@addressId = REPLACE_WITH_ADDRESS_ID
+@serviceId = REPLACE_WITH_SERVICE_ID
+
+### Login; use an HTTP client cookie jar. Never commit real credentials.
+POST {{base}}/admin/auth/login
+Origin: http://localhost:5173
+Content-Type: application/json
+
+{"email":"YOUR_ADMIN_EMAIL","password":"YOUR_LOCAL_PASSWORD"}
+
+### Session response contains admin identity, permissions and csrfToken.
+GET {{base}}/admin/auth/session
+
+### Structured service area. Creation returns data._id.
+POST {{base}}/admin/service-areas
+Origin: http://localhost:5173
+X-CSRF-Token: {{csrf}}
+X-Idempotency-Key: replace-with-unique-area-operation
+Content-Type: application/json
+
+{"areaCode":"REPLACE_CODE","name":"REPLACE_AREA","city":"Latur","state":"Maharashtra","postalCodes":["413512"],"isServiceable":true,"operatingHours":{"opens":"09:00","closes":"20:00"},"status":"active"}
+
+### Business policy; configure hours/lead/slot/timeout before bookings.
+POST {{base}}/admin/settings
+Origin: http://localhost:5173
+X-CSRF-Token: {{csrf}}
+X-Idempotency-Key: replace-with-unique-policy-operation
+Content-Type: application/json
+
+{"key":"business","bookingLeadMinutes":120,"assignmentTimeoutMinutes":10,"cancellationNoticeHours":4,"rescheduleNoticeHours":4,"slotMinutes":30,"arrivalOtpRequired":true,"operatingCity":"Latur","operatingHours":{"opens":"09:00","closes":"20:00"}}
+
+### Quote ignores client-supplied prices; unknown fields are rejected.
+POST {{base}}/admin/bookings/quote
+Origin: http://localhost:5173
+X-CSRF-Token: {{csrf}}
+X-Idempotency-Key: replace-with-unique-quote-operation
+Content-Type: application/json
+
+{"customerId":"{{customerId}}","cart":{"serviceAreaId":"{{areaId}}","items":[{"serviceId":"{{serviceId}}","quantity":1}]}}
+
+### Create booking. Choose a future, aligned time within configured hours.
+POST {{base}}/admin/bookings
+Origin: http://localhost:5173
+X-CSRF-Token: {{csrf}}
+X-Idempotency-Key: replace-with-unique-booking-operation
+Content-Type: application/json
+
+{"customerId":"{{customerId}}","addressId":"{{addressId}}","cart":{"serviceAreaId":"{{areaId}}","items":[{"serviceId":"{{serviceId}}","quantity":1}]},"startsAt":"2036-10-21T10:00:00+05:30","method":"cash"}
+
+### Read actual provider configuration; no secrets are returned.
+GET {{base}}/admin/integrations
+
+### Bounded report export. from/to are India calendar dates.
+GET {{base}}/admin/reports/bookings/export?from=2026-10-01&to=2026-10-31&limit=100&page=1

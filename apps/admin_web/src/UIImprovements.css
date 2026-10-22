@@ -1,0 +1,204 @@
+/* Shared readable controls and responsive workspaces. */
+.ui-mobile-records, .ui-mobile-back, .ui-mobile-category { display: none; }
+.ui-workspace-title { flex: 1; color: #536780; font-size: 14px; font-weight: 600; }
+.final-admin .topbar-actions { margin-left: auto; }
+.final-admin .bp-heading, .final-admin .page-heading { text-align: left; justify-content: space-between; }
+.final-admin .ui-support .final-split:not(.without-details) { grid-template-columns: minmax(280px,.8fr) minmax(380px,1.2fr); }
+.ui-support .ui-ticket { padding: 14px; }
+.final-admin .ui-overview .kpi-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.ui-overview-toggle { margin-bottom: 16px; }
+.final-admin .ui-overview .table-scroll { height: auto; max-height: 400px; }
+.final-admin .ui-overview .table-scroll table { min-width: 0; width: 100%; table-layout: fixed; }
+.final-admin .ui-overview .table-scroll th, .final-admin .ui-overview .table-scroll td { font-size: 12px; padding: 12px 8px; white-space: normal; overflow-wrap: anywhere; }
+.ui-overview .table-scroll td small { display: block; margin-top: 5px; font-size: 12px; color: #536780; }
+.final-admin .experts-page .bp-table-scroll td { height: 64px; padding: 10px 7px; }
+.final-admin .experts-page .bp-table-scroll table { min-width: 0; width: 100%; }
+.final-admin .experts-page .bp-table-scroll td, .final-admin .experts-page .bp-table-scroll th { white-space: normal; overflow-wrap: anywhere; }
+.final-admin .ep-details > div, .final-admin .ep-profile small, .final-admin .ep-review-check { font-size: 13px; }
+.final-admin .ep-documents button { font-size: 13px; min-height: 40px; padding: 8px; background: #edf5ff; border-radius: 6px; text-decoration: none; }
+.final-admin .ep-documents small { font-size: 12px; }
+.final-admin .ui-booking-date { position: relative; }
+.ui-booking-date > span { position: absolute; top: -17px; left: 0; font-size: 11px; }
+.final-admin .ui-bookings .final-toolbar { padding-top: 28px; align-items: center; }
+.final-admin .ui-settings { scroll-padding-bottom: 100px; }
+.final-admin .ui-settings > form { padding-bottom: 12px; }
+.ui-save-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 30px; bottom: 0; }
+.ui-save-bar > span { color: #536780; font-size: 13px; }
+.final-admin .ui-settings .final-callout { margin-bottom: 28px; }
+.reports-page button[aria-pressed=true] { color: #0755bc; border-color: #1674f5; background: #edf5ff; }
+.final-admin .report-stats .ui-comparison { display: block; margin-top: 10px; padding: 8px; color: #345b83; }
+.final-admin .offers-page { height: auto; min-height: 0; }
+.final-admin .offers-page .ui-offers-workspace { flex: 0 0 auto; }
+.final-admin .offers-page .of-offer-list { flex: 0 0 auto; overflow: visible; }
+.final-admin .offers-page .of-catalog .bp-pagination { margin-top: 20px; }
+@media(max-width:700px) {
+ .final-admin .bp-heading, .final-admin .page-heading { align-items: stretch; text-align: left; }
+ .final-admin .bp-heading > div, .final-admin .bp-heading h1 { text-align: left; }
+ .ui-mobile-records { display: grid; gap: 12px; padding: 12px; }
+ .ui-mobile-records article { border: 1px solid #dce4ef; border-radius: 10px; padding: 16px; background: white; }
+ .ui-mobile-records h3 { font-size: 16px; margin: 14px 0 8px; }
+ .ui-mobile-records h3 button { font-size: 16px; }
+ .ui-mobile-records p { color: #536780; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+ .ui-mobile-records article > .bp-button { width: 100%; margin-top: 16px; }
+ .ui-card-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+ .ui-card-metrics dt { font-size: 12px; color: #536780; }
+ .ui-card-metrics dd { margin: 6px 0 0; font-weight: 600; }
+ .ui-mobile-back { display: inline-flex; margin-bottom: 16px; }
+ .final-admin .payments-page .bp-table-scroll, .final-admin .customers-page .bp-table-scroll { display: none; }
+ .final-admin .customers-page .bp-filters .bp-search { flex: 1 0 100%; width: 100%; min-width: 0; }
+ .final-admin .payments-page .pp-details-panel { display: none; }
+ .final-admin .ui-payment-detail-open .pp-transactions { display: none; }
+ .final-admin .ui-payment-detail-open .pp-details-panel { display: block; }
+ .final-admin .ui-support .final-split { display: block; }
+ .final-admin .ui-support .final-split:not(.without-details) > .final-table-panel { display: none; }
+ .final-admin .ui-support .final-table-panel { min-height: 0; max-height: none; }
+ .final-admin .services-page .sp-main-panel { display: none; }
+ .ui-mobile-category { display: grid; gap: 8px; margin-bottom: 4px; font-size: 13px; color: #536780; }
+ .ui-mobile-category select { min-height: 42px; background: white; border: 1px solid #dce4ef; border-radius: 7px; padding: 8px; color: #233d5c; }
+ .final-admin .ui-overview .kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .final-admin .ui-overview .table-scroll th:nth-child(3), .final-admin .ui-overview .table-scroll td:nth-child(3) { display: none; }
+ .final-admin .ui-overview .table-scroll th, .final-admin .ui-overview .table-scroll td { font-size: 12px; padding: 10px 5px; }
+ .final-admin .ui-booking-date { margin-top: 18px; }
+ .final-admin .ui-settings { overflow: visible; }
+ .ui-save-bar { position: static; margin-top: 24px; }
+ .final-admin .final-module-tabs, .final-admin .bp-tabs { background: linear-gradient(to left,#e8eef7,transparent 20px) right/24px 100% no-repeat; scrollbar-width: thin; padding-bottom: 5px; }
+ .final-admin .bp-tabs button, .final-admin .final-module-tabs button { min-height: 44px; }
+}
+.final-admin { font-size: 14px; }
+.final-admin .bp-heading p, .final-admin .final-detail p, .final-admin .bp-pagination,
+.final-admin .bp-tabs button, .final-admin .final-module-tabs button { font-size: 13px; color: #536780; }
+.final-admin .final-scroll th, .final-admin .bp-table-scroll th { font-size: 12px; color: #536780; }
+.final-admin .final-scroll td, .final-admin .bp-table-scroll td { font-size: 13px; }
+.final-admin .final-scroll td small, .final-admin .bp-table-scroll small,
+.final-admin .final-details-grid dt, .final-admin .final-stats small { font-size: 12px; color: #596d85; }
+.final-admin .final-pill, .final-admin .bp-badge { font-size: 11px; }
+.final-admin .bp-button, .final-admin .final-small { min-height: 38px; font-size: 13px; }
+.final-admin .final-toolbar { flex-wrap: wrap; gap: 10px; }
+.final-admin .final-toolbar select, .final-admin .final-toolbar input { min-height: 38px; font-size: 13px; max-width: 100%; }
+.final-admin .final-detail { padding: 20px; }
+.final-admin .final-details-grid dd { font-size: 13px; }
+.final-admin .final-action-grid { position: sticky; bottom: -20px; background: white; border-top: 1px solid #dce4ef; padding: 12px 0; z-index: 3; }
+.final-admin .ui-bookings .final-split:not(.without-details) { grid-template-columns: minmax(0,1fr); overflow: auto; }
+.ui-bookings .final-split:not(.without-details) > .final-table-panel { display: none; }
+.ui-bookings .final-split:not(.without-details) > .final-detail { width: 100%; max-width: 1000px; margin-inline: auto; }
+.ui-booking-cards { display: none; }
+.ui-needs-expert { background: #fff7e8; }
+.final-admin .services-page .sp-workspace { grid-template-columns: 250px minmax(0,1fr); }
+.final-admin .sp-service-grid { grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); }
+.final-admin .ui-offers-workspace { display: grid; grid-template-columns: minmax(0,1fr); overflow: visible; }
+.final-admin .ui-offers-workspace.with-previews { grid-template-columns: minmax(0,1fr) 340px; }
+.final-admin .of-catalog { min-height: 0; }
+.final-admin .of-catalog > h2 { flex: 0 0 auto; margin-bottom: 12px; }
+.final-admin .of-catalog .bp-tabs { flex: 0 0 auto; }
+.final-admin .of-offer-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(270px,1fr)); align-content: start; gap: 16px; max-height: none; }
+.final-admin .of-offer-card .of-banner { height: auto; aspect-ratio: 2.4; }
+.final-admin .of-card-footer small { font-size: 11px; color: #596d85; }
+.final-admin .of-previews { grid-column: auto; }
+.final-admin .of-preview-stack { flex-direction: column; }
+.final-admin .ui-editor-dialog { position: fixed; inset: 0; width: min(620px,calc(100vw - 24px)); height: min(850px,calc(100dvh - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: 20px; overflow: auto; border: 1px solid #dae3ee; border-radius: 14px; box-shadow: 0 24px 90px #10294740; }
+.ui-editor-dialog::backdrop { background: #10294780; }
+.final-admin .ui-editor-dialog:not([open]) { display: none; }
+.final-admin .ui-editor-dialog form { min-height: 100%; height: auto; display: flex; flex-direction: column; gap: 14px; }
+.final-admin .ui-editor-dialog .of-form-fields { overflow: visible; flex: 1; }
+.final-admin .ui-editor-dialog label, .final-admin .ui-editor-dialog input,
+.final-admin .ui-editor-dialog select, .final-admin .ui-editor-dialog textarea { font-size: 14px; }
+.final-admin .ui-editor-dialog .sp-form-footer, .final-admin .ui-editor-dialog .of-form-footer { position: sticky; bottom: -20px; background: white; margin-top: auto; padding: 14px 0; border-top: 1px solid #dce4ef; }
+.final-admin .pp-workspace { grid-template-columns: minmax(0,1.6fr) minmax(360px,1fr); }
+.final-admin .payments-page .bp-table-scroll table { min-width: 0; table-layout: fixed; width: 100%; }
+.final-admin .payments-page .bp-table-scroll td, .final-admin .payments-page .bp-table-scroll th { white-space: normal; overflow-wrap: anywhere; padding: 12px 7px; }
+.payments-page .bp-table-scroll .bp-avatar { display: none; }
+.final-admin .pp-detail-grid dd { font-size: 13px; }
+.final-admin .pp-actions { display: flex; flex-direction: column; gap: 10px; }
+.final-admin .pp-actions .bp-danger { color: #b42351; background: #fff1f5; border-color: #ef9bb8; }
+.final-admin .ui-bookings .final-toolbar > label { display: flex; flex-direction: column; align-items: stretch; gap: 5px; }
+.final-admin .ui-bookings .final-toolbar .bp-search { flex-direction: row; align-items: center; }
+
+/* Final alignment and city scope remain available at phone widths. */
+.final-admin .bp-heading > div:first-child { margin: 0; align-self: stretch; text-align: left; }
+@media(max-width:700px) {
+ .final-admin .bp-heading { align-items: stretch; }
+ .final-admin .bp-heading > div:first-child { width: 100%; }
+ .final-admin .bp-heading > .bp-button { align-self: stretch; }
+ .final-admin .top-city { display: flex; max-width: 125px; min-width: 0; padding: 0 4px; }
+ .final-admin .top-city select { width: 90px; padding: 0 4px; font-size: 12px; }
+ .final-admin .top-city > svg { display: none; }
+ .final-admin .topbar-actions { gap: 6px; }
+ .ui-workspace-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+ .final-admin .topbar .search-box { min-width: 0; }
+}
+.final-admin .restored-overview .page-heading { gap: 16px; }
+.final-admin .restored-overview .heading-actions { width: auto; min-width: 0; }
+.final-admin .restored-overview .export-button { min-width: 145px; white-space: nowrap; flex-shrink: 0; }
+.final-admin .restored-overview .y-axis, .final-admin .restored-overview .x-axis,
+.final-admin .restored-overview .chart-legend { font-size: 11px; color: #536780; }
+.final-admin .restored-overview .operations { border: 1px solid #efc489; background: #fffcf7; }
+.final-admin .restored-overview .overview-operation { min-height: 38px; font-size: 12px; }
+.final-admin .experts-page .ep-workspace { grid-template-columns: minmax(0,1fr) minmax(360px,.65fr); }
+.final-admin .ep-document-dialog { width: min(1000px,94vw); max-width: 94vw; }
+.final-admin .ep-document-frame { height: 65dvh; }
+.final-admin .ep-document-image { max-height: 65dvh; width: 100%; object-fit: contain; }
+.ui-ticket-list { display: grid; align-content: start; gap: 12px; padding: 14px 0; overflow: auto; }
+.ui-ticket { padding: 18px; background: white; border: 1px solid #dce4ef; border-radius: 10px; text-align: left; color: #233d5c; font: inherit; cursor: pointer; }
+.ui-ticket.selected { background: #fff2f7; border-color: #ed8eb4; }
+.ui-ticket h3 { margin: 12px 0; font-size: 15px; }
+.ui-ticket p, .ui-ticket small { color: #536780; line-height: 1.6; }
+.ui-card-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.final-admin .customers-page .bp-table-scroll table { min-width: 850px; }
+.final-admin .bp-selection { padding: 14px; background: #edf5ff; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+.final-admin .bp-selection button { min-height: 36px; }
+.final-admin .ui-settlements .final-stats article:first-child { border-top: 4px solid #e49a22; }
+.final-admin .ui-settlements .final-stats article:last-child { border-top: 4px solid #1674f5; }
+.final-admin .ui-settings .final-field { margin: 0; }
+.final-admin .ui-settings .final-form-grid { gap: 18px 24px; }
+.ui-settings h3 { margin: 24px 0 14px; font-size: 16px; }
+.ui-save-bar { position: sticky; bottom: -24px; background: white; padding: 14px 0; border-top: 1px solid #dce4ef; }
+.ui-report-context, .ui-comparison { font-size: 13px; line-height: 1.6; color: #536780; }
+.ui-comparison { padding: 12px 16px; background: #edf5ff; border-radius: 8px; }
+.final-admin .report-bar-row { font-size: 13px; }
+.final-admin .final-package-grid { grid-template-columns: repeat(auto-fill,minmax(300px,1fr)); align-content: start; }
+.final-admin .final-package-image { height: 140px; }
+.ui-savings { color: #137853 !important; font-weight: 600; }
+.ui-access-logo { height: 100px; max-width: 220px; object-fit: contain; }
+.final-access .final-field, .final-access-form > p { font-size: 14px; color: #536780; }
+@media(max-width:1100px) {
+ .final-admin .pp-workspace, .final-admin .experts-page .ep-workspace { grid-template-columns: 1fr; overflow: auto; }
+ .final-admin .pp-transactions { min-height: 500px; }
+ .final-admin .ui-offers-workspace.with-previews { grid-template-columns: 1fr; }
+}
+@media(max-width:700px) {
+ .final-admin .bp-heading, .final-admin .offers-page .bp-heading { flex-direction: column; align-items: stretch; gap: 14px; }
+ .final-admin .bp-heading-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+ .final-admin .bp-heading-actions .bp-button { flex: 1; }
+ .final-admin .bp-heading p, .final-admin .offers-page .bp-heading p { max-width: none; font-size: 13px; }
+ .final-admin .restored-overview .page-heading { display: flex; flex-direction: column; align-items: stretch; text-align: left; }
+ .final-admin .restored-overview .heading-actions { display: flex; flex-wrap: wrap; width: 100%; gap: 10px; }
+ .final-admin .restored-overview .heading-actions > * { flex: 1 1 150px; }
+ .final-admin .restored-overview .insights-grid { display: flex; flex-direction: column; }
+ .restored-overview .operations { order: -1; }
+ .final-admin .ui-offers-workspace, .final-admin .ui-offers-workspace.with-previews { display: block; }
+ .final-admin .of-catalog { height: auto; display: block; padding: 16px 12px 0; }
+ .final-admin .of-catalog > h2 { margin-bottom: 12px; }
+ .final-admin .of-offer-list { display: grid; grid-template-columns: 1fr; overflow: visible; max-height: none; }
+ .final-admin .of-previews { margin-top: 16px; }
+ .final-admin .services-page .sp-workspace { display: flex; flex-direction: column; }
+ .final-admin .sp-main-list { max-height: 240px; }
+ .final-admin .sp-service-grid { grid-template-columns: 1fr; overflow: visible; }
+ .final-admin .ui-bookings .final-table-panel { max-height: none; min-height: 0; }
+ .ui-bookings .final-table-panel > .final-scroll { display: none; }
+ .ui-booking-cards { display: grid; gap: 12px; padding: 10px 0; }
+ .ui-booking-cards article { border: 1px solid #dce4ef; border-radius: 10px; padding: 16px; }
+ .ui-booking-cards h3 { font-size: 16px; margin: 12px 0 8px; }
+ .ui-booking-cards p { color: #536780; font-size: 13px; }
+ .ui-booking-cards .bp-button { width: 100%; }
+ .final-admin .final-toolbar > * { flex: 1 1 130px; min-width: 0; }
+ .final-admin .final-split { display: flex; flex-direction: column; }
+ .final-admin .final-detail { order: -1; }
+ .final-admin .final-action-grid { bottom: -20px; }
+ .final-admin .pp-workspace { display: flex; flex-direction: column; overflow: visible; }
+ .final-admin .pp-details-panel { overflow: visible; }
+ .final-admin .payments-page .bp-table-scroll table { min-width: 650px; }
+ .final-admin .final-package-grid { grid-template-columns: 1fr; }
+ .final-admin .ui-editor-dialog { padding: 16px; }
+ .final-admin .ui-editor-dialog .sp-form-footer, .final-admin .ui-editor-dialog .of-form-footer { bottom: -16px; }
+ .ui-save-bar { bottom: -16px; }
+}

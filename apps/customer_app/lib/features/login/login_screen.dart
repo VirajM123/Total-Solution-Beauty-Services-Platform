@@ -43,7 +43,10 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     if (!widget.config.mockAuthEnabled) {
-      setState(() => _error = 'Sign in is unavailable in this build.');
+      setState(
+        () => _error =
+            'Customer sign in is awaiting the mobile authentication API. You can browse services below.',
+      );
       return;
     }
     setState(() {
@@ -111,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 child: SizedBox(
                   width: constraints.maxWidth,
-                  height: 800 * scale + shift,
+                  height: 835 * scale + shift,
                   child: Stack(
                     children: [
                       Positioned(
@@ -430,7 +433,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       Positioned(
-                        top: 727 * scale + shift,
+                        top: 725 * scale + shift,
+                        left: inset,
+                        right: inset,
+                        child: TextButton(
+                          onPressed: () => Navigator.of(
+                            context,
+                          ).pushNamed(RouteNames.catalog),
+                          child: const Text('Browse services'),
+                        ),
+                      ),
+                      Positioned(
+                        top: 766 * scale + shift,
                         left: inset,
                         right: inset,
                         child: TextButton(

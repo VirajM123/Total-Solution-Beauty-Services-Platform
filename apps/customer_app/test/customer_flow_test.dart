@@ -101,7 +101,8 @@ void main() {
     navigator.pushNamed(RouteNames.home);
     await tester.pumpAndSettle();
     expect(find.byType(DevelopmentHomeScreen), findsNothing);
-    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('Explore our beauty services'), findsOneWidget);
+    expect(find.byKey(const ValueKey('confirm-booking')), findsNothing);
   });
 
   testWidgets('registration validates fields and reaches distinct mock OTP', (
@@ -602,9 +603,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Payment Method'), findsOneWidget);
     expect(find.text('UPI (Recommended)'), findsOneWidget);
-    expect(find.text('Credit / Debit Card'), findsOneWidget);
+    expect(find.text('Credit / Debit Card'), findsNothing);
     expect(find.text('Cash on Service'), findsOneWidget);
-    await tester.ensureVisible(find.byKey(const ValueKey('checkout-tip-custom')));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('checkout-tip-custom')),
+    );
     await tester.tap(find.byKey(const ValueKey('checkout-tip-custom')));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -634,9 +637,10 @@ void main() {
     expect(find.text('Booking Summary'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('continue-to-payment-method')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('payment-method-card')));
+    expect(find.byKey(const ValueKey('payment-method-card')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('payment-method-upi')));
     await tester.pumpAndSettle();
-    expect(find.text('Pay Securely · Preview'), findsOneWidget);
+    expect(find.text('Confirm Booking'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('payment-method-upi')));
     await tester.pumpAndSettle();
     expect(find.text('UPI (Recommended)'), findsOneWidget);

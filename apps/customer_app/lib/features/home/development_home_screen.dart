@@ -4713,9 +4713,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
 
   Widget _confirmBookingAction() => _checkoutAction(
     key: const ValueKey('confirm-booking'),
-    label: _paymentMethod == CheckoutPaymentMethod.cashOnService
-        ? 'Confirm Booking'
-        : 'Pay Securely · Preview',
+    label: 'Confirm Booking',
     onPressed: _submittingPreview || _checkoutPreview != null
         ? null
         : _confirmPreviewBooking,
@@ -4801,7 +4799,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       const Text(
-        'Choose how you would like to pay.',
+        'Choose Cash or UPI. Pay after service completion.',
         style: TextStyle(color: _muted, fontSize: 13),
       ),
       const SizedBox(height: 14),
@@ -4810,13 +4808,6 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
         icon: Icons.account_balance_wallet_outlined,
         title: 'UPI (Recommended)',
         description: 'Google Pay  ·  PhonePe  ·  Paytm',
-      ),
-      const SizedBox(height: 8),
-      _paymentMethodCard(
-        method: CheckoutPaymentMethod.card,
-        icon: Icons.credit_card_rounded,
-        title: 'Credit / Debit Card',
-        description: 'Visa, Mastercard, RuPay',
       ),
       const SizedBox(height: 8),
       _paymentMethodCard(
@@ -4898,7 +4889,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       Text(
         _paymentMethod == CheckoutPaymentMethod.cashOnService
             ? 'You will pay after the service is completed.'
-            : 'Online payment is not connected in this development preview. No charge will be made.',
+            : 'UPI is payable after service completion. Online payment is not connected in this development preview. No charge will be made.',
         style: const TextStyle(color: _muted, fontSize: 11),
       ),
     ],

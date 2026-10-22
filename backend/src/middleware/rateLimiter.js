@@ -1,1 +1,14 @@
-// TODO: Implement this backend module.
+const { rateLimit } = require('express-rate-limit')
+
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: 'RATE_LIMITED', message: 'Too many sign-in attempts. Try again later.' },
+  },
+})
+
+module.exports = { adminLoginLimiter }

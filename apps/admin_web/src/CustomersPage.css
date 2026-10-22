@@ -1,0 +1,21 @@
+.customers-page .bp-filters .bp-search { flex: 2; }
+.customers-page .bp-panel-top { justify-content: flex-start; }
+.customers-page .bp-tabs { gap: 18px; }
+.customers-page .bp-table-scroll table { min-width: 1080px; }
+.customers-page .bp-person { gap: 10px; }
+.customers-page .bp-avatar { width: 34px; height: 34px; flex-basis: 34px; }
+.cp-active { color: #099e65; background: #ddf9eb; }
+.cp-inactive { color: #738099; background: #edf0f6; }
+.cp-number { text-align: center; }
+.customers-page th:nth-child(5) { text-align: center; }
+.cp-actions { display: flex; align-items: center; gap: 7px; }
+.cp-profile-button { padding: 6px 10px; border: 1px solid #b6d1fa; border-radius: 5px; background: #f9fcff; color: #0871ec; font-size: 11px; font-weight: 600; }
+.cp-profile-button:hover { background: #eaf3ff; }
+.cp-notes-label { grid-column: 1 / -1; }
+.cp-notes-label textarea { padding: 11px; min-height: 90px; border: 1px solid #dfe5ef; border-radius: 7px; resize: vertical; font: inherit; color: #213654; }
+.customers-page .bp-details dd { overflow-wrap: anywhere; }
+.customers-page .bp-booking-actions a { text-decoration: none; }
+.cp-notes { padding: 14px; margin-bottom: 20px; border-radius: 8px; background: #fff6fa; font-size: 12px; }
+.cp-notes p { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media(min-width:951px) { .customers-page .bp-table-scroll td { height: clamp(44px, calc((100dvh - 356px) / 8), 64px); } }
+@media(max-width:700px) { .customers-page .bp-tabs { gap: 3px; } }

@@ -1,32 +1,22 @@
-# React + TypeScript + Vite
+# Hi Beauty Admin
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The Admin frontend includes operational screens for bookings, customers, beauty experts, services and packages, payments and worker settlements, offers and coupons, support, reports, and settings.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+From this directory:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+npm run dev
+npm run build
+npm run lint
+npm test
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Integration status
+
+This is a local design/behavior preview, not a production-connected admin system. Records are stored in browser `localStorage`; no MongoDB access or Admin API integration is implemented. Sign-in controls are intentionally disabled: the preview is not protected by authentication or role authorization.
+
+Before production, connect the UI to the Node.js backend, enforce Admin roles and sensitive operations on the server, and replace local persistence with typed API requests. Upload catalog images and private worker documents through backend-managed object storage; do not place database credentials in frontend environment variables. Payment verification, refunds/transfers, notifications, and worker responses must be confirmed by backend services rather than this local preview.
+
+The payment and offer unit tests cover local business rules only; they do not verify backend behavior or database schemas.

@@ -4,5 +4,6 @@ abstract final class RouteNames {
   static const login = '/login';
   static const register = '/register';
   static const otp = '/development-otp';
+  static const catalog = '/catalog';
   static const home = '/development-home';
 }

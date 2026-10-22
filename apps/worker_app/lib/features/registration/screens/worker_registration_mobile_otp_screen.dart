@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+import '../../../integration/worker_environment.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -29,7 +30,7 @@ class _WorkerRegistrationMobileOtpScreenState
   }
 
   Future<void> _verify() async {
-    if (_busy || !kDebugMode) return;
+    if (_busy || !WorkerEnvironment.developmentPreview) return;
     if (_controller.text.length != 6) {
       setState(() => _error = 'Enter all six digits.');
       return;
@@ -170,7 +171,7 @@ class _WorkerRegistrationMobileOtpScreenState
                         borderRadius: BorderRadius.circular(28),
                       ),
                       child: FilledButton(
-                        onPressed: _busy || !kDebugMode ? null : _verify,
+                        onPressed: _busy || !WorkerEnvironment.developmentPreview ? null : _verify,
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           disabledBackgroundColor: Colors.transparent,

@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+import '../integration/worker_environment.dart';
+
 import 'package:flutter/material.dart';
 
 import '../features/splash/worker_splash_screen.dart';
@@ -19,7 +20,7 @@ class WorkerApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFFFF9F5),
       ),
 
-      home: const WorkerSplashScreen(demoEnabled: kDebugMode),
+      home: const WorkerSplashScreen(demoEnabled: WorkerEnvironment.developmentPreview),
     );
   }
 }

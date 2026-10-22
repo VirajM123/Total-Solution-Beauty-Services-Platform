@@ -46,10 +46,7 @@ class CheckoutPreview {
 
   BookingStatus get bookingStatus => BookingStatus.confirmed;
   PaymentStatus get paymentStatus => PaymentStatus.pending;
-  PaymentTiming get paymentTiming =>
-      paymentMethod == CheckoutPaymentMethod.cashOnService
-      ? PaymentTiming.afterService
-      : PaymentTiming.now;
+  PaymentTiming get paymentTiming => PaymentTiming.afterService;
 }
 
 class PreviewService {

@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+import '../../integration/worker_environment.dart';
+
 import 'package:flutter/material.dart';
 
 import '../login/worker_login_screen.dart';
@@ -35,6 +36,7 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
   @override
   void initState() {
     super.initState();
+    if (!WorkerEnvironment.developmentPreview) return;
     _repository.addListener(_profileChanged);
     _loadProfile();
   }
@@ -61,7 +63,7 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
   void _exitPreview() {
     Navigator.of(context).pushAndRemoveUntil<void>(
       MaterialPageRoute<void>(
-        builder: (_) => const WorkerLoginScreen(demoEnabled: kDebugMode),
+        builder: (_) => const WorkerLoginScreen(demoEnabled: WorkerEnvironment.developmentPreview),
       ),
       (_) => false,
     );
@@ -75,7 +77,7 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!kDebugMode) {
+    if (!WorkerEnvironment.developmentPreview) {
       return const Scaffold(
         backgroundColor: Color(0xFFFFF9F5),
         body: SafeArea(

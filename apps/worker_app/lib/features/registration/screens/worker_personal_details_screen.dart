@@ -1,3 +1,4 @@
+import '../../../integration/worker_environment.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -300,10 +301,10 @@ class _WorkerPersonalDetailsScreenState
       widget.verifiedMobile == _mobile.text.trim();
 
   bool get _demoMobileMatches =>
-      kDebugMode && _demoVerifiedMobile == _mobile.text.trim();
+      WorkerEnvironment.developmentPreview && _demoVerifiedMobile == _mobile.text.trim();
 
   bool get _demoEmailMatches =>
-      kDebugMode &&
+      WorkerEnvironment.developmentPreview &&
       _demoVerifiedEmail != null &&
       _demoVerifiedEmail!.toLowerCase() == _email.text.trim().toLowerCase();
 
@@ -372,7 +373,7 @@ class _WorkerPersonalDetailsScreenState
     }
     final callback = widget.onVerifyMobile;
     if (callback == null) {
-      if (!kDebugMode) {
+      if (!WorkerEnvironment.developmentPreview) {
         _notice('Mobile OTP verification is not connected yet.');
         return;
       }
@@ -406,7 +407,7 @@ class _WorkerPersonalDetailsScreenState
     }
     final callback = widget.onVerifyEmail;
     if (callback == null) {
-      if (!kDebugMode) {
+      if (!WorkerEnvironment.developmentPreview) {
         _notice('Email verification is not connected yet.');
         return;
       }
@@ -436,7 +437,7 @@ class _WorkerPersonalDetailsScreenState
   // Development-only UI preview. Never sends or submits registration data.
   // Demo codes do not change verifiedMobile/verifiedEmail or onContinue.
   Future<void> _previewProfessionalDetails() async {
-    if (!kDebugMode) return;
+    if (!WorkerEnvironment.developmentPreview) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_dob == null || !_adult(_dob!)) {
       _notice('Workers must be at least 18 years old.');
@@ -827,7 +828,7 @@ class _WorkerPersonalDetailsScreenState
                       ),
                     ),
                   ),
-                  if (kDebugMode) ...[
+                  if (WorkerEnvironment.developmentPreview) ...[
                     const SizedBox(height: 8),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),

@@ -1,10 +1,11 @@
+import '../../../integration/worker_environment.dart';
 import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
+
 
 import '../../../app/slide_page_route.dart';
 import '../../home/worker_profile_data.dart';
@@ -329,7 +330,7 @@ class _WorkerProfessionalDetailsScreenState
 
     // Development-only screen navigation. This does NOT upload documents,
     // submit an application, or count demo OTPs as real verification.
-    if (kDebugMode) {
+    if (WorkerEnvironment.developmentPreview) {
       Navigator.of(context).push(
         SlidePageRoute<void>(page: const WorkerDocumentVerificationScreen()),
       );

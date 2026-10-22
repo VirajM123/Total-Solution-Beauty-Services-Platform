@@ -3,3 +3,7 @@ node_modules/
 build/
 .env
 .env.local
+
+# Local secrets; retain templates.
+.env.*
+!.env.example

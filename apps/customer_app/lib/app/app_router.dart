@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
 import '../features/home/development_home_screen.dart';
+import '../features/catalog/catalog_screen.dart';
 import '../features/login/login_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/otp/development_otp_screen.dart';
@@ -30,6 +31,8 @@ class AppRouter {
         ),
       RouteNames.home when config.mockAuthEnabled =>
         const DevelopmentHomeScreen(),
+      RouteNames.home => CatalogScreen(config: config),
+      RouteNames.catalog => CatalogScreen(config: config),
       _ => LoginScreen(config: config),
     };
     return MaterialPageRoute<void>(builder: (_) => page, settings: settings);

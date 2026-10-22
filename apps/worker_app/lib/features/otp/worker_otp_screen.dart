@@ -1,6 +1,7 @@
+import '../../integration/worker_environment.dart';
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -55,7 +56,7 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
   }
 
   void _restartDemoCountdown() {
-    if (!kDebugMode || _remainingSeconds != 0) return;
+    if (!WorkerEnvironment.developmentPreview || _remainingSeconds != 0) return;
     _otp.clear();
     _otpFocus.requestFocus();
     setState(() => _error = null);
@@ -70,7 +71,7 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
 
   Future<void> _verify() async {
     if (_verifying) return;
-    if (!kDebugMode) {
+    if (!WorkerEnvironment.developmentPreview) {
       setState(() => _error = 'Verification is not connected to the server.');
       return;
     }

@@ -40,19 +40,21 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Manage your appointments'), findsOneWidget);
+    expect(find.text('Every appointment, beautifully organized.'), findsOneWidget);
     expect(find.text('Facial Service'), findsOneWidget);
     expect(find.text('Hair Styling'), findsOneWidget);
-    expect(find.text('₹2,100'), findsOneWidget);
+    expect(find.textContaining('₹2,100', findRichText: true), findsOneWidget);
     expect(tester.takeException(), isNull);
 
+    await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Completed'));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ChoiceChip, 'Completed'));
     await tester.pumpAndSettle();
 
     expect(find.text('Facial Service'), findsNothing);
     expect(find.text('Hair Styling'), findsOneWidget);
     expect(find.text('1 booking'), findsOneWidget);
-    expect(find.text('₹900'), findsOneWidget);
+    expect(find.text('Payable  ₹900', findRichText: true), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.enterText(find.byType(TextField), 'Second Customer');
