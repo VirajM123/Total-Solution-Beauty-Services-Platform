@@ -68,10 +68,10 @@ class CatalogService {
     categoryId: (json['category'] as Map<String, dynamic>)['id'] as String,
     summary: json['shortDescription'] as String? ?? '',
     description: json['description'] as String? ?? '',
-    pricePaise: BigInt.parse(json['pricePaise'] as String),
+    pricePaise: _parsePaise(json['pricePaise']),
     compareAtPricePaise: json['compareAtPricePaise'] == null
         ? null
-        : BigInt.parse(json['compareAtPricePaise'] as String),
+        : _parsePaise(json['compareAtPricePaise']),
     durationMinutes: json['durationMinutes'] as int,
     homeService: json['isHomeServiceAvailable'] == true,
     thumbnail: json['thumbnail'] as String?,
@@ -79,6 +79,107 @@ class CatalogService {
         .map((item) => (item as Map<String, dynamic>)['url'] as String)
         .toList(),
     benefits: (json['benefits'] as List? ?? []).cast<String>(),
+  );
+}
+
+BigInt _parsePaise(Object value) => switch (value) {
+  String amount => BigInt.parse(amount),
+  int amount => BigInt.from(amount),
+  _ => throw FormatException('Invalid paise amount: $value'),
+};
+
+class CatalogResourcePage<T> {
+  const CatalogResourcePage(this.items, this.page, this.hasMore);
+  final List<T> items;
+  final int page;
+  final bool hasMore;
+
+  factory CatalogResourcePage.parse(
+    Map<String, dynamic> data,
+    T Function(Map<String, dynamic>) parse,
+  ) {
+    final pagination = data['pagination'] as Map<String, dynamic>;
+    return CatalogResourcePage(
+      (data['items'] as List)
+          .map((item) => parse(item as Map<String, dynamic>))
+          .toList(),
+      pagination['page'] as int,
+      pagination['hasMore'] as bool,
+    );
+  }
+}
+
+class CatalogPackage {
+  const CatalogPackage({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.serviceIds,
+    required this.pricePaise,
+    required this.durationMinutes,
+    this.thumbnail,
+  });
+  final String id, name, description;
+  final List<String> serviceIds;
+  final BigInt pricePaise;
+  final int durationMinutes;
+  final String? thumbnail;
+  String get priceLabel => CatalogService.formatPaise(pricePaise);
+
+  factory CatalogPackage.fromJson(Map<String, dynamic> json) => CatalogPackage(
+    id: (json['id'] ?? json['_id']) as String,
+    name: json['name'] as String,
+    description: json['description'] as String? ?? '',
+    serviceIds: (json['components'] as List? ?? [])
+        .map(
+          (component) =>
+              (component as Map<String, dynamic>)['serviceId'] as String,
+        )
+        .toList(),
+    pricePaise: _parsePaise(json['pricePaise']),
+    durationMinutes: json['durationMinutes'] as int,
+    thumbnail: json['thumbnail'] as String?,
+  );
+}
+
+class CatalogOffer {
+  const CatalogOffer({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.code,
+    required this.discountType,
+    required this.value,
+    required this.endsAt,
+    this.minimumOrderPaise,
+    this.maximumDiscountPaise,
+    this.thumbnail,
+  });
+  final String id, name, description, code, discountType;
+  final int value;
+  final DateTime endsAt;
+  final BigInt? minimumOrderPaise, maximumDiscountPaise;
+  final String? thumbnail;
+
+  String get discountLabel => discountType == 'percentage'
+      ? '$value% off'
+      : '${CatalogService.formatPaise(BigInt.from(value))} off';
+
+  factory CatalogOffer.fromJson(Map<String, dynamic> json) => CatalogOffer(
+    id: (json['id'] ?? json['_id']) as String,
+    name: json['name'] as String,
+    description: json['description'] as String? ?? '',
+    code: json['code'] as String,
+    discountType: json['discountType'] as String,
+    value: json['value'] as int,
+    endsAt: DateTime.parse(json['endsAt'] as String),
+    minimumOrderPaise: json['minimumOrderPaise'] == null
+        ? null
+        : _parsePaise(json['minimumOrderPaise']),
+    maximumDiscountPaise: json['maximumDiscountPaise'] == null
+        ? null
+        : _parsePaise(json['maximumDiscountPaise']),
+    thumbnail: json['thumbnail'] as String?,
   );
 }
 
@@ -112,6 +213,24 @@ class CatalogRepository {
   Future<CatalogService> service(String id) async => CatalogService.fromJson(
     await api.get('/catalog/services/${Uri.encodeComponent(id)}'),
   );
+
+  Future<CatalogResourcePage<CatalogPackage>> packages({int page = 1}) async =>
+      CatalogResourcePage.parse(
+        await api.get(
+          '/catalog/packages',
+          query: {'page': '$page', 'limit': '20'},
+        ),
+        CatalogPackage.fromJson,
+      );
+
+  Future<CatalogResourcePage<CatalogOffer>> offers({int page = 1}) async =>
+      CatalogResourcePage.parse(
+        await api.get(
+          '/catalog/offers',
+          query: {'page': '$page', 'limit': '20'},
+        ),
+        CatalogOffer.fromJson,
+      );
 
   /// Traverses backend displayOrder + id order, including page boundaries.
   Future<CatalogNeighbors> neighbors(CatalogService current) async {

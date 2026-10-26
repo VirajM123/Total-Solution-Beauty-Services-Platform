@@ -5,10 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../app/route_names.dart';
+import '../../core/api/mobile_api.dart';
 import '../../core/config/app_config.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/constants/pinkora_brand.dart';
+import '../../integration/customer_auth_api.dart';
 import '../shared/auth_brand_mark.dart';
+import '../otp/development_otp_screen.dart';
 
 const _plum = PinkoraBrand.charcoal;
 const _berry = PinkoraBrand.berry;
@@ -17,8 +20,11 @@ const _muted = PinkoraBrand.muted;
 const _line = PinkoraBrand.line;
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, required this.config});
+  const LoginScreen({super.key, required this.config, this.authApi});
   final AppConfig config;
+  final CustomerAuthApi? authApi;
+  CustomerAuthApi get auth =>
+      authApi ?? CustomerAuthApi(api: MobileApi(baseUrl: config.apiBaseUrl));
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -42,21 +48,22 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = 'Enter a valid 10-digit Indian mobile number.');
       return;
     }
-    if (!widget.config.mockAuthEnabled) {
-      setState(
-        () => _error =
-            'Customer sign in is awaiting the mobile authentication API. You can browse services below.',
-      );
-      return;
-    }
     setState(() {
       _error = null;
       _loading = true;
     });
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    if (!mounted) return;
-    setState(() => _loading = false);
-    Navigator.of(context).pushNamed(RouteNames.otp, arguments: value);
+    try {
+      final challengeId = await widget.auth.requestOtp(value);
+      if (!mounted) return;
+      await Navigator.of(context).pushNamed(
+        RouteNames.otp,
+        arguments: CustomerOtpRouteArgs(phone: value, challengeId: challengeId),
+      );
+    } catch (error) {
+      if (mounted) setState(() => _error = '$error');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override

@@ -21,7 +21,12 @@ class _CatalogScreenState extends State<CatalogScreen>
   Timer? _debounce;
   List<CatalogCategory> _categories = [];
   CatalogPage<CatalogService>? _services;
+  List<CatalogPackage>? _packages;
+  List<CatalogOffer>? _offers;
   String? _category, _error;
+  int _section = 0;
+  int _packagePage = 1, _offerPage = 1;
+  bool _packagesHaveMore = false, _offersHaveMore = false;
   bool _loading = true;
   bool _categoriesLoaded = false;
   int _generation = 0;
@@ -38,7 +43,7 @@ class _CatalogScreenState extends State<CatalogScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _load(page: _services?.page ?? 1, refreshCategories: true);
+      _refreshCurrent();
     }
   }
 
@@ -89,6 +94,92 @@ class _CatalogScreenState extends State<CatalogScreen>
     }
   }
 
+  Future<void> _refreshCurrent() async {
+    if (_section == 1) {
+      _services = null;
+      _categoriesLoaded = false;
+      _offers = null;
+      await _loadPackages(page: 1);
+    } else if (_section == 2) {
+      _services = null;
+      _categoriesLoaded = false;
+      _packages = null;
+      await _loadOffers(page: 1);
+    } else {
+      _packages = null;
+      _offers = null;
+      await _load(page: _services?.page ?? 1, refreshCategories: true);
+    }
+  }
+
+  Future<void> _loadPackages({required int page}) async {
+    final generation = ++_generation;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final result = await _repository.packages(page: page);
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _packages = page == 1 ? result.items : [...?_packages, ...result.items];
+        _packagePage = result.page;
+        _packagesHaveMore = result.hasMore;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _loading = false;
+        _error = error is MobileApiException
+            ? error.message
+            : 'Published packages could not be loaded. Please try again.';
+      });
+    }
+  }
+
+  Future<void> _loadOffers({required int page}) async {
+    final generation = ++_generation;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final result = await _repository.offers(page: page);
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _offers = page == 1 ? result.items : [...?_offers, ...result.items];
+        _offerPage = result.page;
+        _offersHaveMore = result.hasMore;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _loading = false;
+        _error = error is MobileApiException
+            ? error.message
+            : 'Published offers could not be loaded. Please try again.';
+      });
+    }
+  }
+
+  void _selectSection(int section) {
+    if (_loading || section == _section) return;
+    setState(() {
+      _section = section;
+      _category = null;
+      _error = null;
+    });
+    if (section == 0) {
+      _load(refreshCategories: !_categoriesLoaded);
+    } else if (section == 1 && _packages == null) {
+      _loadPackages(page: 1);
+    } else if (section == 2 && _offers == null) {
+      _loadOffers(page: 1);
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -108,17 +199,14 @@ class _CatalogScreenState extends State<CatalogScreen>
       foregroundColor: PinkoraBrand.berry,
       actions: [
         IconButton(
-          onPressed: _loading
-              ? null
-              : () =>
-                    _load(page: _services?.page ?? 1, refreshCategories: true),
+          onPressed: _loading ? null : _refreshCurrent,
           icon: const Icon(Icons.refresh),
           tooltip: 'Refresh catalog',
         ),
       ],
     ),
     body: RefreshIndicator(
-      onRefresh: () => _load(refreshCategories: true),
+      onRefresh: _refreshCurrent,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
@@ -136,67 +224,89 @@ class _CatalogScreenState extends State<CatalogScreen>
             style: TextStyle(color: PinkoraBrand.muted),
           ),
           const SizedBox(height: 20),
-          TextField(
-            controller: _search,
-            maxLength: 100,
-            decoration: const InputDecoration(
-              hintText: 'Search services',
-              prefixIcon: Icon(Icons.search),
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(),
-              counterText: '',
-            ),
-            onChanged: (_) {
-              _debounce?.cancel();
-              // Invalidate responses immediately while the next search is debounced.
-              _generation++;
-              _debounce = Timer(
-                const Duration(milliseconds: 350),
-                () => _load(),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             children: [
               ChoiceChip(
-                label: const Text('All services'),
-                selected: _category == null,
-                onSelected: _loading
-                    ? null
-                    : (_) {
-                        _category = null;
-                        _load();
-                      },
+                key: const ValueKey('catalog-services-tab'),
+                label: const Text('Services'),
+                selected: _section == 0,
+                onSelected: _loading ? null : (_) => _selectSection(0),
               ),
-              ..._categories.map(
-                (item) => ChoiceChip(
-                  label: Text(item.name),
-                  selected: _category == item.id,
-                  onSelected: _loading
-                      ? null
-                      : (_) {
-                          _category = item.id;
-                          _load();
-                        },
-                ),
+              ChoiceChip(
+                key: const ValueKey('catalog-packages-tab'),
+                label: const Text('Packages'),
+                selected: _section == 1,
+                onSelected: _loading ? null : (_) => _selectSection(1),
+              ),
+              ChoiceChip(
+                key: const ValueKey('catalog-offers-tab'),
+                label: const Text('Offers'),
+                selected: _section == 2,
+                onSelected: _loading ? null : (_) => _selectSection(2),
               ),
             ],
           ),
           const SizedBox(height: 16),
+          if (_section == 0) ...[
+            TextField(
+              controller: _search,
+              maxLength: 100,
+              decoration: const InputDecoration(
+                hintText: 'Search services',
+                prefixIcon: Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(),
+                counterText: '',
+              ),
+              onChanged: (_) {
+                _debounce?.cancel();
+                _generation++;
+                _debounce = Timer(
+                  const Duration(milliseconds: 350),
+                  () => _load(),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('All services'),
+                  selected: _category == null,
+                  onSelected: _loading
+                      ? null
+                      : (_) {
+                          _category = null;
+                          _load();
+                        },
+                ),
+                ..._categories.map(
+                  (item) => ChoiceChip(
+                    label: Text(item.name),
+                    selected: _category == item.id,
+                    onSelected: _loading
+                        ? null
+                        : (_) {
+                            _category = item.id;
+                            _load();
+                          },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
           if (_loading)
             const Padding(
               padding: EdgeInsets.all(40),
               child: Center(child: CircularProgressIndicator()),
             ),
           if (_error != null)
-            _CatalogError(
-              message: _error!,
-              retry: () => _load(page: _services?.page ?? 1),
-            ),
-          if (!_loading && _error == null) ...[
+            _CatalogError(message: _error!, retry: _refreshCurrent),
+          if (!_loading && _error == null && _section == 0) ...[
             if (_services?.items.isEmpty ?? true)
               const Padding(
                 padding: EdgeInsets.all(36),
@@ -274,10 +384,136 @@ class _CatalogScreenState extends State<CatalogScreen>
                 ],
               ),
           ],
+          if (!_loading && _error == null && _section == 1) ...[
+            if (_packages?.isEmpty ?? true)
+              const Padding(
+                padding: EdgeInsets.all(36),
+                child: Text(
+                  'No published packages are available right now.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ...?_packages?.map(
+              (item) => Card(
+                margin: const EdgeInsets.only(bottom: 14),
+                color: Colors.white,
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    CatalogImage(url: item.thumbnail, height: 160),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.name,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          if (item.description.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(item.description),
+                          ],
+                          const SizedBox(height: 12),
+                          Text(
+                            '${item.priceLabel} · ${item.durationMinutes} min',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: PinkoraBrand.berry,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_packagesHaveMore)
+              Center(
+                child: TextButton(
+                  onPressed: _loading
+                      ? null
+                      : () => _loadPackages(page: _packagePage + 1),
+                  child: const Text('Load more packages'),
+                ),
+              ),
+          ],
+          if (!_loading && _error == null && _section == 2) ...[
+            if (_offers?.isEmpty ?? true)
+              const Padding(
+                padding: EdgeInsets.all(36),
+                child: Text(
+                  'No published offers are available right now.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ...?_offers?.map(
+              (item) => Card(
+                margin: const EdgeInsets.only(bottom: 14),
+                color: Colors.white,
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    CatalogImage(url: item.thumbnail, height: 140),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.name,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(item.discountLabel),
+                          if (item.description.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(item.description),
+                          ],
+                          const SizedBox(height: 8),
+                          SelectableText(
+                            'Code: ${item.code}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: PinkoraBrand.berry,
+                            ),
+                          ),
+                          if (item.minimumOrderPaise != null)
+                            Text(
+                              'Minimum order ${CatalogService.formatPaise(item.minimumOrderPaise!)}',
+                            ),
+                          if (item.maximumDiscountPaise != null)
+                            Text(
+                              'Maximum discount ${CatalogService.formatPaise(item.maximumDiscountPaise!)}',
+                            ),
+                          Text('Valid until ${_formatDate(item.endsAt)}'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_offersHaveMore)
+              Center(
+                child: TextButton(
+                  onPressed: _loading
+                      ? null
+                      : () => _loadOffers(page: _offerPage + 1),
+                  child: const Text('Load more offers'),
+                ),
+              ),
+          ],
         ],
       ),
     ),
   );
+
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
 class CatalogImage extends StatelessWidget {

@@ -4,33 +4,55 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../app/route_names.dart';
+import '../../core/api/mobile_api.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/constants/pinkora_brand.dart';
+import '../../integration/customer_auth_api.dart';
 
-/// Exists only in the navigation stack while exercising the debug UI flow.
-class DevelopmentRegistration {
-  const DevelopmentRegistration({required this.name, required this.phone});
+class CustomerRegistrationDraft {
+  const CustomerRegistrationDraft({
+    required this.name,
+    required this.phone,
+    this.email,
+  });
 
   final String name;
   final String phone;
+  final String? email;
 }
 
-/// Local UI exercise only. This code never calls an auth service or creates a session.
-class DevelopmentOtpScreen extends StatefulWidget {
-  const DevelopmentOtpScreen({
-    super.key,
+class CustomerOtpRouteArgs {
+  const CustomerOtpRouteArgs({
     required this.phone,
+    required this.challengeId,
     this.registration,
   });
-
   final String phone;
-  final DevelopmentRegistration? registration;
-
-  @override
-  State<DevelopmentOtpScreen> createState() => _DevelopmentOtpScreenState();
+  final String challengeId;
+  final CustomerRegistrationDraft? registration;
 }
 
-class _DevelopmentOtpScreenState extends State<DevelopmentOtpScreen> {
+class CustomerRegistrationArgs {
+  const CustomerRegistrationArgs({this.phone = '', this.registrationToken});
+  final String phone;
+  final String? registrationToken;
+}
+
+class CustomerOtpScreen extends StatefulWidget {
+  const CustomerOtpScreen({
+    super.key,
+    required this.args,
+    required this.auth,
+  });
+
+  final CustomerOtpRouteArgs args;
+  final CustomerAuthApi auth;
+
+  @override
+  State<CustomerOtpScreen> createState() => _CustomerOtpScreenState();
+}
+
+class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
   final _code = TextEditingController();
   final _codeFocus = FocusNode();
   Timer? _cooldown;
@@ -57,14 +79,70 @@ class _DevelopmentOtpScreenState extends State<DevelopmentOtpScreen> {
     });
   }
 
-  void _verify() {
-    if (_code.text != '123456') {
-      setState(() => _error = 'Incorrect development code. Use 123456.');
+  Future<void> _verify() async {
+    if (_code.text.length != 6) {
+      setState(() => _error = 'Enter the complete 6-digit code.');
       return;
     }
-    Navigator.of(
-      context,
-    ).pushNamedAndRemoveUntil(RouteNames.home, (route) => false);
+    setState(() {
+      _error = null;
+    });
+    try {
+      final result = await widget.auth.verifyOtp(
+        widget.args.challengeId,
+        _code.text,
+        fullName: widget.args.registration?.name ?? 'Customer',
+      );
+      if (!mounted) return;
+      if (result.registrationRequired) {
+        final registration = widget.args.registration;
+        if (registration != null) {
+          await widget.auth.register(
+            registrationToken: result.registrationToken!,
+            name: registration.name,
+            email: registration.email,
+          );
+          if (mounted) {
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              RouteNames.home,
+              (route) => false,
+            );
+          }
+        } else {
+          await Navigator.of(context).pushNamed(
+            RouteNames.register,
+            arguments: CustomerRegistrationArgs(
+              phone: widget.args.phone,
+              registrationToken: result.registrationToken,
+            ),
+          );
+        }
+        return;
+      }
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        RouteNames.home,
+        (route) => false,
+      );
+    } on MobileApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Unable to verify the code: $error');
+    }
+  }
+
+  Future<void> _resend() async {
+    if (_remaining != 0) return;
+    try {
+      await widget.auth.resendOtp(widget.args.challengeId);
+      if (!mounted) return;
+      _code.clear();
+      setState(() => _error = null);
+      _startCooldown();
+    } on MobileApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Unable to resend the code: $error');
+    }
   }
 
   Widget _codeBoxes() => LayoutBuilder(
@@ -202,7 +280,7 @@ class _DevelopmentOtpScreenState extends State<DevelopmentOtpScreen> {
             ),
             const SizedBox(height: 7),
             Text(
-              'Enter the 6-digit development code for\n+91 ${widget.phone}',
+              'Enter the 6-digit code sent to\n+91 ${widget.args.phone}',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: PinkoraBrand.muted,
@@ -274,14 +352,9 @@ class _DevelopmentOtpScreenState extends State<DevelopmentOtpScreen> {
             ),
             const SizedBox(height: 12),
             TextButton(
-              onPressed: _remaining == 0
-                  ? () {
-                      _code.clear();
-                      _startCooldown();
-                    }
-                  : null,
+              onPressed: _remaining == 0 ? _resend : null,
               child: const Text(
-                'Restart demo timer',
+                'Resend code',
                 style: TextStyle(
                   color: Color(0xFFB00045),
                   fontSize: 12,
@@ -290,22 +363,10 @@ class _DevelopmentOtpScreenState extends State<DevelopmentOtpScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Divider(color: PinkoraBrand.line),
-            const SizedBox(height: 8),
             Text(
-              'DEVELOPMENT PREVIEW · CODE: 123456${_remaining > 0 ? ' · ${_remaining}s' : ''}',
+              _remaining > 0 ? 'Resend available in ${_remaining}s' : '',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: PinkoraBrand.muted,
-                fontSize: 8,
-                letterSpacing: .35,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'No SMS is sent and no worker session is created.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: PinkoraBrand.muted, fontSize: 8),
+              style: const TextStyle(color: PinkoraBrand.muted, fontSize: 10),
             ),
           ],
         ),

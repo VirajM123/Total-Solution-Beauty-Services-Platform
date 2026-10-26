@@ -35,18 +35,7 @@ class _WorkerRegistrationMobileOtpScreenState
       setState(() => _error = 'Enter all six digits.');
       return;
     }
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    if (!mounted) return;
-    setState(() => _busy = false);
-    if (_controller.text != '123456') {
-      setState(() => _error = 'Incorrect demo code. Try 123456.');
-      return;
-    }
-    Navigator.of(context).pop(true);
+    setState(() => _error = 'No server-issued registration challenge is active.');
   }
 
   @override
@@ -104,8 +93,8 @@ class _WorkerRegistrationMobileOtpScreenState
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
-                      'DEMO ONLY — No SMS is sent. Code: 123456. '
-                      'This does not verify phone ownership or authorize registration.',
+                      'A server-issued verification code is required. '
+                      'This screen does not accept local demo codes.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: plum, fontSize: 12, height: 1.5),
                     ),

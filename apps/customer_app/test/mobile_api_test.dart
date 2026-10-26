@@ -32,6 +32,38 @@ void main() {
     );
     api.close();
   });
+  test('POST sends the mobile authorization token without retrying', () async {
+    var calls = 0;
+    final api = MobileApi(
+      baseUrl: 'https://example.test/api',
+      client: MockClient((request) async {
+        calls++;
+        expect(request.method, 'POST');
+        expect(request.url.path, '/api/mobile/auth/otp/verify');
+        expect(request.headers['authorization'], 'Bearer mobile-session');
+        expect(request.headers['content-type'], contains('application/json'));
+        expect(request.body, '{"challengeId":"challenge","code":"654321"}');
+        return http.Response(
+          '{"success":false,"error":{"code":"INVALID_OTP","message":"Invalid code."}}',
+          401,
+        );
+      }),
+    );
+    await expectLater(
+      api.post(
+        '/mobile/auth/otp/verify',
+        body: {'challengeId': 'challenge', 'code': '654321'},
+        accessToken: 'mobile-session',
+      ),
+      throwsA(
+        isA<MobileApiException>()
+            .having((error) => error.code, 'code', 'INVALID_OTP')
+            .having((error) => error.status, 'status', 401),
+      ),
+    );
+    expect(calls, 1);
+    api.close();
+  });
   test('safe transient GET retries once with no fixtures', () async {
     var calls = 0;
     final api = MobileApi(

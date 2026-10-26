@@ -1,5 +1,6 @@
-import '../../integration/worker_api.dart';
 import '../../integration/worker_environment.dart';
+import '../../integration/worker_api.dart';
+import '../../integration/worker_mobile_auth_api.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -16,9 +17,10 @@ const _line = Color(0xFFE8C9CE);
 const _ivory = Color(0xFFFFF9F5);
 
 class WorkerLoginScreen extends StatefulWidget {
-  const WorkerLoginScreen({super.key, required this.demoEnabled});
+  const WorkerLoginScreen({super.key, required this.demoEnabled, this.authApi});
 
   final bool demoEnabled;
+  final WorkerAuthApi? authApi;
 
   @override
   State<WorkerLoginScreen> createState() => _WorkerLoginScreenState();
@@ -50,24 +52,24 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
       setState(() => _error = 'Enter a valid 10-digit Indian mobile number.');
       return;
     }
-    if (!widget.demoEnabled || !WorkerEnvironment.developmentPreview) {
-      try {
-        await const PendingWorkerApi().requestOtp(phone);
-      } on WorkerIntegrationPending catch (error) {
-        if (mounted) setState(() => _error = error.toString());
-      }
-      return;
-    }
     setState(() {
       _error = null;
       _loading = true;
     });
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-    setState(() => _loading = false);
-    await Navigator.of(context).push(
-      SlidePageRoute<void>(page: WorkerOtpScreen(phone: phone)),
-    );
+    final auth = widget.authApi ?? WorkerMobileAuthApi();
+    try {
+      await auth.requestOtp(phone);
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        SlidePageRoute<void>(
+          page: WorkerOtpScreen(phone: phone, authApi: auth),
+        ),
+      );
+    } on WorkerAuthException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override

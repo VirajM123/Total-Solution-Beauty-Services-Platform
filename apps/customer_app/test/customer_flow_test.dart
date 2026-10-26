@@ -3,14 +3,74 @@ import 'package:customer_app/app/route_names.dart';
 import 'package:customer_app/core/config/app_config.dart';
 import 'package:customer_app/core/config/environment.dart';
 import 'package:customer_app/core/constants/app_assets.dart';
+import 'package:customer_app/core/api/mobile_api.dart';
+import 'package:customer_app/integration/customer_auth_api.dart';
 import 'package:customer_app/features/login/login_screen.dart';
 import 'package:customer_app/features/home/development_home_screen.dart';
 import 'package:customer_app/features/otp/development_otp_screen.dart';
 import 'package:customer_app/features/register/registration_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'dart:convert';
 
 const config = AppConfig(Environment.development);
+
+class _MemoryCustomerTokenStorage implements CustomerTokenStorage {
+  String? token;
+  @override
+  Future<String?> read() async => token;
+  @override
+  Future<void> write(String value) async => token = value;
+  @override
+  Future<void> delete() async => token = null;
+}
+
+CustomerAuthApi _testAuth({bool registrationRequired = false}) {
+  return CustomerAuthApi(
+    api: MobileApi(
+      baseUrl: 'https://example.test/api',
+      client: MockClient((request) async {
+        final path = request.url.path;
+        if (path.endsWith('/otp/request')) {
+          return http.Response(
+            '{"success":true,"data":{"challengeId":"aaaaaaaaaaaaaaaaaaaaaaaa","expiresInSeconds":300,"resendAfterSeconds":30}}',
+            201,
+          );
+        }
+        if (path.endsWith('/otp/verify')) {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body['fullName'], isNotNull);
+          if (body['code'] == '111111') {
+            return http.Response(
+              '{"success":false,"error":{"code":"INVALID_OTP","message":"Verification code is invalid or expired."}}',
+              401,
+            );
+          }
+          if (registrationRequired) {
+            return http.Response(
+              '{"success":true,"data":{"registrationRequired":true,"registrationToken":"${'r' * 43}","appType":"customer"}}',
+              200,
+            );
+          }
+          return http.Response(
+            '{"success":true,"data":{"accessToken":"${'a' * 43}","appType":"customer","user":{"id":"customer-id","fullName":"Asha Patil","mobileNumber":"+919876543210"}}}',
+            200,
+          );
+        }
+        if (path.endsWith('/register/customer')) {
+          return http.Response(
+            '{"success":true,"data":{"accessToken":"${'a' * 43}","appType":"customer","user":{"id":"customer-id","fullName":"Asha Patil","mobileNumber":"+919876543210"}}}',
+            201,
+          );
+        }
+        return http.Response('{"success":true,"data":{"loggedOut":true}}', 200);
+      }),
+    ),
+    tokenStorage: _MemoryCustomerTokenStorage(),
+  );
+}
 
 void main() {
   testWidgets('splash renders branding and advances to onboarding', (
@@ -48,8 +108,8 @@ void main() {
     expect(find.text('Welcome back'), findsOneWidget);
   });
 
-  testWidgets('phone validation and mock OTP flow', (tester) async {
-    await tester.pumpWidget(const CustomerApp(config: config));
+  testWidgets('phone validation and backend OTP login flow', (tester) async {
+    await tester.pumpWidget(CustomerApp(config: config, auth: _testAuth()));
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Skip'));
@@ -61,7 +121,6 @@ void main() {
     expect(find.textContaining('valid 10-digit'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '9876543210');
     await tester.tap(find.text('Continue'));
-    await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
     expect(find.text('Verify mobile number'), findsOneWidget);
     expect(find.text('One step closer'), findsOneWidget);
@@ -71,8 +130,8 @@ void main() {
     await tester.enterText(find.byType(TextField), '111111');
     await tester.tap(find.text('Verify & Continue'));
     await tester.pump();
-    expect(find.textContaining('Incorrect development code'), findsOneWidget);
-    await tester.enterText(find.byType(TextField), '123456');
+    expect(find.textContaining('invalid or expired'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '654321');
     await tester.tap(find.text('Verify & Continue'));
     await tester.pumpAndSettle();
     expect(find.text('Glow Beautiful\nat Home'), findsOneWidget);
@@ -105,10 +164,12 @@ void main() {
     expect(find.byKey(const ValueKey('confirm-booking')), findsNothing);
   });
 
-  testWidgets('registration validates fields and reaches distinct mock OTP', (
+  testWidgets('registration validates fields and reaches backend OTP', (
     tester,
   ) async {
-    await tester.pumpWidget(const CustomerApp(config: config));
+    await tester.pumpWidget(
+      CustomerApp(config: config, auth: _testAuth(registrationRequired: true)),
+    );
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Skip'));
@@ -155,14 +216,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('registration-consent')));
     await tester.ensureVisible(find.text('Continue'));
     await tester.tap(find.text('Continue'));
-    await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
-    final otp = tester.widget<DevelopmentOtpScreen>(
-      find.byType(DevelopmentOtpScreen),
+    final otp = tester.widget<CustomerOtpScreen>(
+      find.byType(CustomerOtpScreen),
     );
-    expect(otp.registration?.name, 'Asha Patil');
-    expect(otp.phone, '9876543210');
-    await tester.enterText(find.byType(TextField), '123456');
+    expect(otp.args.registration?.name, 'Asha Patil');
+    expect(otp.args.phone, '9876543210');
+    await tester.enterText(find.byType(TextField), '654321');
     await tester.tap(find.text('Verify & Continue'));
     await tester.pumpAndSettle();
     expect(find.text('Glow Beautiful\nat Home'), findsOneWidget);
@@ -191,7 +251,7 @@ void main() {
   testWidgets('abandoning registration OTP clears unverified details', (
     tester,
   ) async {
-    await tester.pumpWidget(const CustomerApp(config: config));
+    await tester.pumpWidget(CustomerApp(config: config, auth: _testAuth()));
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Skip'));
@@ -215,7 +275,7 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
-    expect(find.byType(DevelopmentOtpScreen), findsOneWidget);
+    expect(find.byType(CustomerOtpScreen), findsOneWidget);
     navigator.pop();
     await tester.pumpAndSettle();
     expect(
@@ -234,43 +294,45 @@ void main() {
     );
   });
 
-  testWidgets('production registration cannot reach mock OTP', (tester) async {
-    await tester.pumpWidget(
-      const CustomerApp(config: AppConfig(Environment.production)),
-    );
-    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-    navigator.pushNamed(RouteNames.register);
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const ValueKey('registration-name')),
-      'Asha Patil',
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('registration-phone')),
-      '9876543210',
-    );
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('registration-consent')),
-    );
-    await tester.tap(find.byKey(const ValueKey('registration-consent')));
-    await tester.ensureVisible(find.text('Continue'));
-    await tester.tap(find.text('Continue'));
-    await tester.pumpAndSettle();
-    expect(
-      find.text('Registration is unavailable in this build.'),
-      findsOneWidget,
-    );
-    expect(find.byType(DevelopmentOtpScreen), findsNothing);
-    navigator.pushNamed(
-      RouteNames.otp,
-      arguments: const DevelopmentRegistration(
-        name: 'Asha Patil',
-        phone: '9876543210',
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byType(DevelopmentOtpScreen), findsNothing);
-  });
+  testWidgets(
+    'production registration fails closed without API configuration',
+    (tester) async {
+      await tester.pumpWidget(
+        const CustomerApp(config: AppConfig(Environment.production)),
+      );
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.pushNamed(RouteNames.register);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('registration-name')),
+        'Asha Patil',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('registration-phone')),
+        '9876543210',
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('registration-consent')),
+      );
+      await tester.tap(find.byKey(const ValueKey('registration-consent')));
+      await tester.ensureVisible(find.text('Continue'));
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Configure API_BASE_URL'), findsOneWidget);
+      expect(find.byType(CustomerOtpScreen), findsNothing);
+      navigator.pushNamed(
+        RouteNames.otp,
+        arguments: const CustomerOtpRouteArgs(
+          phone: '9876543210',
+          challengeId: 'aaaaaaaaaaaaaaaaaaaaaaaa',
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(CustomerOtpScreen), findsOneWidget);
+    },
+  );
 
   testWidgets('optional registration details validate and remain optional', (
     tester,

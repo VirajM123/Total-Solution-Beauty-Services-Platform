@@ -2,16 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../app/route_names.dart';
+import '../../core/api/mobile_api.dart';
 import '../../core/config/app_config.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/constants/pinkora_brand.dart';
 import '../login/login_screen.dart' show IndiaFlag;
+import '../../integration/customer_auth_api.dart';
 import '../otp/development_otp_screen.dart';
 import '../shared/auth_brand_mark.dart';
 
 class RegistrationScreen extends StatefulWidget {
-  const RegistrationScreen({super.key, required this.config});
+  const RegistrationScreen({
+    super.key,
+    required this.config,
+    this.authApi,
+    this.registration,
+  });
   final AppConfig config;
+  final CustomerAuthApi? authApi;
+  CustomerAuthApi get auth =>
+      authApi ?? CustomerAuthApi(api: MobileApi(baseUrl: config.apiBaseUrl));
+  final CustomerRegistrationArgs? registration;
 
   @override
   State<RegistrationScreen> createState() => _RegistrationScreenState();
@@ -26,6 +37,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   DateTime? _birthDate;
   bool _consent = false;
   bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _phone.text = widget.registration?.phone ?? '';
+  }
 
   @override
   void dispose() {
@@ -68,29 +85,52 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         _consentError != null) {
       return;
     }
-    if (!widget.config.mockAuthEnabled) {
-      setState(
-        () => _phoneError = 'Registration is unavailable in this build.',
-      );
-      return;
-    }
     setState(() => _loading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    if (!mounted) return;
-    setState(() => _loading = false);
-    await Navigator.of(context).pushNamed(
-      RouteNames.otp,
-      arguments: DevelopmentRegistration(name: name, phone: phone),
-    );
-    if (mounted) {
-      _name.clear();
-      _phone.clear();
-      _email.clear();
-      setState(() {
-        _gender = null;
-        _birthDate = null;
-        _consent = false;
-      });
+    try {
+      final proof = widget.registration?.registrationToken;
+      if (proof != null) {
+        await widget.auth.register(
+          registrationToken: proof,
+          name: name,
+          email: email,
+        );
+        if (mounted) {
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil(RouteNames.home, (route) => false);
+        }
+      } else {
+        final challengeId = await widget.auth.requestOtp(phone);
+        if (!mounted) return;
+        await Navigator.of(context).pushNamed(
+          RouteNames.otp,
+          arguments: CustomerOtpRouteArgs(
+            phone: phone,
+            challengeId: challengeId,
+            registration: CustomerRegistrationDraft(
+              name: name,
+              phone: phone,
+              email: email,
+            ),
+          ),
+        );
+        if (mounted) {
+          _name.clear();
+          _phone.clear();
+          _email.clear();
+          setState(() {
+            _gender = null;
+            _birthDate = null;
+            _consent = false;
+          });
+        }
+      }
+    } on MobileApiException catch (error) {
+      if (mounted) setState(() => _phoneError = error.message);
+    } catch (error) {
+      if (mounted) setState(() => _phoneError = 'Registration failed: $error');
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -277,6 +317,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           TextField(
                             key: const ValueKey('registration-phone'),
                             controller: _phone,
+                            readOnly:
+                                widget.registration?.registrationToken != null,
                             keyboardType: TextInputType.phone,
                             textInputAction: TextInputAction.next,
                             autofillHints: const [

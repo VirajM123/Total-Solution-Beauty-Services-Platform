@@ -19,7 +19,7 @@ void main() {
       await tester.tap(find.byKey(const Key('worker-continue')));
       await tester.pumpAndSettle();
       expect(find.byType(WorkerOtpScreen), findsNothing);
-      expect(find.textContaining('Worker OTP is unavailable'), findsOneWidget);
+      expect(find.textContaining('Configure API_BASE_URL'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
     skip: WorkerEnvironment.developmentPreview,

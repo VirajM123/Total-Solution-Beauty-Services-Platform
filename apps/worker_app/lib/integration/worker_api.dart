@@ -1,6 +1,6 @@
 /// Domain seams only. No wire format or URL is assumed until worker contracts
 /// exist. Implementations must return server records and enforce worker scope.
-enum WorkerApproval { pending, approved, rejected, suspended }
+enum WorkerApproval { notRegistered, pending, approved, rejected, suspended }
 
 enum WorkerJobAction {
   accept,
@@ -24,9 +24,14 @@ class WorkerIntegrationPending implements Exception {
 }
 
 class WorkerIdentity {
-  const WorkerIdentity({required this.workerId, required this.approval});
+  const WorkerIdentity({
+    required this.workerId,
+    required this.approval,
+    this.registrationToken,
+  });
   final String workerId;
   final WorkerApproval approval;
+  final String? registrationToken;
   bool get mayWork => approval == WorkerApproval.approved;
 }
 
@@ -89,7 +94,17 @@ class WorkerSettlementRecord {
 
 abstract interface class WorkerAuthApi {
   Future<void> requestOtp(String indianMobile);
-  Future<WorkerIdentity> verifyOtp(String indianMobile, String otp);
+  Future<void> resendOtp();
+  Future<WorkerIdentity> verifyOtp(
+    String indianMobile,
+    String otp, {
+    String fullName = 'Worker',
+  });
+  Future<WorkerIdentity> completeRegistration({
+    required String registrationToken,
+    required String fullName,
+    String? email,
+  });
   Future<WorkerIdentity> currentIdentity();
   Future<void> logout();
 }
@@ -122,8 +137,20 @@ class PendingWorkerApi implements WorkerAuthApi, WorkerOperationsApi {
   @override
   Future<void> requestOtp(String indianMobile) => _pending('Worker OTP');
   @override
-  Future<WorkerIdentity> verifyOtp(String indianMobile, String otp) =>
+  Future<WorkerIdentity> verifyOtp(
+    String indianMobile,
+    String otp, {
+    String fullName = 'Worker',
+  }) =>
       _pending('Worker OTP verification');
+  @override
+  Future<void> resendOtp() => _pending('Worker OTP resend');
+  @override
+  Future<WorkerIdentity> completeRegistration({
+    required String registrationToken,
+    required String fullName,
+    String? email,
+  }) => _pending('Worker registration');
   @override
   Future<WorkerIdentity> currentIdentity() =>
       _pending('Worker session and approval');

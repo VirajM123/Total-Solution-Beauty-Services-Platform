@@ -1,12 +1,13 @@
-import '../../integration/worker_environment.dart';
 import 'dart:async';
-
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../app/slide_page_route.dart';
-import '../home/worker_home_screen.dart';
+import '../../integration/worker_api.dart';
+import '../../integration/worker_mobile_auth_api.dart';
+import '../registration/screens/worker_application_status_screen.dart';
+import '../registration/screens/worker_account_registration_screen.dart';
 
 const _plum = Color(0xFF460621);
 const _berry = Color(0xFFB20A50);
@@ -15,9 +16,11 @@ const _ivory = Color(0xFFFFF9F5);
 const _line = Color(0xFFE8C9CE);
 
 class WorkerOtpScreen extends StatefulWidget {
-  const WorkerOtpScreen({super.key, required this.phone});
+  const WorkerOtpScreen({super.key, required this.phone, this.authApi});
 
   final String phone;
+  final WorkerAuthApi? authApi;
+  WorkerAuthApi get auth => authApi ?? WorkerMobileAuthApi();
 
   @override
   State<WorkerOtpScreen> createState() => _WorkerOtpScreenState();
@@ -55,32 +58,24 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
     });
   }
 
-  void _restartDemoCountdown() {
-    if (!WorkerEnvironment.developmentPreview || _remainingSeconds != 0) return;
-    _otp.clear();
-    _otpFocus.requestFocus();
-    setState(() => _error = null);
-    _startCountdown();
-    setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Development preview only — no SMS was sent.'),
-      ),
-    );
+  Future<void> _resend() async {
+    if (_remainingSeconds != 0) return;
+    try {
+      await widget.auth.resendOtp();
+      if (!mounted) return;
+      _otp.clear();
+      _otpFocus.requestFocus();
+      setState(() => _error = null);
+      _startCountdown();
+    } on WorkerAuthException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    }
   }
 
   Future<void> _verify() async {
     if (_verifying) return;
-    if (!WorkerEnvironment.developmentPreview) {
-      setState(() => _error = 'Verification is not connected to the server.');
-      return;
-    }
     if (_otp.text.length != 6) {
       setState(() => _error = 'Enter the complete 6-digit code.');
-      return;
-    }
-    if (_otp.text != '123456') {
-      setState(() => _error = 'Invalid development OTP. Try again.');
       return;
     }
     setState(() {
@@ -88,12 +83,52 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
       _error = null;
     });
     FocusScope.of(context).unfocus();
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      SlidePageRoute<void>(page: WorkerHomeScreen(phoneNumber: widget.phone)),
-      (_) => false,
-    );
+    try {
+      final identity = await widget.auth.verifyOtp(
+        widget.phone,
+        _otp.text,
+        fullName: 'Worker',
+      );
+      if (!mounted) return;
+      final proof = identity.registrationToken;
+      if (proof != null) {
+        await Navigator.of(context).pushReplacement(
+          SlidePageRoute<void>(
+            page: WorkerAccountRegistrationScreen(
+              phone: widget.phone,
+              registrationToken: proof,
+              authApi: widget.auth,
+            ),
+          ),
+        );
+        return;
+      }
+      final stage = switch (identity.approval) {
+        WorkerApproval.approved => WorkerApplicationStage.approved,
+        WorkerApproval.pending => WorkerApplicationStage.underReview,
+        WorkerApproval.rejected => WorkerApplicationStage.rejected,
+        WorkerApproval.suspended => WorkerApplicationStage.actionRequired,
+        WorkerApproval.notRegistered => WorkerApplicationStage.preview,
+      };
+      Navigator.of(context).pushAndRemoveUntil(
+        SlidePageRoute<void>(
+          page: WorkerApplicationStatusScreen(
+            stage: stage,
+            applicationReference: identity.workerId.isEmpty
+                ? null
+                : identity.workerId,
+            reviewMessage: identity.approval == WorkerApproval.notRegistered
+                ? 'Your worker profile is not registered yet. Complete your application before accessing operational APIs.'
+                : null,
+          ),
+        ),
+        (_) => false,
+      );
+    } on WorkerAuthException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _verifying = false);
+    }
   }
 
   @override
@@ -173,7 +208,7 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
                       ),
                       const SizedBox(height: 9),
                       Text(
-                        'Enter the 6-digit development code for\n+91 ${widget.phone}',
+                        'Enter the 6-digit code sent to\n+91 ${widget.phone}',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 14,
@@ -342,9 +377,9 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
                       Center(
                         child: _remainingSeconds == 0
                             ? TextButton(
-                                onPressed: _restartDemoCountdown,
+                                onPressed: _resend,
                                 child: const Text(
-                                  'Restart demo timer',
+                                  'Resend code',
                                   style: TextStyle(
                                     color: _berry,
                                     fontWeight: FontWeight.w700,
@@ -360,17 +395,6 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
                               ),
                       ),
                       const SizedBox(height: 26),
-                      const Divider(color: _line),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'DEVELOPMENT PREVIEW  •  CODE: 123456\nNo SMS is sent and no worker session is created.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: _muted,
-                          height: 1.7,
-                        ),
-                      ),
                     ],
                   ),
                 ),

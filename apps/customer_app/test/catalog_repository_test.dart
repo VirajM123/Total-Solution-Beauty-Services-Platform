@@ -69,4 +69,77 @@ void main() {
       throwsA(isA<MobileApiException>()),
     );
   });
+
+  test('published packages and offers use the public catalog DTOs', () async {
+    final api = MobileApi(
+      baseUrl: 'https://example.com/api',
+      client: MockClient((request) async {
+        expect(request.url.queryParameters, {'page': '2', 'limit': '20'});
+        if (request.url.path == '/api/catalog/packages') {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'items': [
+                  {
+                    '_id': 'package-id',
+                    'name': 'Glow package',
+                    'description': 'A published service bundle',
+                    'components': [
+                      {'serviceId': 'service-id', 'quantity': 1},
+                    ],
+                    'pricePaise': 249950,
+                    'durationMinutes': 90,
+                    'thumbnail': 'https://media.example.com/package.jpg',
+                  },
+                ],
+                'pagination': {'page': 2, 'limit': 20, 'hasMore': false},
+              },
+            }),
+            200,
+          );
+        }
+        expect(request.url.path, '/api/catalog/offers');
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'items': [
+                {
+                  '_id': 'offer-id',
+                  'name': 'Welcome offer',
+                  'description': 'Save on your first service',
+                  'code': 'WELCOME20',
+                  'discountType': 'percentage',
+                  'value': 20,
+                  'minimumOrderPaise': 10000,
+                  'maximumDiscountPaise': 50000,
+                  'startsAt': '2026-10-01T00:00:00.000Z',
+                  'endsAt': '2026-11-01T00:00:00.000Z',
+                  'thumbnail': 'https://media.example.com/offer.jpg',
+                },
+              ],
+              'pagination': {'page': 2, 'limit': 20, 'hasMore': true},
+            },
+          }),
+          200,
+        );
+      }),
+    );
+    addTearDown(api.close);
+    final repository = CatalogRepository(api);
+    final packages = await repository.packages(page: 2);
+    expect(packages.items.single.id, 'package-id');
+    expect(packages.items.single.priceLabel, '₹2499.50');
+    expect(packages.items.single.durationMinutes, 90);
+    expect(packages.items.single.serviceIds, ['service-id']);
+    expect(packages.hasMore, isFalse);
+
+    final offers = await repository.offers(page: 2);
+    expect(offers.items.single.code, 'WELCOME20');
+    expect(offers.items.single.discountLabel, '20% off');
+    expect(offers.items.single.endsAt, DateTime.utc(2026, 11));
+    expect(offers.items.single.minimumOrderPaise, BigInt.from(10000));
+    expect(offers.hasMore, isTrue);
+  });
 }

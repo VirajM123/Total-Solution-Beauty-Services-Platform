@@ -28,6 +28,7 @@ class MobileApi {
   Future<Map<String, dynamic>> get(
     String path, {
     Map<String, String> query = const {},
+    String? accessToken,
   }) async {
     final base = Uri.tryParse(_baseUrl);
     if (base == null ||
@@ -55,7 +56,13 @@ class MobileApi {
       }
       try {
         final response = await _client
-            .get(uri, headers: const {'Accept': 'application/json'})
+            .get(
+              uri,
+              headers: {
+                'Accept': 'application/json',
+                if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+              },
+            )
             .timeout(timeout);
         if (_closed) {
           throw const MobileApiException('CANCELLED', 'Request cancelled.');
@@ -119,6 +126,88 @@ class MobileApi {
       }
     }
     throw const MobileApiException('NETWORK_UNAVAILABLE', 'Unable to connect.');
+  }
+
+  Future<Map<String, dynamic>> post(
+    String path, {
+    required Map<String, dynamic> body,
+    String? accessToken,
+  }) async {
+    final base = Uri.tryParse(_baseUrl);
+    if (base == null ||
+        !base.hasAuthority ||
+        !['http', 'https'].contains(base.scheme) ||
+        (!kDebugMode && base.scheme != 'https') ||
+        base.userInfo.isNotEmpty ||
+        base.hasQuery ||
+        base.hasFragment) {
+      throw const MobileApiException(
+        'CONFIGURATION_REQUIRED',
+        'Configure API_BASE_URL for the central Hii Beauty backend.',
+      );
+    }
+    if (!path.startsWith('/') || path.contains('..') || path.contains('://')) {
+      throw ArgumentError.value(path, 'path');
+    }
+    final uri = base.replace(
+      path: '${base.path.replaceFirst(RegExp(r'/+$'), '')}$path',
+    );
+    try {
+      final response = await _client
+          .post(
+            uri,
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(timeout);
+      if (_closed) {
+        throw const MobileApiException('CANCELLED', 'Request cancelled.');
+      }
+      final Object? decoded;
+      try {
+        decoded = jsonDecode(response.body);
+      } on FormatException {
+        throw MobileApiException(
+          'INVALID_RESPONSE',
+          'The server returned an invalid response.',
+          status: response.statusCode,
+        );
+      }
+      if (decoded is! Map<String, dynamic>) {
+        throw const MobileApiException('INVALID_RESPONSE', 'Invalid API envelope.');
+      }
+      if (response.statusCode < 200 ||
+          response.statusCode >= 300 ||
+          decoded['success'] != true) {
+        final error = decoded['error'];
+        throw MobileApiException(
+          error is Map ? '${error['code'] ?? 'API_ERROR'}' : 'API_ERROR',
+          error is Map && error['message'] is String
+              ? error['message'] as String
+              : 'The service is unavailable. Please try again.',
+          status: response.statusCode,
+        );
+      }
+      final data = decoded['data'];
+      if (data is! Map<String, dynamic>) {
+        throw const MobileApiException('INVALID_RESPONSE', 'Invalid API data.');
+      }
+      return data;
+    } on TimeoutException {
+      throw const MobileApiException(
+        'TIMEOUT',
+        'The request timed out. Please retry.',
+      );
+    } on http.ClientException {
+      throw const MobileApiException(
+        'NETWORK_UNAVAILABLE',
+        'Unable to connect. Check your connection and retry.',
+      );
+    }
   }
 
   void close() {

@@ -103,6 +103,101 @@ void main() {
     );
   });
 
+  testWidgets('packages and offers load from API and refresh updated offers', (
+    tester,
+  ) async {
+    var offerName = 'Welcome offer';
+    var categoryServiceRequestCount = 0;
+    final api = MobileApi(
+      baseUrl: 'https://example.com/api',
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/categories')) {
+          return response(
+            page([
+              {'id': 'skin', 'name': 'Skin', 'image': null},
+            ]),
+          );
+        }
+        if (request.url.path.endsWith('/services')) {
+          if (request.url.queryParameters['categoryId'] != null) {
+            categoryServiceRequestCount++;
+          }
+          return response(page([service('service-a')]));
+        }
+        if (request.url.path.endsWith('/packages')) {
+          return response({
+            'items': [
+              {
+                '_id': 'package-id',
+                'name': 'Glow package',
+                'description': 'Published package',
+                'components': [
+                  {'serviceId': 'service-a', 'quantity': 1},
+                  {'serviceId': 'service-b', 'quantity': 1},
+                ],
+                'pricePaise': 249950,
+                'durationMinutes': 90,
+                'thumbnail': null,
+              },
+            ],
+            'pagination': {'page': 1, 'limit': 20, 'hasMore': false},
+          });
+        }
+        expect(request.url.path, '/api/catalog/offers');
+        return response({
+          'items': [
+            {
+              '_id': 'offer-id',
+              'name': offerName,
+              'description': 'Published offer',
+              'code': 'WELCOME20',
+              'discountType': 'percentage',
+              'value': 20,
+              'minimumOrderPaise': 10000,
+              'maximumDiscountPaise': 50000,
+              'startsAt': '2026-10-01T00:00:00.000Z',
+              'endsAt': '2026-11-01T00:00:00.000Z',
+              'thumbnail': null,
+            },
+          ],
+          'pagination': {'page': 1, 'limit': 20, 'hasMore': false},
+        });
+      }),
+    );
+    addTearDown(api.close);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CatalogScreen(
+          config: const AppConfig(Environment.production),
+          repository: CatalogRepository(api),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Skin'), findsOneWidget);
+    expect(find.text('Service service-a'), findsOneWidget);
+    expect(find.text('₹100.50 · 30 min'), findsOneWidget);
+    await tester.tap(find.text('Skin'));
+    await tester.pumpAndSettle();
+    expect(categoryServiceRequestCount, 1);
+
+    await tester.tap(find.byKey(const ValueKey('catalog-packages-tab')));
+    await tester.pumpAndSettle();
+    expect(find.text('Glow package'), findsOneWidget);
+    expect(find.text('₹2499.50 · 90 min'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('catalog-offers-tab')));
+    await tester.pumpAndSettle();
+    expect(find.text('Welcome offer'), findsOneWidget);
+    expect(find.text('20% off'), findsOneWidget);
+    expect(find.text('Code: WELCOME20'), findsOneWidget);
+
+    offerName = 'Admin-edited offer';
+    await tester.tap(find.byTooltip('Refresh catalog'));
+    await tester.pumpAndSettle();
+    expect(find.text('Admin-edited offer'), findsOneWidget);
+  });
+
   testWidgets('detail navigates to fresh neighboring detail', (tester) async {
     final details = <String>[];
     final api = MobileApi(
