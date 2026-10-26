@@ -5,7 +5,11 @@ abstract final class WorkerEnvironment {
   static const developmentPreview =
       kDebugMode &&
       bool.fromEnvironment('WORKER_DEVELOPMENT_PREVIEW', defaultValue: false);
-  static const apiBaseUrl = String.fromEnvironment('API_BASE_URL');
+  static String get apiBaseUrl {
+    const configured = String.fromEnvironment('API_BASE_URL');
+    if (configured.isNotEmpty) return configured;
+    return kIsWeb ? 'http://localhost:5001' : 'http://10.0.2.2:5001';
+  }
 
   static Uri? get apiOrigin {
     final uri = Uri.tryParse(apiBaseUrl);

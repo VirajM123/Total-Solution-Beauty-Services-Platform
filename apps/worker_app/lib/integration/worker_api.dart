@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 /// Domain seams only. No wire format or URL is assumed until worker contracts
 /// exist. Implementations must return server records and enforce worker scope.
 enum WorkerApproval { notRegistered, pending, approved, rejected, suspended }
@@ -106,6 +108,19 @@ abstract interface class WorkerAuthApi {
     String? email,
   });
   Future<WorkerIdentity> currentIdentity();
+  Future<String> uploadDocument({
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+  });
+  Future<WorkerIdentity> submitRegistration({
+    required int experienceYears,
+    required List<String> serviceIds,
+    required List<String> serviceAreaIds,
+    required String identityMediaAssetId,
+  });
+  Future<List<Map<String, dynamic>>> fetchServiceAreas();
+  Future<List<Map<String, dynamic>>> fetchServices();
   Future<void> logout();
 }
 
@@ -154,6 +169,25 @@ class PendingWorkerApi implements WorkerAuthApi, WorkerOperationsApi {
   @override
   Future<WorkerIdentity> currentIdentity() =>
       _pending('Worker session and approval');
+  @override
+  Future<String> uploadDocument({
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+  }) => _pending('Worker document upload');
+  @override
+  Future<WorkerIdentity> submitRegistration({
+    required int experienceYears,
+    required List<String> serviceIds,
+    required List<String> serviceAreaIds,
+    required String identityMediaAssetId,
+  }) => _pending('Worker registration submission');
+  @override
+  Future<List<Map<String, dynamic>>> fetchServiceAreas() =>
+      _pending('Worker service areas');
+  @override
+  Future<List<Map<String, dynamic>>> fetchServices() =>
+      _pending('Worker services');
   @override
   Future<void> logout() => _pending('Worker session revocation');
   @override

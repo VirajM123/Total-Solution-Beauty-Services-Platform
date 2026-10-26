@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -283,6 +284,95 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
           : '${user is Map ? user['_id'] : ''}',
       approval: state,
     );
+  }
+
+  @override
+  Future<String> uploadDocument({
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+  }) async {
+    final token = await _storage.read();
+    if (token == null) throw const WorkerAuthException('UNAUTHENTICATED', 'Sign in is required.');
+    final uri = _uri('/mobile/worker/media');
+    final response = await _client.post(
+      uri,
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': mimeType,
+        'x-file-name': Uri.encodeComponent(fileName),
+      },
+      body: bytes,
+    ).timeout(const Duration(seconds: 30));
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic> || decoded['success'] != true) {
+      final error = decoded is Map ? decoded['error'] : null;
+      throw WorkerAuthException(
+        error is Map ? '' + (error['code'] ?? 'UPLOAD_FAILED') : 'UPLOAD_FAILED',
+        error is Map && error['message'] is String
+            ? error['message'] as String
+            : 'Failed to upload document. Please try again.',
+      );
+    }
+    final data = decoded['data'];
+    if (data is Map && data['_id'] != null) {
+      return '' + data['_id'];
+    }
+    throw const WorkerAuthException('INVALID_RESPONSE', 'Invalid response from media server.');
+  }
+
+  @override
+  Future<WorkerIdentity> submitRegistration({
+    required int experienceYears,
+    required List<String> serviceIds,
+    required List<String> serviceAreaIds,
+    required String identityMediaAssetId,
+  }) async {
+    final token = await _storage.read();
+    if (token == null) throw const WorkerAuthException('UNAUTHENTICATED', 'Sign in is required.');
+    final data = await _request(
+      'POST',
+      '/mobile/worker/registration',
+      token: token,
+      body: {
+        'experienceYears': experienceYears,
+        'serviceIds': serviceIds,
+        'serviceAreaIds': serviceAreaIds,
+        'documents': [
+          {'mediaAssetId': identityMediaAssetId, 'kind': 'identity'}
+        ],
+      },
+    );
+    return WorkerIdentity(
+      workerId: '' + (data['_id'] ?? ''),
+      approval: WorkerApproval.pending,
+    );
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchServiceAreas() async {
+    try {
+      final uri = _uri('/catalog/service-areas');
+      final response = await _client.get(uri).timeout(const Duration(seconds: 10));
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map && decoded['data'] is Map && decoded['data']['items'] is List) {
+        return List<Map<String, dynamic>>.from(decoded['data']['items']);
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchServices() async {
+    try {
+      final uri = _uri('/catalog/services');
+      final response = await _client.get(uri).timeout(const Duration(seconds: 10));
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map && decoded['data'] is Map && decoded['data']['items'] is List) {
+        return List<Map<String, dynamic>>.from(decoded['data']['items']);
+      }
+    } catch (_) {}
+    return [];
   }
 
   @override
