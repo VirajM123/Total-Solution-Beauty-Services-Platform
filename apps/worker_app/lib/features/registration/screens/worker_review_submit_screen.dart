@@ -1,10 +1,12 @@
-import '../../../integration/worker_environment.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/slide_page_route.dart';
 import '../../home/worker_profile_data.dart';
 import 'worker_application_status_screen.dart';
+import '../../../integration/worker_api.dart';
+import '../../../integration/worker_mobile_auth_api.dart';
+import 'worker_document_verification_screen.dart';
 
 // Step 4 is intentionally a DEBUG-ONLY local review preview.
 // No application, identity document or verification result is transmitted.
@@ -35,6 +37,11 @@ class WorkerReviewSubmitScreen extends StatefulWidget {
     this.professionalCertificateFormat,
     this.profilePhotoBytes,
     this.profileRepository,
+    this.authApi,
+    this.identityDocument,
+    this.certificateDocument,
+    this.catalogServices = const [],
+    this.catalogAreas = const [],
   });
 
   final String fullName;
@@ -55,6 +62,11 @@ class WorkerReviewSubmitScreen extends StatefulWidget {
   final String identityType;
   final String identityFileFormat;
   final String? professionalCertificateFormat;
+  final WorkerAuthApi? authApi;
+  final WorkerSelectedDocument? identityDocument;
+  final WorkerSelectedDocument? certificateDocument;
+  final List<Map<String, dynamic>> catalogServices;
+  final List<Map<String, dynamic>> catalogAreas;
 
   @override
   State<WorkerReviewSubmitScreen> createState() =>
@@ -63,11 +75,14 @@ class WorkerReviewSubmitScreen extends StatefulWidget {
 
 class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
   bool _confirmedAccurate = false;
+  bool _termsAgreed = false;
   bool _understandsDemo = false;
   bool _savingPreview = false;
+  bool _submitting = false;
+  bool get _isLiveSubmission => widget.identityDocument != null;
 
   Future<void> _previewSubmission() async {
-    if (!WorkerEnvironment.developmentPreview || _savingPreview) return;
+    if (_savingPreview) return;
     if (!_confirmedAccurate || !_understandsDemo) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please confirm both statements first.')),
@@ -116,6 +131,127 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
       ),
     );
   }
+
+  Future<void> _submitApplication() async {
+    if (_submitting) return;
+    if (!_confirmedAccurate || !_termsAgreed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please confirm both statements before submitting.')),
+      );
+      return;
+    }
+    if (widget.identityDocument == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Identity proof file is missing.')),
+      );
+      return;
+    }
+
+    setState(() => _submitting = true);
+    final auth = widget.authApi ?? WorkerMobileAuthApi();
+
+    try {
+      // 1. Upload identity document to backend
+      final doc = widget.identityDocument!;
+      final mime = doc.isImage
+          ? (doc.extension.toLowerCase() == 'png' ? 'image/png' : 'image/jpeg')
+          : 'application/pdf';
+
+      final mediaAssetId = await auth.uploadDocument(
+        bytes: doc.bytes,
+        fileName: doc.name,
+        mimeType: mime,
+      );
+
+      // 2. Resolve service IDs & service area IDs
+      var serviceIds = <String>[];
+      if (widget.catalogServices.isNotEmpty) {
+        for (final sName in widget.services) {
+          final match = widget.catalogServices.firstWhere(
+            (s) => s['name'] == sName,
+            orElse: () => <String, dynamic>{},
+          );
+          final id = match['id'] ?? match['_id'];
+          if (id != null && id.toString().isNotEmpty) {
+            serviceIds.add(id.toString());
+          }
+        }
+      }
+      if (serviceIds.isEmpty) {
+        final fetchedServices = await auth.fetchServices();
+        for (final sName in widget.services) {
+          final match = fetchedServices.firstWhere(
+            (s) => s['name'] == sName,
+            orElse: () => <String, dynamic>{},
+          );
+          final id = match['id'] ?? match['_id'];
+          if (id != null && id.toString().isNotEmpty) {
+            serviceIds.add(id.toString());
+          }
+        }
+        if (serviceIds.isEmpty && fetchedServices.isNotEmpty) {
+          final firstId = fetchedServices.first['id'] ?? fetchedServices.first['_id'];
+          if (firstId != null) serviceIds.add(firstId.toString());
+        }
+      }
+
+      var serviceAreaIds = <String>[];
+      if (widget.catalogAreas.isNotEmpty) {
+        for (final a in widget.catalogAreas) {
+          final id = a['_id'] ?? a['id'];
+          if (id != null && id.toString().isNotEmpty) {
+            serviceAreaIds.add(id.toString());
+          }
+        }
+      }
+      if (serviceAreaIds.isEmpty) {
+        final fetchedAreas = await auth.fetchServiceAreas();
+        if (fetchedAreas.isNotEmpty) {
+          final firstId = fetchedAreas.first['_id'] ?? fetchedAreas.first['id'];
+          if (firstId != null) serviceAreaIds.add(firstId.toString());
+        }
+      }
+
+      // 3. Submit registration to backend
+      final identity = await auth.submitRegistration(
+        experienceYears: widget.yearsOfExperience,
+        serviceIds: serviceIds,
+        serviceAreaIds: serviceAreaIds,
+        identityMediaAssetId: mediaAssetId,
+      );
+
+      if (!mounted) return;
+
+      // 4. Navigate to WorkerApplicationStatusScreen
+      Navigator.of(context).pushAndRemoveUntil(
+        SlidePageRoute<void>(
+          page: WorkerApplicationStatusScreen(
+            stage: WorkerApplicationStage.underReview,
+            applicationReference: identity.workerId.isNotEmpty ? identity.workerId : null,
+            authApi: auth,
+            workerPhone: widget.mobile,
+            reviewMessage: 'Your application has been received and is pending admin verification.',
+          ),
+        ),
+        (_) => false,
+      );
+    } on WorkerAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Submission failed: ' + e.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
 
   Widget _detail(String label, String value) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 5),
@@ -386,18 +522,32 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                           style: TextStyle(color: _plum, fontSize: 12.5),
                         ),
                       ),
-                      CheckboxListTile(
-                        value: _understandsDemo,
-                        onChanged: (value) =>
-                            setState(() => _understandsDemo = value ?? false),
-                        activeColor: _berry,
-                        contentPadding: EdgeInsets.zero,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        title: const Text(
-                          'I understand this is a demo, not a real submission.',
-                          style: TextStyle(color: _plum, fontSize: 12.5),
+                      if (!_isLiveSubmission)
+                        CheckboxListTile(
+                          value: _understandsDemo,
+                          onChanged: (value) =>
+                              setState(() => _understandsDemo = value ?? false),
+                          activeColor: _berry,
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          title: const Text(
+                            'I understand this is a demo, not a real submission.',
+                            style: TextStyle(color: _plum, fontSize: 12.5),
+                          ),
+                        )
+                      else
+                        CheckboxListTile(
+                          value: _termsAgreed,
+                          onChanged: (value) =>
+                              setState(() => _termsAgreed = value ?? false),
+                          activeColor: _berry,
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          title: const Text(
+                            'I agree to the partner verification terms and review process.',
+                            style: TextStyle(color: _plum, fontSize: 12.5),
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 5),
                       const Text(
                         'To edit earlier information, use Back to Documents, then Back '
@@ -441,32 +591,63 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                               ),
                               borderRadius: BorderRadius.circular(26),
                             ),
-                            child: FilledButton.icon(
-                              onPressed: WorkerEnvironment.developmentPreview && !_savingPreview
-                                  ? _previewSubmission
-                                  : null,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                foregroundColor: Colors.white,
-                                shadowColor: Colors.transparent,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                ),
-                              ),
-                              icon: const Icon(
-                                Icons.visibility_outlined,
-                                size: 19,
-                              ),
-                              label: Text(
-                                _savingPreview
-                                    ? 'Saving local profile…'
-                                    : 'Preview submission',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
+                            child: !_isLiveSubmission
+                                ? FilledButton.icon(
+                                    onPressed: _savingPreview ? null : _previewSubmission,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      foregroundColor: Colors.white,
+                                      shadowColor: Colors.transparent,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                      ),
+                                    ),
+                                    icon: const Icon(
+                                      Icons.visibility_outlined,
+                                      size: 19,
+                                    ),
+                                    label: Text(
+                                      _savingPreview
+                                          ? 'Saving local profile…'
+                                          : 'Preview submission',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  )
+                                : FilledButton.icon(
+                                    onPressed: _submitting ? null : _submitApplication,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      foregroundColor: Colors.white,
+                                      shadowColor: Colors.transparent,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                      ),
+                                    ),
+                                    icon: _submitting
+                                        ? const SizedBox.square(
+                                            dimension: 16,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.check_circle_outline_rounded,
+                                            size: 19,
+                                          ),
+                                    label: Text(
+                                      _submitting
+                                          ? 'Submitting Application…'
+                                          : 'Submit Application',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
                           ),
                         ),
                       ),

@@ -1,4 +1,3 @@
-import '../../integration/worker_environment.dart';
 
 import 'package:flutter/material.dart';
 
@@ -7,13 +6,12 @@ import 'worker_dashboard_screen.dart';
 import 'worker_profile_data.dart';
 import 'worker_payout_data.dart';
 
-/// The OTP route supplies the phone used to look up the local demo profile.
-/// It is not evidence of a server-authenticated account.
+/// Worker home and operational dashboard screen.
 class WorkerHomeScreen extends StatefulWidget {
   const WorkerHomeScreen({
     super.key,
     this.phoneNumber = '',
-    this.demoMode = true,
+    this.demoMode = false,
     this.profileRepository,
     this.payoutRepository,
   });
@@ -36,7 +34,6 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
   @override
   void initState() {
     super.initState();
-    if (!WorkerEnvironment.developmentPreview) return;
     _repository.addListener(_profileChanged);
     _loadProfile();
   }
@@ -63,7 +60,7 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
   void _exitPreview() {
     Navigator.of(context).pushAndRemoveUntil<void>(
       MaterialPageRoute<void>(
-        builder: (_) => const WorkerLoginScreen(demoEnabled: WorkerEnvironment.developmentPreview),
+        builder: (_) => const WorkerLoginScreen(demoEnabled: false),
       ),
       (_) => false,
     );
@@ -77,65 +74,6 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!WorkerEnvironment.developmentPreview) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFFFF9F5),
-        body: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.lock_outline, size: 52, color: Color(0xFFB20A50)),
-                  SizedBox(height: 16),
-                  Text(
-                    'Worker access not configured',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF460621),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Secure worker authentication and admin approval are required before dashboard access.',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (_profileError != null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFFFF9F5),
-        body: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Could not load local worker profile.'),
-                  const SizedBox(height: 8),
-                  Text('$_profileError', textAlign: TextAlign.center),
-                  TextButton(
-                    onPressed: _loadProfile,
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
     return WorkerDashboardScreen(
       demoMode: widget.demoMode,
       workerPhone: widget.phoneNumber,
@@ -143,10 +81,10 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
       payoutRepository: widget.payoutRepository,
       workerName: _profile?.fullName.isNotEmpty == true
           ? _profile!.fullName
-          : 'Worker',
+          : 'Hi Beauty Partner',
       location: _profile?.cityOrArea.isNotEmpty == true
           ? _profile!.cityOrArea
-          : 'Your service area',
+          : 'Latur',
       profilePhotoPath: _profile?.profilePhotoPath,
       onLogoutTap: _exitPreview,
     );

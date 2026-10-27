@@ -5961,12 +5961,13 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     ],
   );
 
-  Widget _profileMenuGroup(List<_ProfileMenuEntry> entries) => Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
+  Widget _profileMenuGroup(List<_ProfileMenuEntry> entries) => Material(
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(17),
-      border: Border.all(color: _bookingLine),
+      side: const BorderSide(color: _bookingLine),
     ),
+    clipBehavior: Clip.antiAlias,
     child: Column(
       children: [
         for (var index = 0; index < entries.length; index++) ...[

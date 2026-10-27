@@ -1,12 +1,11 @@
-import '../../integration/worker_environment.dart';
 import '../../integration/worker_api.dart';
 import '../../integration/worker_mobile_auth_api.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../registration/screens/worker_personal_details_screen.dart';
 import '../../app/slide_page_route.dart';
+import '../registration/screens/worker_account_registration_screen.dart';
 import '../otp/worker_otp_screen.dart';
 import '../widgets/worker_login_footer.dart';
 
@@ -33,9 +32,9 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
   bool _loading = false;
 
   void _comingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature is coming soon.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$feature is coming soon.')));
   }
 
   @override
@@ -66,7 +65,15 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
         ),
       );
     } on WorkerAuthException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (error.code == 'REGISTRATION_REQUIRED' && mounted) {
+        await Navigator.of(context).push(
+          SlidePageRoute<void>(
+            page: WorkerAccountRegistrationScreen(phone: phone, authApi: auth),
+          ),
+        );
+      } else if (mounted) {
+        setState(() => _error = error.message);
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -95,13 +102,13 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 stops: [0.0, 0.30, 0.48, 0.66, 1.0],
-colors: [
-  Color(0x18FFF9F5),
-  Color(0x35FFF9F5),
-  Color(0xD9FFF9F5),
-  Color(0xFAFFF9F5),
-  Color(0xF5FFF9F5),
-],
+                colors: [
+                  Color(0x18FFF9F5),
+                  Color(0x35FFF9F5),
+                  Color(0xD9FFF9F5),
+                  Color(0xFAFFF9F5),
+                  Color(0xF5FFF9F5),
+                ],
               ),
             ),
           ),
@@ -113,16 +120,17 @@ colors: [
                 final width = math.min(constraints.maxWidth, 420.0);
                 final compact = constraints.maxHeight < 740;
                 final horizontalPadding = width < 340 ? 18.0 : 22.0;
-             final heroHeight = keyboardOpen
-    ? 145.0
-    : (constraints.maxHeight * (compact ? 0.23 : 0.25))
-        .clamp(165.0, 225.0)
-        .toDouble();
+                final heroHeight = keyboardOpen
+                    ? 145.0
+                    : (constraints.maxHeight * (compact ? 0.23 : 0.25))
+                          .clamp(165.0, 225.0)
+                          .toDouble();
 
                 return SingleChildScrollView(
                   controller: _scrollController,
                   physics: const ClampingScrollPhysics(),
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   child: Center(
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
@@ -162,9 +170,9 @@ colors: [
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color: _muted,
-                                fontSize: 11,
-letterSpacing: 1.3,
-fontWeight: FontWeight.w600,
+                                      fontSize: 11,
+                                      letterSpacing: 1.3,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   const SizedBox(height: 9),
@@ -174,7 +182,9 @@ fontWeight: FontWeight.w600,
                                       vertical: 5,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.9),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.9,
+                                      ),
                                       border: Border.all(color: _line),
                                       borderRadius: BorderRadius.circular(18),
                                     ),
@@ -203,14 +213,14 @@ fontWeight: FontWeight.w600,
                             ),
                             const SizedBox(height: 5),
                             const Text(
-                            'Your services. Your schedule. Your success.',
-textAlign: TextAlign.center,
-style: TextStyle(
-  fontSize: 13,
-  color: _muted,
-  fontWeight: FontWeight.w500,
-  height: 1.4,
-),
+                              'Your services. Your schedule. Your success.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: _muted,
+                                fontWeight: FontWeight.w500,
+                                height: 1.4,
+                              ),
                             ),
                             SizedBox(height: compact ? 18 : 23),
                             const Text(
@@ -234,64 +244,94 @@ style: TextStyle(
                                   FilteringTextInputFormatter.digitsOnly,
                                   LengthLimitingTextInputFormatter(10),
                                 ],
-                                style: const TextStyle(color: _plum, fontSize: 15),
+                                style: const TextStyle(
+                                  color: _plum,
+                                  fontSize: 15,
+                                ),
                                 onChanged: (_) {
-                                  if (_error != null) setState(() => _error = null);
+                                  if (_error != null)
+                                    setState(() => _error = null);
                                 },
                                 onSubmitted: (_) => _continue(),
                                 decoration: InputDecoration(
                                   hintText: 'Enter mobile number',
                                   hintStyle: const TextStyle(fontSize: 13),
-                                  prefixIconConstraints: const BoxConstraints(minWidth: 100),
+                                  prefixIconConstraints: const BoxConstraints(
+                                    minWidth: 100,
+                                  ),
                                   prefixIcon: const Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 10),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                    ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Text('🇮🇳', style: TextStyle(fontSize: 18)),
+                                        Text(
+                                          '🇮🇳',
+                                          style: TextStyle(fontSize: 18),
+                                        ),
                                         SizedBox(width: 7),
-                                        Text('+91', style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: _plum,
-                                        )),
+                                        Text(
+                                          '+91',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: _plum,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
                                   filled: true,
-                                  fillColor: Colors.white.withValues(alpha: 0.94),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                                  fillColor: Colors.white.withValues(
+                                    alpha: 0.94,
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                  ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: const BorderSide(color: _line),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: _berry, width: 1.5),
+                                    borderSide: const BorderSide(
+                                      color: _berry,
+                                      width: 1.5,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                             if (_error != null) ...[
                               const SizedBox(height: 8),
-                              Text(_error!, style: const TextStyle(
-                                color: Color(0xFFB3261E), fontSize: 12,
-                              )),
+                              Text(
+                                _error!,
+                                style: const TextStyle(
+                                  color: Color(0xFFB3261E),
+                                  fontSize: 12,
+                                ),
+                              ),
                             ],
                             const SizedBox(height: 15),
                             SizedBox(
                               height: 49,
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(colors: [
-                                    Color(0xFFD41361), Color(0xFF750034),
-                                  ]),
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFFD41361),
+                                      Color(0xFF750034),
+                                    ],
+                                  ),
                                   borderRadius: BorderRadius.circular(30),
-                                  boxShadow: const [BoxShadow(
-                                    color: Color(0x268B174A),
-                                    blurRadius: 12,
-                                    offset: Offset(0, 5),
-                                  )],
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x268B174A),
+                                      blurRadius: 12,
+                                      offset: Offset(0, 5),
+                                    ),
+                                  ],
                                 ),
                                 child: FilledButton(
                                   key: const Key('worker-continue'),
@@ -308,17 +348,25 @@ style: TextStyle(
                                       ? const SizedBox.square(
                                           dimension: 19,
                                           child: CircularProgressIndicator(
-                                            color: Colors.white, strokeWidth: 2,
+                                            color: Colors.white,
+                                            strokeWidth: 2,
                                           ),
                                         )
                                       : const Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Text('Continue', style: TextStyle(
-                                              fontFamily: 'Georgia', fontSize: 18,
-                                            )),
+                                            Text(
+                                              'Continue',
+                                              style: TextStyle(
+                                                fontFamily: 'Georgia',
+                                                fontSize: 18,
+                                              ),
+                                            ),
                                             SizedBox(width: 10),
-                                            Icon(Icons.arrow_forward_rounded, size: 20),
+                                            Icon(
+                                              Icons.arrow_forward_rounded,
+                                              size: 20,
+                                            ),
                                           ],
                                         ),
                                 ),
@@ -328,19 +376,17 @@ style: TextStyle(
                             WorkerLoginFooter(
                               onGoogle: () => _comingSoon('Google sign-in'),
                               onApple: () => _comingSoon('Apple sign-in'),
-                           onRegister: () {
-  if (!WorkerEnvironment.developmentPreview) {
-    setState(() => _error = 'Registration requires worker OTP, private document upload and application APIs.');
-    return;
-  }
-  Navigator.of(context).push(
-    SlidePageRoute<void>(
-      page: WorkerPersonalDetailsScreen(
-        initialMobile: _phone.text.trim(),
-      ),
-    ),
-  );
-},
+                              onRegister: () {
+                                final phone = _phone.text.trim();
+                                if (phone.isEmpty) {
+                                  setState(
+                                    () => _error =
+                                        'Enter your 10-digit mobile number to register as a partner.',
+                                  );
+                                  return;
+                                }
+                                _continue();
+                              },
                               onTerms: () => _comingSoon('Terms of service'),
                               onPrivacy: () => _comingSoon('Privacy policy'),
                             ),

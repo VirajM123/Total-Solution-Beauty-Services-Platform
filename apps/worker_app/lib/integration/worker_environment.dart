@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 
 /// Opt in explicitly; profile/release builds can never activate local previews.
@@ -8,6 +9,7 @@ abstract final class WorkerEnvironment {
   static String get apiBaseUrl {
     const configured = String.fromEnvironment('API_BASE_URL');
     if (configured.isNotEmpty) return configured;
+    if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')) return '';
     return kIsWeb ? 'http://localhost:5001' : 'http://10.0.2.2:5001';
   }
 

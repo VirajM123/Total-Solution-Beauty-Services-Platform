@@ -1,4 +1,3 @@
-import '../../../integration/worker_environment.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -10,6 +9,9 @@ import 'package:flutter/services.dart';
 import '../../../app/slide_page_route.dart';
 import '../../home/worker_profile_data.dart';
 import 'worker_document_verification_screen.dart';
+import '../../../integration/worker_api.dart';
+import '../../../integration/worker_mobile_auth_api.dart';
+import 'worker_personal_details_screen.dart';
 
 // Pinkora Worker Registration — Step 2 of 4.
 // UI-only: no backend writes, approvals or verification assertions.
@@ -45,11 +47,16 @@ class WorkerProfessionalDetails {
 }
 
 class WorkerProfessionalDetailsScreen extends StatefulWidget {
-  const WorkerProfessionalDetailsScreen({super.key, this.onContinue});
+  const WorkerProfessionalDetailsScreen({
+    super.key,
+    this.onContinue,
+    this.authApi,
+    this.personalDetails,
+  });
 
-  // Later, the parent registration coordinator can collect this validated
-  // data without directly submitting anything to the backend.
   final ValueChanged<WorkerProfessionalDetails>? onContinue;
+  final WorkerAuthApi? authApi;
+  final WorkerPersonalDetails? personalDetails;
 
   @override
   State<WorkerProfessionalDetailsScreen> createState() =>
@@ -59,6 +66,28 @@ class WorkerProfessionalDetailsScreen extends StatefulWidget {
 class _WorkerProfessionalDetailsScreenState
     extends State<WorkerProfessionalDetailsScreen> {
   final _formKey = GlobalKey<FormState>();
+  List<Map<String, dynamic>> _catalogServices = [];
+  List<Map<String, dynamic>> _catalogAreas = [];
+  bool _loadingCatalog = false;
+
+
+
+  Future<void> _fetchCatalog() async {
+    final api = widget.authApi ?? WorkerMobileAuthApi();
+    if (mounted) setState(() => _loadingCatalog = true);
+    try {
+      final svcs = await api.fetchServices();
+      final areas = await api.fetchServiceAreas();
+      if (!mounted) return;
+      setState(() {
+        _catalogServices = svcs;
+        _catalogAreas = areas;
+      });
+    } catch (_) {}
+    finally {
+      if (mounted) setState(() => _loadingCatalog = false);
+    }
+  }
   final _about = TextEditingController();
   final _certificate = TextEditingController();
 
@@ -273,6 +302,7 @@ class _WorkerProfessionalDetailsScreenState
   @override
   void initState() {
     super.initState();
+    _fetchCatalog();
     _about.addListener(_onDraftChanged);
     _certificate.addListener(_onDraftChanged);
     _restoreDraft();
@@ -328,16 +358,17 @@ class _WorkerProfessionalDetailsScreenState
       return;
     }
 
-    // Development-only screen navigation. This does NOT upload documents,
-    // submit an application, or count demo OTPs as real verification.
-    if (WorkerEnvironment.developmentPreview) {
-      Navigator.of(context).push(
-        SlidePageRoute<void>(page: const WorkerDocumentVerificationScreen()),
-      );
-      return;
-    }
-
-    _notice('Document verification is not connected in production yet.');
+    Navigator.of(context).push(
+      SlidePageRoute<void>(
+        page: WorkerDocumentVerificationScreen(
+          authApi: widget.authApi,
+          personalDetails: widget.personalDetails,
+          professionalDetails: details,
+          catalogServices: _catalogServices,
+          catalogAreas: _catalogAreas,
+        ),
+      ),
+    );
   }
 
   Widget _sectionTitle(String title, {String? hint}) => Padding(
@@ -382,9 +413,32 @@ class _WorkerProfessionalDetailsScreenState
   @override
   Widget build(BuildContext context) {
     final homeVisits = _workMode != 'Salon-based';
-    final services = _category == null
-        ? const <String>[]
-        : workerServiceOptions[_category] ?? const <String>[];
+    final catalogCategoryNames = _catalogServices
+        .map((s) => s['category'] is Map ? (s['category']['name'] as String? ?? '') : '')
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList();
+    final categoryOptions = {
+      ...catalogCategoryNames,
+      ...workerServiceOptions.keys,
+      if (_category != null) _category!,
+    }.toList();
+
+    final List<String> services;
+    if (_category == null) {
+      services = const <String>[];
+    } else {
+      final matchedCatalogServices = _catalogServices
+          .where((s) => s['category'] is Map && s['category']['name'] == _category)
+          .map((s) => s['name'] as String? ?? '')
+          .where((n) => n.isNotEmpty)
+          .toList();
+      if (matchedCatalogServices.isNotEmpty) {
+        services = matchedCatalogServices;
+      } else {
+        services = workerServiceOptions[_category] ?? const <String>[];
+      }
+    }
 
     return Scaffold(
       backgroundColor: _ivory,
@@ -507,7 +561,7 @@ class _WorkerProfessionalDetailsScreenState
                             'Select a category',
                             Icons.auto_awesome_outlined,
                           ),
-                          items: workerServiceOptions.keys
+                          items: categoryOptions
                               .map(
                                 (name) => DropdownMenuItem(
                                   value: name,
@@ -774,7 +828,7 @@ class _WorkerProfessionalDetailsScreenState
                             SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                'This is a UI preview. No worker application is submitted yet.',
+                                'Step 2 of your partner registration. Document uploads next in Step 3.',
                                 style: TextStyle(color: _muted, fontSize: 11.5),
                               ),
                             ),

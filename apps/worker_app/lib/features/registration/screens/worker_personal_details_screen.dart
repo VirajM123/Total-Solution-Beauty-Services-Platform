@@ -1,4 +1,5 @@
 import '../../../integration/worker_environment.dart';
+import '../../../integration/worker_api.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -42,6 +43,7 @@ class WorkerPersonalDetailsScreen extends StatefulWidget {
     this.onVerifyEmail,
     this.onChoosePhoto,
     this.onContinue,
+    this.authApi,
   });
 
   final String initialName;
@@ -55,6 +57,7 @@ class WorkerPersonalDetailsScreen extends StatefulWidget {
   final Future<void> Function(String email)? onVerifyEmail;
   final VoidCallback? onChoosePhoto;
   final ValueChanged<WorkerPersonalDetails>? onContinue;
+  final WorkerAuthApi? authApi;
 
   @override
   State<WorkerPersonalDetailsScreen> createState() =>
@@ -297,8 +300,9 @@ class _WorkerPersonalDetailsScreenState
 
 
   bool get _mobileVerified =>
-      widget.verifiedMobile != null &&
-      widget.verifiedMobile == _mobile.text.trim();
+      (widget.verifiedMobile != null && widget.verifiedMobile == _mobile.text.trim()) ||
+      (widget.initialMobile.isNotEmpty && widget.initialMobile == _mobile.text.trim()) ||
+      _demoMobileMatches;
 
   bool get _demoMobileMatches =>
       WorkerEnvironment.developmentPreview && _demoVerifiedMobile == _mobile.text.trim();
@@ -498,24 +502,31 @@ class _WorkerPersonalDetailsScreenState
       _notice('Workers must be at least 18 years old.');
       return;
     }
-    // Demo success must never satisfy production verification gating.
-    if (!_mobileVerified || !_emailVerified) {
-      _notice('Verify both your mobile number and email to continue.');
+    if (!_mobileVerified) {
+      _notice('Verify your mobile number to continue.');
       return;
     }
-    final callback = widget.onContinue;
-    if (callback == null) {
-      _notice('Professional Details is not connected yet.');
-      return;
-    }
-    callback(WorkerPersonalDetails(
+    final details = WorkerPersonalDetails(
       fullName: _name.text.trim(),
       mobile: _mobile.text.trim(),
       email: _email.text.trim(),
       dateOfBirth: _dob!,
       cityOrArea: _city.text.trim(),
       profilePhotoBytes: _selectedPhoto,
-    ));
+    );
+    final callback = widget.onContinue;
+    if (callback != null) {
+      callback(details);
+      return;
+    }
+    Navigator.of(context).push(
+      SlidePageRoute<void>(
+        page: WorkerProfessionalDetailsScreen(
+          authApi: widget.authApi,
+          personalDetails: details,
+        ),
+      ),
+    );
   }
 
   InputDecoration _fieldDecoration(String hint, IconData icon) =>
@@ -696,7 +707,7 @@ class _WorkerPersonalDetailsScreenState
                               ? null : 'Enter a valid Indian mobile number.',
                         ),
                         const SizedBox(height: 17),
-                        _label('Email address *'),
+                        _label('Email address (Optional)'),
                         TextFormField(
                           controller: _email,
                           keyboardType: TextInputType.emailAddress,
@@ -731,7 +742,7 @@ class _WorkerPersonalDetailsScreenState
                         const Row(children: [
                           Icon(Icons.lock_outline_rounded, size: 14, color: _muted),
                           SizedBox(width: 5),
-                          Expanded(child: Text('Both contact details must be verified before continuing.',
+                          Expanded(child: Text('Mobile number is verified for partner registration security.',
                               style: TextStyle(color: _muted, fontSize: 11.5))),
                         ]),
                         const SizedBox(height: 18),

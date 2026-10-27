@@ -97,14 +97,14 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
     };
     try {
       final response = await switch (method) {
-        'GET' => _client.get(uri, headers: headers).timeout(
-          const Duration(seconds: 12),
-        ),
-        'POST' => _client.post(
-          uri,
-          headers: headers,
-          body: jsonEncode(body),
-        ).timeout(const Duration(seconds: 12)),
+        'GET' =>
+          _client
+              .get(uri, headers: headers)
+              .timeout(const Duration(seconds: 12)),
+        'POST' =>
+          _client
+              .post(uri, headers: headers, body: jsonEncode(body))
+              .timeout(const Duration(seconds: 12)),
         _ => throw ArgumentError.value(method, 'method'),
       };
       final decoded = jsonDecode(response.body);
@@ -134,7 +134,10 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
       }
       return data;
     } on TimeoutException {
-      throw const WorkerAuthException('TIMEOUT', 'The request timed out. Retry.');
+      throw const WorkerAuthException(
+        'TIMEOUT',
+        'The request timed out. Retry.',
+      );
     } on http.ClientException {
       throw const WorkerAuthException(
         'NETWORK_UNAVAILABLE',
@@ -149,16 +152,32 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
   }
 
   @override
-  Future<void> requestOtp(String indianMobile) async {
+  Future<void> requestOtp(
+    String indianMobile, {
+    bool forRegistration = false,
+  }) async {
     final mobile = _normalizeMobile(indianMobile);
     final data = await _request(
       'POST',
       '/mobile/auth/otp/request',
-      body: {'mobileNumber': mobile, 'appType': 'worker'},
+      body: {
+        'mobileNumber': mobile,
+        'appType': 'worker',
+        'flow': forRegistration ? 'registration' : 'login',
+      },
     );
+    if (data['registrationRequired'] == true) {
+      throw const WorkerAuthException(
+        'REGISTRATION_REQUIRED',
+        'No worker account exists for this number. Please register first.',
+      );
+    }
     final challenge = data['challengeId'];
     if (challenge is! String) {
-      throw const WorkerAuthException('INVALID_RESPONSE', 'Missing OTP challenge.');
+      throw const WorkerAuthException(
+        'INVALID_RESPONSE',
+        'Missing OTP challenge.',
+      );
     }
     _challengeId = challenge;
     _requestedMobile = mobile;
@@ -255,17 +274,17 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
       'suspended' => WorkerApproval.suspended,
       _ => WorkerApproval.notRegistered,
     };
-    return WorkerIdentity(
-      workerId: '${user['id']}',
-      approval: approval,
-    );
+    return WorkerIdentity(workerId: '${user['id']}', approval: approval);
   }
 
   @override
   Future<WorkerIdentity> currentIdentity() async {
     final token = await _storage.read();
     if (token == null) {
-      throw const WorkerAuthException('UNAUTHENTICATED', 'Sign in is required.');
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
     }
     final data = await _request('GET', '/mobile/worker/profile', token: token);
     final profile = data['profile'];
@@ -293,22 +312,30 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
     required String mimeType,
   }) async {
     final token = await _storage.read();
-    if (token == null) throw const WorkerAuthException('UNAUTHENTICATED', 'Sign in is required.');
+    if (token == null)
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
     final uri = _uri('/mobile/worker/media');
-    final response = await _client.post(
-      uri,
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': mimeType,
-        'x-file-name': Uri.encodeComponent(fileName),
-      },
-      body: bytes,
-    ).timeout(const Duration(seconds: 30));
+    final response = await _client
+        .post(
+          uri,
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': mimeType,
+            'x-file-name': Uri.encodeComponent(fileName),
+          },
+          body: bytes,
+        )
+        .timeout(const Duration(seconds: 30));
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<String, dynamic> || decoded['success'] != true) {
       final error = decoded is Map ? decoded['error'] : null;
       throw WorkerAuthException(
-        error is Map ? '' + (error['code'] ?? 'UPLOAD_FAILED') : 'UPLOAD_FAILED',
+        error is Map
+            ? '' + (error['code'] ?? 'UPLOAD_FAILED')
+            : 'UPLOAD_FAILED',
         error is Map && error['message'] is String
             ? error['message'] as String
             : 'Failed to upload document. Please try again.',
@@ -318,7 +345,10 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
     if (data is Map && data['_id'] != null) {
       return '' + data['_id'];
     }
-    throw const WorkerAuthException('INVALID_RESPONSE', 'Invalid response from media server.');
+    throw const WorkerAuthException(
+      'INVALID_RESPONSE',
+      'Invalid response from media server.',
+    );
   }
 
   @override
@@ -329,7 +359,11 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
     required String identityMediaAssetId,
   }) async {
     final token = await _storage.read();
-    if (token == null) throw const WorkerAuthException('UNAUTHENTICATED', 'Sign in is required.');
+    if (token == null)
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
     final data = await _request(
       'POST',
       '/mobile/worker/registration',
@@ -339,7 +373,7 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
         'serviceIds': serviceIds,
         'serviceAreaIds': serviceAreaIds,
         'documents': [
-          {'mediaAssetId': identityMediaAssetId, 'kind': 'identity'}
+          {'mediaAssetId': identityMediaAssetId, 'kind': 'identity'},
         ],
       },
     );
@@ -353,9 +387,13 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
   Future<List<Map<String, dynamic>>> fetchServiceAreas() async {
     try {
       final uri = _uri('/catalog/service-areas');
-      final response = await _client.get(uri).timeout(const Duration(seconds: 10));
+      final response = await _client
+          .get(uri)
+          .timeout(const Duration(seconds: 10));
       final decoded = jsonDecode(response.body);
-      if (decoded is Map && decoded['data'] is Map && decoded['data']['items'] is List) {
+      if (decoded is Map &&
+          decoded['data'] is Map &&
+          decoded['data']['items'] is List) {
         return List<Map<String, dynamic>>.from(decoded['data']['items']);
       }
     } catch (_) {}
@@ -365,14 +403,28 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
   @override
   Future<List<Map<String, dynamic>>> fetchServices() async {
     try {
-      final uri = _uri('/catalog/services');
-      final response = await _client.get(uri).timeout(const Duration(seconds: 10));
+      final uri = _uri('/api/catalog/services');
+      final response = await _client
+          .get(uri)
+          .timeout(const Duration(seconds: 10));
       final decoded = jsonDecode(response.body);
-      if (decoded is Map && decoded['data'] is Map && decoded['data']['items'] is List) {
+      if (decoded is Map &&
+          decoded['data'] is Map &&
+          decoded['data']['items'] is List) {
         return List<Map<String, dynamic>>.from(decoded['data']['items']);
       }
     } catch (_) {}
     return [];
+  }
+
+  Future<Map<String, dynamic>> checkWorkerStatus() async {
+    final token = await _storage.read();
+    if (token == null)
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
+    return _request('GET', '/mobile/worker/status', token: token);
   }
 
   @override
@@ -380,7 +432,12 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
     final token = await _storage.read();
     if (token == null) return;
     try {
-      await _request('POST', '/mobile/worker/logout', body: const {}, token: token);
+      await _request(
+        'POST',
+        '/mobile/worker/logout',
+        body: const {},
+        token: token,
+      );
     } finally {
       await _storage.delete();
       _challengeId = null;

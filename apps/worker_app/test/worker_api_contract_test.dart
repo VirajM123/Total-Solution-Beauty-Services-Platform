@@ -86,91 +86,130 @@ void main() {
     expect(() => page.items.clear(), throwsUnsupportedError);
   });
 
-  test('worker OTP login persists a scoped session and reads approval status', () async {
-    final storage = _MemoryWorkerTokenStorage();
-    final api = WorkerMobileAuthApi(
-      apiBaseUrl: 'https://example.test/api',
-      tokenStorage: storage,
-      client: MockClient((request) async {
-        if (request.url.path.endsWith('/otp/request')) {
-          expect(request.body, contains('"appType":"worker"'));
-          expect(request.body, contains('"mobileNumber":"+919876543210"'));
+  test(
+    'worker OTP login persists a scoped session and reads approval status',
+    () async {
+      final storage = _MemoryWorkerTokenStorage();
+      final api = WorkerMobileAuthApi(
+        apiBaseUrl: 'https://example.test/api',
+        tokenStorage: storage,
+        client: MockClient((request) async {
+          if (request.url.path.endsWith('/otp/request')) {
+            expect(request.body, contains('"appType":"worker"'));
+            expect(request.body, contains('"mobileNumber":"+919876543210"'));
+            expect(request.body, contains('"flow":"login"'));
+            return http.Response(
+              '{"success":true,"data":{"challengeId":"aaaaaaaaaaaaaaaaaaaaaaaa"}}',
+              201,
+            );
+          }
+          if (request.url.path.endsWith('/otp/verify')) {
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            expect(body['fullName'], isNotNull);
+            return http.Response(
+              '{"success":true,"data":{"accessToken":"${'s' * 43}","appType":"worker","workerStatus":"pending","user":{"id":"worker-user","fullName":"Worker","mobileNumber":"+919876543210"}}}',
+              200,
+            );
+          }
+          if (request.url.path.endsWith('/profile')) {
+            expect(request.headers['authorization'], 'Bearer ${'s' * 43}');
+            return http.Response(
+              '{"success":true,"data":{"user":{"_id":"worker-user"},"profile":{"_id":"worker-profile","status":"pending"}}}',
+              200,
+            );
+          }
+          expect(request.url.path, endsWith('/logout'));
           return http.Response(
-            '{"success":true,"data":{"challengeId":"aaaaaaaaaaaaaaaaaaaaaaaa"}}',
-            201,
-          );
-        }
-        if (request.url.path.endsWith('/otp/verify')) {
-          final body = jsonDecode(request.body) as Map<String, dynamic>;
-          expect(body['fullName'], isNotNull);
-          return http.Response(
-            '{"success":true,"data":{"accessToken":"${'s' * 43}","appType":"worker","workerStatus":"pending","user":{"id":"worker-user","fullName":"Worker","mobileNumber":"+919876543210"}}}',
+            '{"success":true,"data":{"loggedOut":true}}',
             200,
           );
-        }
-        if (request.url.path.endsWith('/profile')) {
-          expect(request.headers['authorization'], 'Bearer ${'s' * 43}');
-          return http.Response(
-            '{"success":true,"data":{"user":{"_id":"worker-user"},"profile":{"_id":"worker-profile","status":"pending"}}}',
-            200,
-          );
-        }
-        expect(request.url.path, endsWith('/logout'));
-        return http.Response('{"success":true,"data":{"loggedOut":true}}', 200);
-      }),
-    );
-    await api.requestOtp('9876543210');
-    final loggedIn = await api.verifyOtp('9876543210', '654321');
-    expect(loggedIn.approval, WorkerApproval.pending);
-    expect(storage.token, '${'s' * 43}');
-    final current = await api.currentIdentity();
-    expect(current.workerId, 'worker-profile');
-    expect(current.approval, WorkerApproval.pending);
-    await api.logout();
-    expect(storage.token, isNull);
-    api.close();
-  });
+        }),
+      );
+      await api.requestOtp('9876543210');
+      final loggedIn = await api.verifyOtp('9876543210', '654321');
+      expect(loggedIn.approval, WorkerApproval.pending);
+      expect(storage.token, '${'s' * 43}');
+      final current = await api.currentIdentity();
+      expect(current.workerId, 'worker-profile');
+      expect(current.approval, WorkerApproval.pending);
+      await api.logout();
+      expect(storage.token, isNull);
+      api.close();
+    },
+  );
 
-  test('new worker registration requires verified proof and receives scoped token', () async {
-    final storage = _MemoryWorkerTokenStorage();
-    final api = WorkerMobileAuthApi(
-      apiBaseUrl: 'https://example.test/api',
-      tokenStorage: storage,
-      client: MockClient((request) async {
-        if (request.url.path.endsWith('/otp/request')) {
+  test(
+    'new worker registration requires verified proof and receives scoped token',
+    () async {
+      final storage = _MemoryWorkerTokenStorage();
+      final api = WorkerMobileAuthApi(
+        apiBaseUrl: 'https://example.test/api',
+        tokenStorage: storage,
+        client: MockClient((request) async {
+          if (request.url.path.endsWith('/otp/request')) {
+            expect(request.body, contains('"flow":"registration"'));
+            return http.Response(
+              '{"success":true,"data":{"challengeId":"bbbbbbbbbbbbbbbbbbbbbbbb"}}',
+              201,
+            );
+          }
+          if (request.url.path.endsWith('/otp/verify')) {
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            expect(body['fullName'], isNotNull);
+            return http.Response(
+              '{"success":true,"data":{"registrationRequired":true,"registrationToken":"${'r' * 43}","appType":"worker"}}',
+              200,
+            );
+          }
+          expect(request.url.path, endsWith('/register/worker'));
+          expect(request.body, contains('"registrationToken":"${'r' * 43}"'));
           return http.Response(
-            '{"success":true,"data":{"challengeId":"bbbbbbbbbbbbbbbbbbbbbbbb"}}',
+            '{"success":true,"data":{"accessToken":"${'w' * 43}","appType":"worker","user":{"id":"worker-user","fullName":"Worker","mobileNumber":"+919876543210"}}}',
             201,
           );
-        }
-        if (request.url.path.endsWith('/otp/verify')) {
-          final body = jsonDecode(request.body) as Map<String, dynamic>;
-          expect(body['fullName'], isNotNull);
+        }),
+      );
+      await api.requestOtp('9876543210', forRegistration: true);
+      final proof = await api.verifyOtp('9876543210', '654321');
+      expect(proof.registrationToken, '${'r' * 43}');
+      final identity = await api.completeRegistration(
+        registrationToken: proof.registrationToken!,
+        fullName: 'Worker',
+      );
+      expect(identity.workerId, 'worker-user');
+      expect(identity.approval, WorkerApproval.notRegistered);
+      expect(storage.token, '${'w' * 43}');
+      api.close();
+    },
+  );
+
+  test(
+    'unregistered worker login stops before OTP and requests registration',
+    () async {
+      final api = WorkerMobileAuthApi(
+        apiBaseUrl: 'https://example.test/api',
+        tokenStorage: _MemoryWorkerTokenStorage(),
+        client: MockClient((request) async {
+          expect(request.body, contains('"flow":"login"'));
           return http.Response(
-            '{"success":true,"data":{"registrationRequired":true,"registrationToken":"${'r' * 43}","appType":"worker"}}',
+            '{"success":true,"data":{"registrationRequired":true,"appType":"worker","mobileNumber":"+919876543210"}}',
             200,
           );
-        }
-        expect(request.url.path, endsWith('/register/worker'));
-        expect(request.body, contains('"registrationToken":"${'r' * 43}"'));
-        return http.Response(
-          '{"success":true,"data":{"accessToken":"${'w' * 43}","appType":"worker","user":{"id":"worker-user","fullName":"Worker","mobileNumber":"+919876543210"}}}',
-          201,
-        );
-      }),
-    );
-    await api.requestOtp('9876543210');
-    final proof = await api.verifyOtp('9876543210', '654321');
-    expect(proof.registrationToken, '${'r' * 43}');
-    final identity = await api.completeRegistration(
-      registrationToken: proof.registrationToken!,
-      fullName: 'Worker',
-    );
-    expect(identity.workerId, 'worker-user');
-    expect(identity.approval, WorkerApproval.notRegistered);
-    expect(storage.token, '${'w' * 43}');
-    api.close();
-  });
+        }),
+      );
+      await expectLater(
+        api.requestOtp('9876543210'),
+        throwsA(
+          isA<WorkerAuthException>().having(
+            (error) => error.code,
+            'code',
+            'REGISTRATION_REQUIRED',
+          ),
+        ),
+      );
+      api.close();
+    },
+  );
 }
 
 class _MemoryWorkerTokenStorage implements WorkerTokenStorage {

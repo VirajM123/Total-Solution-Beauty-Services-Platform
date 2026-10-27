@@ -3,18 +3,20 @@ import 'package:flutter/services.dart';
 
 import '../../../integration/worker_api.dart';
 import '../../../integration/worker_mobile_auth_api.dart';
-import 'worker_application_status_screen.dart';
+import '../../../app/slide_page_route.dart';
+import '../../otp/worker_otp_screen.dart';
+import 'worker_personal_details_screen.dart';
 
 class WorkerAccountRegistrationScreen extends StatefulWidget {
   const WorkerAccountRegistrationScreen({
     super.key,
     required this.phone,
-    required this.registrationToken,
+    this.registrationToken,
     required this.authApi,
   });
 
   final String phone;
-  final String registrationToken;
+  final String? registrationToken;
   final WorkerAuthApi authApi;
 
   @override
@@ -37,8 +39,18 @@ class _WorkerAccountRegistrationScreenState
   }
 
   Future<void> _register() async {
-    if (_busy || _name.text.trim().length < 2) {
+    if (_busy) return;
+    final name = _name.text.trim();
+    final email = _email.text.trim();
+    if (name.length < 2) {
       setState(() => _error = 'Enter your full name.');
+      return;
+    }
+    if (email.isNotEmpty &&
+        !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+      setState(
+        () => _error = 'Enter a valid email address or leave this blank.',
+      );
       return;
     }
     setState(() {
@@ -46,16 +58,36 @@ class _WorkerAccountRegistrationScreenState
       _error = null;
     });
     try {
+      if (widget.registrationToken == null) {
+        await widget.authApi.requestOtp(widget.phone, forRegistration: true);
+        if (!mounted) return;
+        await Navigator.of(context).push(
+          SlidePageRoute<void>(
+            page: WorkerOtpScreen(
+              phone: widget.phone,
+              authApi: widget.authApi,
+              registrationName: name,
+              registrationEmail: email,
+            ),
+          ),
+        );
+        return;
+      }
       await widget.authApi.completeRegistration(
-        registrationToken: widget.registrationToken,
-        fullName: _name.text,
-        email: _email.text,
+        registrationToken: widget.registrationToken!,
+        fullName: name,
+        email: email,
       );
       if (!mounted) return;
+      // Seamlessly transition to Personal & Professional application details
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute<void>(
-          builder: (_) => const WorkerApplicationStatusScreen(
-            stage: WorkerApplicationStage.preview,
+          builder: (_) => WorkerPersonalDetailsScreen(
+            initialName: name,
+            initialMobile: widget.phone,
+            initialEmail: email,
+            verifiedMobile: widget.phone,
+            authApi: widget.authApi,
           ),
         ),
         (_) => false,
@@ -78,7 +110,7 @@ class _WorkerAccountRegistrationScreenState
             padding: const EdgeInsets.all(24),
             children: [
               const Text(
-                'Mobile number verified',
+                'Create worker account',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
@@ -108,7 +140,11 @@ class _WorkerAccountRegistrationScreenState
                 onPressed: _busy ? null : _register,
                 child: _busy
                     ? const CircularProgressIndicator()
-                    : const Text('Create worker account'),
+                    : Text(
+                        widget.registrationToken == null
+                            ? 'Verify mobile and continue'
+                            : 'Continue to Partner Application',
+                      ),
               ),
             ],
           ),

@@ -53,8 +53,22 @@ class _LoginScreenState extends State<LoginScreen> {
       _loading = true;
     });
     try {
-      final challengeId = await widget.auth.requestOtp(value);
+      final request = await widget.auth.requestLoginOtp(value);
       if (!mounted) return;
+      if (request.registrationRequired) {
+        await Navigator.of(context).pushNamed(
+          RouteNames.register,
+          arguments: CustomerRegistrationArgs(phone: value),
+        );
+        return;
+      }
+      final challengeId = request.challengeId;
+      if (challengeId == null) {
+        throw const MobileApiException(
+          'INVALID_RESPONSE',
+          'Missing OTP challenge.',
+        );
+      }
       await Navigator.of(context).pushNamed(
         RouteNames.otp,
         arguments: CustomerOtpRouteArgs(phone: value, challengeId: challengeId),

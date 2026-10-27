@@ -2,6 +2,11 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../../../app/slide_page_route.dart';
+import '../../../integration/worker_api.dart';
+import 'worker_personal_details_screen.dart';
+import 'worker_professional_details_screen.dart';
+import 'worker_review_submit_screen.dart';
 
 // Pinkora Worker Registration - Page 3 of 4.
 // LOCAL UI PREVIEW ONLY. Documents are NOT uploaded, saved to device storage,
@@ -43,10 +48,22 @@ class WorkerDocumentVerificationDetails {
 }
 
 class WorkerDocumentVerificationScreen extends StatefulWidget {
-  const WorkerDocumentVerificationScreen({super.key, this.onContinue});
+  const WorkerDocumentVerificationScreen({
+    super.key,
+    this.onContinue,
+    this.authApi,
+    this.personalDetails,
+    this.professionalDetails,
+    this.catalogServices = const [],
+    this.catalogAreas = const [],
+  });
 
-  // Future registration coordinator callback, NOT an upload or approval.
   final ValueChanged<WorkerDocumentVerificationDetails>? onContinue;
+  final WorkerAuthApi? authApi;
+  final WorkerPersonalDetails? personalDetails;
+  final WorkerProfessionalDetails? professionalDetails;
+  final List<Map<String, dynamic>> catalogServices;
+  final List<Map<String, dynamic>> catalogAreas;
 
   @override
   State<WorkerDocumentVerificationScreen> createState() =>
@@ -246,17 +263,51 @@ Future<WorkerSelectedDocument?> _selectDocument() async {
       _notice('Complete the required identity proof and consent.');
       return;
     }
-    final callback = widget.onContinue;
-    if (callback == null) {
-      _notice('Page 4 is not connected. No documents were submitted or uploaded.');
-      return;
-    }
-    callback(WorkerDocumentVerificationDetails(
+    final details = WorkerDocumentVerificationDetails(
       identityType: _identityType!,
       identityDocument: _identity!,
       professionalCertificate: _certificate,
       consentToReview: _consent,
-    ));
+    );
+    final callback = widget.onContinue;
+    if (callback != null) {
+      callback(details);
+      return;
+    }
+    final personal = widget.personalDetails;
+    final professional = widget.professionalDetails;
+    if (personal == null || professional == null) {
+      _notice('Registration details missing. Please restart from Step 1.');
+      return;
+    }
+    Navigator.of(context).push(
+      SlidePageRoute<void>(
+        page: WorkerReviewSubmitScreen(
+          authApi: widget.authApi,
+          fullName: personal.fullName,
+          mobile: personal.mobile,
+          email: personal.email,
+          dateOfBirth: personal.dateOfBirth,
+          cityOrArea: personal.cityOrArea,
+          profilePhotoBytes: personal.profilePhotoBytes,
+          primaryCategory: professional.primaryCategory,
+          services: professional.services,
+          yearsOfExperience: professional.yearsOfExperience,
+          workMode: professional.workMode,
+          travelRadiusKm: professional.travelRadiusKm,
+          languages: professional.languages,
+          about: professional.about,
+          certificateDetails: professional.certificateDetails,
+          identityType: details.identityType,
+          identityDocument: details.identityDocument,
+          certificateDocument: details.professionalCertificate,
+          identityFileFormat: details.identityDocument.extension,
+          professionalCertificateFormat: details.professionalCertificate?.extension,
+          catalogServices: widget.catalogServices,
+          catalogAreas: widget.catalogAreas,
+        ),
+      ),
+    );
   }
 
   Widget _sectionHeading(String title, String subtitle, {bool required = false}) {

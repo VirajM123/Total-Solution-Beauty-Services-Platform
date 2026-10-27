@@ -95,7 +95,7 @@ class WorkerSettlementRecord {
 }
 
 abstract interface class WorkerAuthApi {
-  Future<void> requestOtp(String indianMobile);
+  Future<void> requestOtp(String indianMobile, {bool forRegistration = false});
   Future<void> resendOtp();
   Future<WorkerIdentity> verifyOtp(
     String indianMobile,
@@ -150,14 +150,16 @@ class PendingWorkerApi implements WorkerAuthApi, WorkerOperationsApi {
   Future<T> _pending<T>(String feature) =>
       Future<T>.error(WorkerIntegrationPending(feature));
   @override
-  Future<void> requestOtp(String indianMobile) => _pending('Worker OTP');
+  Future<void> requestOtp(
+    String indianMobile, {
+    bool forRegistration = false,
+  }) => _pending('Worker OTP');
   @override
   Future<WorkerIdentity> verifyOtp(
     String indianMobile,
     String otp, {
     String fullName = 'Worker',
-  }) =>
-      _pending('Worker OTP verification');
+  }) => _pending('Worker OTP verification');
   @override
   Future<void> resendOtp() => _pending('Worker OTP resend');
   @override
@@ -174,20 +176,20 @@ class PendingWorkerApi implements WorkerAuthApi, WorkerOperationsApi {
     required Uint8List bytes,
     required String fileName,
     required String mimeType,
-  }) => _pending('Worker document upload');
+  }) => _pending('Document upload');
   @override
   Future<WorkerIdentity> submitRegistration({
     required int experienceYears,
     required List<String> serviceIds,
     required List<String> serviceAreaIds,
     required String identityMediaAssetId,
-  }) => _pending('Worker registration submission');
+  }) => _pending('Worker registration');
   @override
   Future<List<Map<String, dynamic>>> fetchServiceAreas() =>
-      _pending('Worker service areas');
+      _pending('Fetch service areas');
   @override
   Future<List<Map<String, dynamic>>> fetchServices() =>
-      _pending('Worker services');
+      _pending('Fetch services');
   @override
   Future<void> logout() => _pending('Worker session revocation');
   @override

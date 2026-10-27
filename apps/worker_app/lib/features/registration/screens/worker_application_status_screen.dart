@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
-// Pinkora worker application status UI.
-// Preview mode is the default: never represent local form completion as a
-// submitted or approved application. Production status must come from backend.
+import '../../../integration/worker_api.dart';
+import '../../../integration/worker_mobile_auth_api.dart';
+import '../../home/worker_home_screen.dart';
+
+// Hi Beauty worker application status UI.
+// Connected to backend status checks for live admin verification updates.
 
 enum WorkerApplicationStage {
   preview,
@@ -14,7 +17,7 @@ enum WorkerApplicationStage {
   rejected,
 }
 
-class WorkerApplicationStatusScreen extends StatelessWidget {
+class WorkerApplicationStatusScreen extends StatefulWidget {
   const WorkerApplicationStatusScreen({
     super.key,
     this.stage = WorkerApplicationStage.preview,
@@ -22,6 +25,8 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
     this.applicationReference,
     this.reviewMessage,
     this.onBackToLogin,
+    this.authApi,
+    this.workerPhone,
   });
 
   final WorkerApplicationStage stage;
@@ -29,6 +34,19 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
   final String? applicationReference;
   final String? reviewMessage;
   final VoidCallback? onBackToLogin;
+  final WorkerAuthApi? authApi;
+  final String? workerPhone;
+
+  @override
+  State<WorkerApplicationStatusScreen> createState() =>
+      _WorkerApplicationStatusScreenState();
+}
+
+class _WorkerApplicationStatusScreenState
+    extends State<WorkerApplicationStatusScreen> {
+  late WorkerApplicationStage _stage;
+  bool _checking = false;
+  String? _message;
 
   static const _plum = Color(0xFF460621);
   static const _berry = Color(0xFFB20A50);
@@ -36,10 +54,17 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
   static const _ivory = Color(0xFFFFF9F5);
   static const _line = Color(0xFFEEDCE2);
 
-  bool get _isPreview => stage == WorkerApplicationStage.preview;
+  @override
+  void initState() {
+    super.initState();
+    _stage = widget.stage;
+    _message = widget.reviewMessage;
+  }
+
+  bool get _isPreview => _stage == WorkerApplicationStage.preview;
 
   int get _progress {
-    switch (stage) {
+    switch (_stage) {
       case WorkerApplicationStage.preview:
         return -1;
       case WorkerApplicationStage.submitted:
@@ -58,7 +83,7 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
   }
 
   String get _headline {
-    switch (stage) {
+    switch (_stage) {
       case WorkerApplicationStage.preview:
         return 'Almost there!';
       case WorkerApplicationStage.submitted:
@@ -75,24 +100,24 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
   }
 
   String get _subtitle {
-    switch (stage) {
+    switch (_stage) {
       case WorkerApplicationStage.preview:
-        return 'This is a preview of your application status screen. No application has been sent yet.';
+        return 'This is a preview of your application status screen. Complete registration to submit.';
       case WorkerApplicationStage.submitted:
       case WorkerApplicationStage.underReview:
       case WorkerApplicationStage.adminVerification:
-        return 'Thank you for joining Hi Beauty. We’ll notify you after admin review.';
+        return _message ?? 'Thank you for joining Hi Beauty. Your application is under admin review.';
       case WorkerApplicationStage.actionRequired:
-        return reviewMessage ?? 'Some information needs updating before review can continue.';
+        return _message ?? 'Some information needs updating before review can continue.';
       case WorkerApplicationStage.approved:
-        return 'Your registration has been approved by the Hi Beauty team.';
+        return 'Your partner registration has been approved by the Hi Beauty team. You can now access your dashboard and start accepting bookings!';
       case WorkerApplicationStage.rejected:
-        return reviewMessage ?? 'Your application could not be approved at this time.';
+        return _message ?? 'Your application could not be approved at this time.';
     }
   }
 
   String? get _dateText {
-    final date = submittedAt;
+    final date = widget.submittedAt;
     if (date == null || _isPreview) return null;
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -104,10 +129,70 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
     return '${date.day} ${months[date.month - 1]} ${date.year}, $hour:$minute $ampm';
   }
 
+  Future<void> _checkStatus() async {
+    if (_checking) return;
+    setState(() => _checking = true);
+    try {
+      final auth = widget.authApi ?? WorkerMobileAuthApi();
+      if (auth is WorkerMobileAuthApi) {
+        final statusData = await auth.checkWorkerStatus();
+        final serverStatus = '${statusData['status'] ?? ''}';
+        if (!mounted) return;
+        if (serverStatus == 'approved') {
+          setState(() {
+            _stage = WorkerApplicationStage.approved;
+            _message = null;
+          });
+        } else if (serverStatus == 'pending') {
+          setState(() {
+            _stage = WorkerApplicationStage.underReview;
+            _message = 'Application is currently under review by our admin team.';
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Application is still pending admin review.')),
+          );
+        } else if (serverStatus == 'rejected') {
+          setState(() {
+            _stage = WorkerApplicationStage.rejected;
+            _message = 'Your application was rejected by the administration.';
+          });
+        }
+      } else {
+        final identity = await auth.currentIdentity();
+        if (!mounted) return;
+        if (identity.approval == WorkerApproval.approved) {
+          setState(() => _stage = WorkerApplicationStage.approved);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not refresh status: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  void _goToDashboard() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(
+        builder: (_) => WorkerHomeScreen(
+          phoneNumber: widget.workerPhone ?? '',
+          demoMode: false,
+        ),
+      ),
+      (_) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isPositive = stage != WorkerApplicationStage.rejected &&
-        stage != WorkerApplicationStage.actionRequired;
+    final isPositive = _stage != WorkerApplicationStage.rejected &&
+        _stage != WorkerApplicationStage.actionRequired;
+    final isApproved = _stage == WorkerApplicationStage.approved;
+
     return Scaffold(
       backgroundColor: _ivory,
       body: SafeArea(
@@ -140,20 +225,31 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: _muted,
-                          fontSize: 12,
-                          height: 1.35,
+                          fontSize: 12.5,
+                          height: 1.4,
                         ),
                       ),
                       if (_isPreview) ...[
                         const SizedBox(height: 14),
                         _previewBanner(),
                       ],
-                      if (applicationReference != null && !_isPreview) ...[
+                      if (widget.applicationReference != null && !_isPreview) ...[
                         const SizedBox(height: 10),
                         Center(
-                          child: Text(
-                            'Application: $applicationReference',
-                            style: const TextStyle(color: _muted, fontSize: 12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFDE8F0),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Application ID: ${widget.applicationReference}',
+                              style: const TextStyle(
+                                color: _berry,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -169,23 +265,92 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
                     color: _ivory,
                     border: Border(top: BorderSide(color: _line)),
                   ),
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 9),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: OutlinedButton(
-                      onPressed: onBackToLogin ?? () => Navigator.of(context).maybePop(),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _plum,
-                        backgroundColor: const Color(0xFFFFE9F0),
-                        side: const BorderSide(color: Color(0xFFF0B8C9)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(27),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isApproved) ...[
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFD41361), Color(0xFF750034)],
+                              ),
+                              borderRadius: BorderRadius.circular(27),
+                            ),
+                            child: FilledButton(
+                              onPressed: _goToDashboard,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(27),
+                                ),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Go to Partner Dashboard',
+                                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Icon(Icons.arrow_forward_rounded, size: 20),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ] else ...[
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: FilledButton.icon(
+                            onPressed: _checking ? null : _checkStatus,
+                            icon: _checking
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.refresh_rounded, size: 19),
+                            label: Text(
+                              _checking ? 'Checking Status…' : 'Check Review Status',
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _berry,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(27),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: OutlinedButton(
+                          onPressed: widget.onBackToLogin ?? () => Navigator.of(context).maybePop(),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _plum,
+                            side: const BorderSide(color: Color(0xFFF0B8C9)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(27),
+                            ),
+                          ),
+                          child: const Text('Back to Login',
+                              style: TextStyle(fontWeight: FontWeight.w600)),
                         ),
                       ),
-                      child: const Text('Back to Login',
-                          style: TextStyle(fontWeight: FontWeight.w700)),
-                    ),
+                    ],
                   ),
                 ),
               ],
@@ -310,7 +475,7 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
       'Approved',
     ];
     final captions = <String>[
-      _isPreview ? 'Waiting for real backend submission' : (_dateText ?? 'Application received'),
+      _isPreview ? 'Waiting for registration submission' : (_dateText ?? 'Application received'),
       'Our team is checking your details.',
       'Document and profile verification.',
       'You’ll receive a notification.',
@@ -396,7 +561,7 @@ class WorkerApplicationStatusScreen extends StatelessWidget {
           SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Once notifications are connected, we’ll update you about your application by the available channels.',
+              'Once approved by the admin team, your account will be enabled to accept customer appointments.',
               style: TextStyle(color: _muted, fontSize: 12, height: 1.4),
             ),
           ),

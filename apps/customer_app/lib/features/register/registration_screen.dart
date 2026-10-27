@@ -100,7 +100,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ).pushNamedAndRemoveUntil(RouteNames.home, (route) => false);
         }
       } else {
-        final challengeId = await widget.auth.requestOtp(phone);
+        final challengeId = await widget.auth.requestRegistrationOtp(phone);
         if (!mounted) return;
         await Navigator.of(context).pushNamed(
           RouteNames.otp,
@@ -472,45 +472,48 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ),
                           optional: true,
                         ),
-                        CheckboxListTile(
-                          key: const ValueKey('registration-consent'),
-                          value: _consent,
-                          onChanged: (value) => setState(() {
-                            _consent = value ?? false;
-                            if (_consent) _consentError = null;
-                          }),
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: EdgeInsets.zero,
-                          visualDensity: const VisualDensity(
-                            vertical: -4,
-                            horizontal: -4,
-                          ),
-                          activeColor: PinkoraBrand.berry,
-                          title: const Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(text: 'I agree to the '),
-                                TextSpan(
-                                  text: 'Terms of Service',
-                                  style: TextStyle(
-                                    color: PinkoraBrand.berry,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                                TextSpan(text: ' and '),
-                                TextSpan(
-                                  text: 'Privacy Policy',
-                                  style: TextStyle(
-                                    color: PinkoraBrand.berry,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                                TextSpan(text: '.'),
-                              ],
+                        Material(
+                          type: MaterialType.transparency,
+                          child: CheckboxListTile(
+                            key: const ValueKey('registration-consent'),
+                            value: _consent,
+                            onChanged: (value) => setState(() {
+                              _consent = value ?? false;
+                              if (_consent) _consentError = null;
+                            }),
+                            controlAffinity: ListTileControlAffinity.leading,
+                            contentPadding: EdgeInsets.zero,
+                            visualDensity: const VisualDensity(
+                              vertical: -4,
+                              horizontal: -4,
                             ),
-                            style: TextStyle(
-                              color: PinkoraBrand.charcoal,
-                              fontSize: 11.5,
+                            activeColor: PinkoraBrand.berry,
+                            title: const Text.rich(
+                              TextSpan(
+                                children: [
+                                  TextSpan(text: 'I agree to the '),
+                                  TextSpan(
+                                    text: 'Terms of Service',
+                                    style: TextStyle(
+                                      color: PinkoraBrand.berry,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                  TextSpan(text: ' and '),
+                                  TextSpan(
+                                    text: 'Privacy Policy',
+                                    style: TextStyle(
+                                      color: PinkoraBrand.berry,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                  TextSpan(text: '.'),
+                                ],
+                              ),
+                              style: TextStyle(
+                                color: PinkoraBrand.charcoal,
+                                fontSize: 11.5,
+                              ),
                             ),
                           ),
                         ),

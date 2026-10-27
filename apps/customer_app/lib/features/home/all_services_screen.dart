@@ -270,9 +270,11 @@ class _AllServicesScreenState extends State<AllServicesScreen> {
                       if (index >= visibleCategories.length) {
                         final service =
                             matchingServices[index - visibleCategories.length];
-                        return ListTile(
-                          key: ValueKey('search-service-${service.name}'),
-                          tileColor: Colors.white,
+                        return Material(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          child: ListTile(
+                            key: ValueKey('search-service-${service.name}'),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -287,7 +289,7 @@ class _AllServicesScreenState extends State<AllServicesScreen> {
                             color: PinkoraBrand.rose,
                           ),
                           onTap: () => widget.onServiceSelected(service.name),
-                        );
+                        ));
                       }
                       final category = visibleCategories[index];
                       return _CategoryCard(

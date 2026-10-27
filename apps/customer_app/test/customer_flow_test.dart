@@ -27,13 +27,23 @@ class _MemoryCustomerTokenStorage implements CustomerTokenStorage {
   Future<void> delete() async => token = null;
 }
 
-CustomerAuthApi _testAuth({bool registrationRequired = false}) {
+CustomerAuthApi _testAuth({
+  bool registrationRequired = false,
+  bool unregisteredOnLogin = false,
+}) {
   return CustomerAuthApi(
     api: MobileApi(
       baseUrl: 'https://example.test/api',
       client: MockClient((request) async {
         final path = request.url.path;
         if (path.endsWith('/otp/request')) {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          if (unregisteredOnLogin && body['flow'] == 'login') {
+            return http.Response(
+              '{"success":true,"data":{"registrationRequired":true,"appType":"customer","mobileNumber":"+919876543210"}}',
+              200,
+            );
+          }
           return http.Response(
             '{"success":true,"data":{"challengeId":"aaaaaaaaaaaaaaaaaaaaaaaa","expiresInSeconds":300,"resendAfterSeconds":30}}',
             201,
@@ -138,6 +148,24 @@ void main() {
     expect(find.text('Popular Services'), findsOneWidget);
     expect(find.textContaining('Total Solution'), findsNothing);
   });
+
+  testWidgets(
+    'unregistered customer goes to registration without sending login OTP',
+    (tester) async {
+      await tester.pumpWidget(
+        CustomerApp(config: config, auth: _testAuth(unregisteredOnLogin: true)),
+      );
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Skip'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '9876543210');
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RegistrationScreen), findsOneWidget);
+      expect(find.text('Verify mobile number'), findsNothing);
+    },
+  );
 
   testWidgets('production cannot open development OTP route', (tester) async {
     await tester.pumpWidget(

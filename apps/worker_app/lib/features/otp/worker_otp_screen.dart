@@ -8,6 +8,8 @@ import '../../integration/worker_api.dart';
 import '../../integration/worker_mobile_auth_api.dart';
 import '../registration/screens/worker_application_status_screen.dart';
 import '../registration/screens/worker_account_registration_screen.dart';
+import '../home/worker_home_screen.dart';
+import '../registration/screens/worker_personal_details_screen.dart';
 
 const _plum = Color(0xFF460621);
 const _berry = Color(0xFFB20A50);
@@ -16,10 +18,18 @@ const _ivory = Color(0xFFFFF9F5);
 const _line = Color(0xFFE8C9CE);
 
 class WorkerOtpScreen extends StatefulWidget {
-  const WorkerOtpScreen({super.key, required this.phone, this.authApi});
+  const WorkerOtpScreen({
+    super.key,
+    required this.phone,
+    this.authApi,
+    this.registrationName,
+    this.registrationEmail,
+  });
 
   final String phone;
   final WorkerAuthApi? authApi;
+  final String? registrationName;
+  final String? registrationEmail;
   WorkerAuthApi get auth => authApi ?? WorkerMobileAuthApi();
 
   @override
@@ -92,6 +102,28 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
       if (!mounted) return;
       final proof = identity.registrationToken;
       if (proof != null) {
+        final registrationName = widget.registrationName;
+        if (registrationName != null) {
+          await widget.auth.completeRegistration(
+            registrationToken: proof,
+            fullName: registrationName,
+            email: widget.registrationEmail,
+          );
+          if (!mounted) return;
+          Navigator.of(context).pushAndRemoveUntil(
+            SlidePageRoute<void>(
+              page: WorkerPersonalDetailsScreen(
+                initialName: registrationName,
+                initialMobile: widget.phone,
+                initialEmail: widget.registrationEmail ?? '',
+                verifiedMobile: widget.phone,
+                authApi: widget.auth,
+              ),
+            ),
+            (_) => false,
+          );
+          return;
+        }
         await Navigator.of(context).pushReplacement(
           SlidePageRoute<void>(
             page: WorkerAccountRegistrationScreen(
@@ -103,12 +135,33 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
         );
         return;
       }
+      if (identity.approval == WorkerApproval.approved) {
+        Navigator.of(context).pushAndRemoveUntil(
+          SlidePageRoute<void>(page: const WorkerHomeScreen(demoMode: false)),
+          (_) => false,
+        );
+        return;
+      }
+      if (identity.approval == WorkerApproval.notRegistered) {
+        Navigator.of(context).pushAndRemoveUntil(
+          SlidePageRoute<void>(
+            page: WorkerPersonalDetailsScreen(
+              initialName: '',
+              initialMobile: widget.phone,
+              initialEmail: '',
+              verifiedMobile: widget.phone,
+              authApi: widget.auth,
+            ),
+          ),
+          (_) => false,
+        );
+        return;
+      }
       final stage = switch (identity.approval) {
-        WorkerApproval.approved => WorkerApplicationStage.approved,
         WorkerApproval.pending => WorkerApplicationStage.underReview,
         WorkerApproval.rejected => WorkerApplicationStage.rejected,
         WorkerApproval.suspended => WorkerApplicationStage.actionRequired,
-        WorkerApproval.notRegistered => WorkerApplicationStage.preview,
+        _ => WorkerApplicationStage.underReview,
       };
       Navigator.of(context).pushAndRemoveUntil(
         SlidePageRoute<void>(
@@ -117,8 +170,10 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
             applicationReference: identity.workerId.isEmpty
                 ? null
                 : identity.workerId,
-            reviewMessage: identity.approval == WorkerApproval.notRegistered
-                ? 'Your worker profile is not registered yet. Complete your application before accessing operational APIs.'
+            authApi: widget.auth,
+            workerPhone: widget.phone,
+            reviewMessage: identity.approval == WorkerApproval.pending
+                ? 'Your application is currently under admin review.'
                 : null,
           ),
         ),
