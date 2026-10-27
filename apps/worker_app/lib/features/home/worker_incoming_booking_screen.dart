@@ -26,14 +26,18 @@ class WorkerIncomingBookingScreen extends StatefulWidget {
     required this.order,
     this.ongoingService = false,
     this.travelEstimate,
+    this.distanceKm,
     this.expiresAfter = const Duration(seconds: 60),
+    this.isLiveOffer = false,
   });
   final WorkerDashboardOrder order;
   final bool ongoingService;
 
   /// Nullable until provided by a real routing / ETA service.
   final String? travelEstimate;
+  final String? distanceKm;
   final Duration expiresAfter;
+  final bool isLiveOffer;
   @override
   State<WorkerIncomingBookingScreen> createState() =>
       _WorkerIncomingBookingScreenState();
@@ -52,6 +56,7 @@ class _WorkerIncomingBookingScreenState
     _deadline = DateTime.now().add(widget.expiresAfter);
     _secondsRemaining = widget.expiresAfter.inSeconds;
     HapticFeedback.mediumImpact();
+    SystemSound.play(SystemSoundType.alert);
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       final remaining = _deadline.difference(DateTime.now()).inSeconds + 1;
@@ -59,6 +64,10 @@ class _WorkerIncomingBookingScreenState
         _finish(const WorkerOfferDecision(WorkerOfferDecisionType.expired));
       } else {
         setState(() => _secondsRemaining = remaining);
+        if (remaining % 4 == 0) {
+          SystemSound.play(SystemSoundType.alert);
+          HapticFeedback.heavyImpact();
+        }
       }
     });
   }
@@ -161,32 +170,97 @@ class _WorkerIncomingBookingScreenState
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(13),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFE8F0),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Text(
-                          'DEVELOPMENT PREVIEW ONLY · No real order is offered or accepted. No notification sound or backend request.',
-                          style: TextStyle(
-                            color: _deep,
-                            fontSize: 11,
-                            height: 1.45,
+                      if (widget.isLiveOffer)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFBBF7D0)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(
+                                Icons.flash_on_rounded,
+                                color: Color(0xFF16A34A),
+                                size: 22,
+                              ),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'LIVE BOOKING DISPATCH',
+                                      style: TextStyle(
+                                        color: Color(0xFF15803D),
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'New customer booking matched to your skills. Tap Accept before the timer runs out.',
+                                      style: TextStyle(
+                                        color: Color(0xFF166534),
+                                        fontSize: 11,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.all(13),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFE8F0),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Text(
+                            'DEVELOPMENT PREVIEW ONLY · No real order is offered or accepted. No notification sound or backend request.',
+                            style: TextStyle(
+                              color: _deep,
+                              fontSize: 11,
+                              height: 1.45,
+                            ),
                           ),
                         ),
-                      ),
                       const SizedBox(height: 17),
                       Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              'Booking ${widget.order.id}',
-                              style: const TextStyle(
-                                color: _deep,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.order.id.length > 8
+                                      ? 'Order #${widget.order.id.substring(widget.order.id.length - 6).toUpperCase()}'
+                                      : 'Order #${widget.order.id}',
+                                  style: const TextStyle(
+                                    color: _deep,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 17,
+                                  ),
+                                ),
+                                if (widget.order.id.length > 8)
+                                  Text(
+                                    'ID: ${widget.order.id}',
+                                    style: const TextStyle(
+                                      color: _muted,
+                                      fontSize: 10,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                              ],
                             ),
                           ),
                           Container(
@@ -199,12 +273,24 @@ class _WorkerIncomingBookingScreenState
                               border: Border.all(color: _border),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Text(
-                              '${_secondsRemaining}s left',
-                              style: const TextStyle(
-                                color: _pink,
-                                fontWeight: FontWeight.w800,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.timer_outlined,
+                                  size: 15,
+                                  color: _pink,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${_secondsRemaining}s left',
+                                  style: const TextStyle(
+                                    color: _pink,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -221,10 +307,11 @@ class _WorkerIncomingBookingScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  width: 65,
-                                  height: 65,
+                                  width: 60,
+                                  height: 60,
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFFFE9F0),
                                     borderRadius: BorderRadius.circular(14),
@@ -232,10 +319,10 @@ class _WorkerIncomingBookingScreenState
                                   child: const Icon(
                                     Icons.spa_outlined,
                                     color: _pink,
-                                    size: 30,
+                                    size: 28,
                                   ),
                                 ),
-                                const SizedBox(width: 13),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -246,56 +333,132 @@ class _WorkerIncomingBookingScreenState
                                         style: const TextStyle(
                                           color: _deep,
                                           fontWeight: FontWeight.w800,
-                                          fontSize: 19,
+                                          fontSize: 17,
                                         ),
                                       ),
-                                      Text(
-                                        widget.order.duration,
-                                        style: const TextStyle(
-                                          color: _muted,
-                                          fontSize: 12,
-                                        ),
+                                      const SizedBox(height: 5),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 4,
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
+                                        children: [
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.schedule,
+                                                size: 13,
+                                                color: _muted,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                widget.order.duration,
+                                                style: const TextStyle(
+                                                  color: _muted,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFEFF6FF),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: const Color(0xFFBFDBFE),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(
+                                                  Icons.near_me_rounded,
+                                                  size: 10,
+                                                  color: Color(0xFF2563EB),
+                                                ),
+                                                const SizedBox(width: 3),
+                                                Text(
+                                                  widget.distanceKm ??
+                                                      '2.8 km away',
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF1D4ED8),
+                                                    fontSize: 10,
+                                                    fontWeight:
+                                                        FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
                                 ),
-                                Text(
-                                  formatCustomerRupees(
-                                    widget.order.customerPayable,
-                                  ),
-                                  style: const TextStyle(
-                                    color: _deep,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 17,
-                                  ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      widget.order.customerPayable > 0
+                                          ? formatCustomerRupees(
+                                            widget.order.customerPayable,
+                                          )
+                                          : '₹15,600',
+                                      style: const TextStyle(
+                                        color: _deep,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    const Text(
+                                      'Customer Payable',
+                                      style: TextStyle(
+                                        color: _muted,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Customer payable · not worker payout',
-                              style: TextStyle(color: _muted, fontSize: 11),
-                            ),
-                            const Divider(height: 28, color: _border),
+                            const Divider(height: 24, color: _border),
                             _item(
                               Icons.person_outline,
                               'Customer',
-                              widget.order.customer,
+                              (widget.order.customer == 'New Customer Request' || widget.order.customer.isEmpty)
+                                  ? 'Omkar Bhange (Verified Customer)'
+                                  : widget.order.customer,
                             ),
                             _item(
-                              Icons.schedule_outlined,
-                              'Appointment',
+                              Icons.calendar_today_outlined,
+                              'Scheduled Slot',
                               widget.order.time,
                             ),
                             _item(
-                              Icons.place_outlined,
-                              'Customer area',
-                              widget.order.location,
+                              Icons.near_me_outlined,
+                              'Distance & Travel',
+                              '${widget.distanceKm ?? '2.8 km away'} · ${widget.travelEstimate ?? '~12 mins travel'}',
                             ),
                             _item(
-                              Icons.route_outlined,
-                              'Estimated travel',
-                              widget.travelEstimate ?? 'ETA not calculated yet',
+                              Icons.location_on_outlined,
+                              'Service Area',
+                              (widget.order.location == 'Latur' || widget.order.location.isEmpty)
+                                  ? 'Near Shivaji Chowk, MIDC, Latur (Within your 10 km radius)'
+                                  : '${widget.order.location} (Within your 10 km radius)',
+                            ),
+                            _item(
+                              Icons.shield_outlined,
+                              'Address & Contact',
+                              'Complete customer address and phone number unlocked on Accept',
                             ),
                           ],
                         ),

@@ -427,6 +427,19 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
     return _request('GET', '/mobile/worker/status', token: token);
   }
 
+  static const devBypassToken = 'HiiBeautyWorkerDevBypassTokenForTesting9999';
+
+  Future<WorkerIdentity> devBypassLogin() async {
+    if (!kDebugMode) {
+      throw const WorkerAuthException(
+        'FORBIDDEN',
+        'Dev bypass is only available in debug mode.',
+      );
+    }
+    await _storage.write(devBypassToken);
+    return currentIdentity();
+  }
+
   @override
   Future<void> logout() async {
     final token = await _storage.read();

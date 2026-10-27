@@ -9,7 +9,7 @@ class AppConfig {
     const configured = String.fromEnvironment('API_BASE_URL');
     if (configured.isNotEmpty) return configured;
     if (environment == Environment.production) return '';
-    return kIsWeb ? 'http://localhost:5001' : 'http://10.0.2.2:5001';
+    return kIsWeb ? 'http://localhost:5001/api' : 'http://10.0.2.2:5001/api';
   }
 
   bool get mockAuthEnabled => environment == Environment.development && kDebugMode;

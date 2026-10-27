@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../../integration/worker_api.dart';
 import 'worker_booking_data.dart';
 import 'worker_demo_booking_store.dart';
 import 'worker_booking_session.dart';
@@ -62,6 +63,7 @@ class WorkerDashboardScreen extends StatefulWidget {
     this.demoMode = true,
     this.orders,
     this.currentDate,
+    this.initialOnline = false,
     this.onAvailabilityRequested,
     this.onOrderTap,
     this.onBookingsTap,
@@ -69,6 +71,7 @@ class WorkerDashboardScreen extends StatefulWidget {
     this.onNotificationsTap,
     this.onProfileTap,
     this.onLogoutTap,
+    this.operationsApi,
   });
 
   final String workerName;
@@ -91,6 +94,9 @@ class WorkerDashboardScreen extends StatefulWidget {
   /// Optional date override for deterministic previews and tests.
   final DateTime? currentDate;
 
+  /// Initial confirmed online availability from authoritative profile.
+  final bool initialOnline;
+
   /// Parent handles API, waits for server confirmation, then rebuilds state.
   final Future<bool> Function(bool desiredOnline)? onAvailabilityRequested;
   final ValueChanged<WorkerDashboardOrder>? onOrderTap;
@@ -99,13 +105,14 @@ class WorkerDashboardScreen extends StatefulWidget {
   final VoidCallback? onNotificationsTap;
   final VoidCallback? onProfileTap;
   final VoidCallback? onLogoutTap;
+  final WorkerOperationsApi? operationsApi;
 
   @override
   State<WorkerDashboardScreen> createState() => _WorkerDashboardScreenState();
 }
 
 class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
-  bool _previewOnline = false;
+  late bool _previewOnline;
   bool _availabilityBusy = false;
   int _navIndex = 0;
   int _offerIndex = 0;
@@ -118,11 +125,20 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _previewOnline = widget.initialOnline;
     if (widget.demoMode) {
       WorkerDemoBookingStore.repository.addListener(_onStoreChanged);
       _loadDemoStore();
     } else {
       _storeLoading = false;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant WorkerDashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialOnline != widget.initialOnline) {
+      _previewOnline = widget.initialOnline;
     }
   }
 
@@ -170,7 +186,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     return WorkerDemoBookingStore.resolveAll(source);
   }
 
-  bool get _isOnline => widget.demoMode ? _previewOnline : false;
+  bool get _isOnline => _previewOnline;
 
   DateTime get _now => (widget.currentDate ?? DateTime.now()).toLocal();
 
@@ -248,10 +264,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     try {
       final accepted = await widget.onAvailabilityRequested!(desired);
       if (mounted) {
+        setState(() {
+          _previewOnline = accepted;
+        });
         _notice(
           accepted
-              ? 'Request accepted. Refreshing backend availability is required.'
-              : 'The server did not accept the availability change.',
+              ? "You're now online and available for bookings."
+              : "You're now offline.",
         );
       }
     } catch (_) {
@@ -277,6 +296,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
         page: WorkerBookingDetailsScreen(
           order: order,
           demoMode: widget.demoMode,
+          operationsApi: widget.operationsApi,
         ),
       ),
     );
@@ -393,6 +413,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       MaterialPageRoute(
         builder: (_) => WorkerIncomingBookingScreen(
           order: chosen,
+          isLiveOffer: true,
+          distanceKm: '2.8 km away',
           ongoingService:
               widget.activeService ||
               WorkerDemoBookingStore.repository.hasActivePhysicalService,

@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/slide_page_route.dart';
+import '../../integration/worker_api.dart';
+import '../../integration/worker_mobile_operations_api.dart';
 import 'worker_booking_data.dart';
 import 'worker_booking_session.dart';
 import 'worker_demo_booking_store.dart';
@@ -23,10 +25,12 @@ class WorkerBookingDetailsScreen extends StatefulWidget {
     super.key,
     required this.order,
     this.demoMode = true,
+    this.operationsApi,
   });
 
   final WorkerDashboardOrder order;
   final bool demoMode;
+  final WorkerOperationsApi? operationsApi;
 
   @override
   State<WorkerBookingDetailsScreen> createState() =>
@@ -38,6 +42,112 @@ class _WorkerBookingDetailsScreenState
   bool _startingService = false;
   bool _storeLoading = true;
   Object? _storeError;
+  String? _localStatus;
+  bool _updatingProgress = false;
+
+  bool get _isLiveMode => widget.operationsApi is WorkerMobileOperationsApi;
+
+  String _progressButtonText(String status) {
+    final s = status.toLowerCase().trim();
+    if (s == 'assigned' || s == 'accepted') return 'Start Travel to Customer 🚗';
+    if (s == 'travelling') return 'I Have Arrived at Location 📍';
+    if (s == 'arrived') return 'Start Service · Enter Customer OTP 🔑';
+    if (s == 'in_progress' || s == 'in progress') return 'Complete Service ✅';
+    if (s == 'completed') return 'Service Completed 🎉';
+    return 'Start Service Not Available';
+  }
+
+  bool _canAct(String status) {
+    if (_updatingProgress) return false;
+    final s = status.toLowerCase().trim();
+    return <String>{'assigned', 'accepted', 'travelling', 'arrived', 'in_progress', 'in progress'}.contains(s);
+  }
+
+  Future<void> _handleProgressAction() async {
+    if (!_isLiveMode) {
+      await _startServicePreview();
+      return;
+    }
+    final api = widget.operationsApi as WorkerMobileOperationsApi;
+    final s = _currentOrder.status.toLowerCase().trim();
+
+    if (s == 'assigned' || s == 'accepted') {
+      setState(() => _updatingProgress = true);
+      try {
+        await api.updateBookingProgress(
+          bookingId: widget.order.id,
+          action: 'travel',
+        );
+        if (mounted) {
+          setState(() => _localStatus = 'Travelling');
+          _notice('🚗 Status: Travelling. Heading to customer location.');
+        }
+      } catch (e) {
+        if (mounted) _notice('Failed to start travel: $e');
+      } finally {
+        if (mounted) setState(() => _updatingProgress = false);
+      }
+    } else if (s == 'travelling') {
+      setState(() => _updatingProgress = true);
+      try {
+        await api.updateBookingProgress(
+          bookingId: widget.order.id,
+          action: 'arrive',
+        );
+        if (mounted) {
+          setState(() => _localStatus = 'Arrived');
+          _notice('📍 Status: Arrived at doorstep. Please request customer OTP.');
+        }
+      } catch (e) {
+        if (mounted) _notice('Failed to confirm arrival: $e');
+      } finally {
+        if (mounted) setState(() => _updatingProgress = false);
+      }
+    } else if (s == 'arrived') {
+      final code = await Navigator.of(context).push<String?>(
+        SlidePageRoute<String?>(
+          page: WorkerStartServiceOtpScreen(
+            order: _currentOrder,
+            demoMode: false,
+          ),
+        ),
+      );
+      if (!mounted || code == null || code.isEmpty) return;
+
+      setState(() => _updatingProgress = true);
+      try {
+        await api.updateBookingProgress(
+          bookingId: widget.order.id,
+          action: 'start',
+          otp: code,
+        );
+        if (mounted) {
+          setState(() => _localStatus = 'In Progress');
+          _notice('🎉 Customer OTP verified! Service is now In Progress.');
+        }
+      } catch (e) {
+        if (mounted) _notice('OTP verification failed: $e');
+      } finally {
+        if (mounted) setState(() => _updatingProgress = false);
+      }
+    } else if (s == 'in_progress' || s == 'in progress') {
+      setState(() => _updatingProgress = true);
+      try {
+        await api.updateBookingProgress(
+          bookingId: widget.order.id,
+          action: 'complete',
+        );
+        if (mounted) {
+          setState(() => _localStatus = 'Completed');
+          _notice('✅ Service completed successfully! Great job.');
+        }
+      } catch (e) {
+        if (mounted) _notice('Failed to complete service: $e');
+      } finally {
+        if (mounted) setState(() => _updatingProgress = false);
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -83,10 +193,15 @@ class _WorkerBookingDetailsScreenState
       ? WorkerDemoBookingStore.session(widget.order.id)
       : null;
 
-  WorkerDashboardOrder get _currentOrder =>
-      widget.demoMode && !_storeLoading && _storeError == null
-      ? WorkerDemoBookingStore.resolve(widget.order)
-      : widget.order;
+  WorkerDashboardOrder get _currentOrder {
+    var order = widget.demoMode && !_storeLoading && _storeError == null
+        ? WorkerDemoBookingStore.resolve(widget.order)
+        : widget.order;
+    if (_localStatus != null) {
+      order = order.copyWith(status: _localStatus);
+    }
+    return order;
+  }
 
   bool get _previewAllowed => kDebugMode && widget.demoMode;
 
@@ -418,7 +533,7 @@ class _WorkerBookingDetailsScreenState
                               photo: true,
                             ),
                             const SizedBox(height: 16),
-                            if (widget.demoMode)
+                            if (widget.demoMode && !_isLiveMode)
                               const Padding(
                                 padding: EdgeInsets.only(bottom: 14),
                                 child: Text(
@@ -648,17 +763,22 @@ class _WorkerBookingDetailsScreenState
                           height: 50,
                           child: FilledButton(
                             key: const Key('start-service-entry'),
-                            onPressed:
-                                session?.serviceStage ==
-                                    WorkerServiceStage.finished
-                                ? () => Navigator.of(context).maybePop()
-                                : _startingService
-                                ? null
-                                : canResume
-                                ? _openProgressPreview
-                                : canStart
-                                ? _startServicePreview
-                                : null,
+                            onPressed: _isLiveMode
+                                ? (_canAct(order.status)
+                                    ? _handleProgressAction
+                                    : (order.status.toLowerCase() == 'completed'
+                                        ? () => Navigator.of(context).maybePop()
+                                        : null))
+                                : (session?.serviceStage ==
+                                        WorkerServiceStage.finished
+                                    ? () => Navigator.of(context).maybePop()
+                                    : _startingService
+                                    ? null
+                                    : canResume
+                                    ? _openProgressPreview
+                                    : canStart
+                                    ? _startServicePreview
+                                    : null),
                             style: FilledButton.styleFrom(
                               backgroundColor: _pink,
                               foregroundColor: Colors.white,
@@ -669,16 +789,20 @@ class _WorkerBookingDetailsScreenState
                               ),
                             ),
                             child: Text(
-                              session?.serviceStage ==
-                                      WorkerServiceStage.finished
-                                  ? 'Back to My Bookings'
-                                  : _startingService
-                                  ? 'Saving Demo Service…'
-                                  : canResume
-                                  ? 'Resume Demo Service'
-                                  : canStart
-                                  ? 'Start Service · Enter Customer OTP'
-                                  : 'Start Service Not Available',
+                              _updatingProgress
+                                  ? 'Updating status…'
+                                  : _isLiveMode
+                                  ? _progressButtonText(order.status)
+                                  : (session?.serviceStage ==
+                                          WorkerServiceStage.finished
+                                      ? 'Back to My Bookings'
+                                      : _startingService
+                                      ? 'Saving Demo Service…'
+                                      : canResume
+                                      ? 'Resume Demo Service'
+                                      : canStart
+                                      ? 'Start Service · Enter Customer OTP'
+                                      : 'Start Service Not Available'),
                             ),
                           ),
                         ),

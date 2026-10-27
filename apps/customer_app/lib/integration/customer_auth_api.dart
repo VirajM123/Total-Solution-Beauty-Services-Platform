@@ -195,6 +195,20 @@ class CustomerAuthApi {
       await _tokenStorage.delete();
     }
   }
-
   Future<String?> sessionToken() => _tokenStorage.read();
+  static const devBypassToken = 'HiiBeautyCustomerDevBypassTokenTesting99991';
+
+  Future<CustomerIdentity> devBypassLogin({
+    String token = devBypassToken,
+    String customerId = '6adf4cd8176ad9094f3611e7',
+    String phone = '+919075320591',
+    String fullName = 'Omkar Bhange',
+  }) async {
+    await _tokenStorage.write(token);
+    return CustomerIdentity(
+      id: customerId,
+      phone: phone,
+      name: fullName,
+    );
+  }
 }

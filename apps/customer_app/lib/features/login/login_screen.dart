@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
@@ -80,6 +81,25 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _devBypass() async {
+    if (_loading) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await widget.auth.devBypassLogin();
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        RouteNames.home,
+        (route) => false,
+      );
+    } catch (error) {
+      if (mounted) setState(() => _error = '$error');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: _ivory,
@@ -135,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 child: SizedBox(
                   width: constraints.maxWidth,
-                  height: 835 * scale + shift,
+                  height: (kDebugMode ? 895 : 835) * scale + shift,
                   child: Stack(
                     children: [
                       Positioned(
@@ -366,8 +386,37 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
+                      if (kDebugMode)
+                        Positioned(
+                          top: 528 * scale + shift,
+                          left: inset,
+                          right: inset,
+                          child: SizedBox(
+                            height: 44 * scale,
+                            child: OutlinedButton.icon(
+                              key: const ValueKey('customer-dev-bypass-button'),
+                              icon: const Icon(Icons.flash_on_rounded, color: Color(0xFF16A34A), size: 18),
+                              label: const Text(
+                                '⚡ Fast Test: Dev Bypass (Omkar Bhange)',
+                                style: TextStyle(
+                                  color: Color(0xFF15803D),
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: const Color(0xFFF0FDF4),
+                                side: const BorderSide(color: Color(0xFF86EFAC), width: 1.2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24 * scale),
+                                ),
+                              ),
+                              onPressed: _loading ? null : _devBypass,
+                            ),
+                          ),
+                        ),
                       Positioned(
-                        top: 542 * scale + shift,
+                        top: (kDebugMode ? 582 : 542) * scale + shift,
                         left: inset,
                         right: inset,
                         child: Row(
@@ -391,7 +440,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       Positioned(
-                        top: 567 * scale + shift,
+                        top: (kDebugMode ? 607 : 567) * scale + shift,
                         left: inset,
                         right: inset,
                         child: _SocialSignIn(
@@ -402,7 +451,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       Positioned(
-                        top: 621 * scale + shift,
+                        top: (kDebugMode ? 661 : 621) * scale + shift,
                         left: inset,
                         right: inset,
                         child: _SocialSignIn(
@@ -417,7 +466,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       Positioned(
-                        top: 686 * scale + shift,
+                        top: (kDebugMode ? 726 : 686) * scale + shift,
                         left: inset,
                         right: inset,
                         child: Text.rich(
@@ -454,7 +503,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       Positioned(
-                        top: 725 * scale + shift,
+                        top: (kDebugMode ? 765 : 725) * scale + shift,
                         left: inset,
                         right: inset,
                         child: TextButton(
@@ -465,7 +514,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       Positioned(
-                        top: 766 * scale + shift,
+                        top: (kDebugMode ? 806 : 766) * scale + shift,
                         left: inset,
                         right: inset,
                         child: TextButton(

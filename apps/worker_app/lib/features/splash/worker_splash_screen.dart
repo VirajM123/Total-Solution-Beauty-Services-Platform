@@ -1,6 +1,9 @@
 
 import 'package:flutter/material.dart';
 
+import '../../integration/worker_api.dart';
+import '../../integration/worker_mobile_auth_api.dart';
+import '../home/worker_home_screen.dart';
 import '../login/worker_login_screen.dart';
 
 class WorkerSplashScreen extends StatefulWidget {
@@ -84,6 +87,27 @@ class _WorkerSplashScreenState extends State<WorkerSplashScreen>
     await Future<void>.delayed(
       const Duration(milliseconds: 500),
     );
+
+    if (!mounted) return;
+
+    try {
+      final auth = WorkerMobileAuthApi();
+      final identity = await auth.currentIdentity();
+      if (mounted && identity.approval == WorkerApproval.approved) {
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder<void>(
+            pageBuilder: (_, animation, __) => FadeTransition(
+              opacity: animation,
+              child: const WorkerHomeScreen(demoMode: false),
+            ),
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
+        );
+        return;
+      }
+    } catch (_) {
+      // Session unavailable or unauthenticated -> proceed to login screen
+    }
 
     if (!mounted) return;
 

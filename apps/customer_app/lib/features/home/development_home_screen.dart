@@ -7,6 +7,7 @@ import '../../core/constants/pinkora_brand.dart';
 import '../booking/checkout_models.dart';
 import 'all_services_screen.dart';
 import 'promotional_banner_carousel.dart';
+import '../../integration/customer_mobile_operations_api.dart';
 
 const _berry = PinkoraBrand.berry;
 const _ink = PinkoraBrand.charcoal;
@@ -28,6 +29,7 @@ class _Service {
     this.description =
         'Enjoy a beauty service in the comfort of your home with a verified professional.',
     this.benefits = const [],
+    this.backendId,
   });
   final String name;
   final String category;
@@ -38,7 +40,8 @@ class _Service {
   final String? discount;
   final String description;
   final List<String> benefits;
-
+  final String? backendId;
+  String get serviceAreaId => 'be21549eeeaf01c30ca4ec6c';
   String get id => '${category.toLowerCase()}::${name.toLowerCase()}';
 }
 
@@ -49,6 +52,7 @@ class _SavedAddress {
     required this.street,
     required this.city,
     required this.postalCode,
+    this.serviceAreaId = 'be21549eeeaf01c30ca4ec6c',
   });
 
   final String id;
@@ -56,6 +60,7 @@ class _SavedAddress {
   final String street;
   final String city;
   final String postalCode;
+  final String serviceAreaId;
 
   String get details => '$street, $city $postalCode';
 }
@@ -202,6 +207,16 @@ const _services = [
   _Service('Bridal Makeup', 'Makeup', 2500, 120, AppAssets.bridalMakeup),
   _Service('Manicure', 'Manicure', 500, 45, AppAssets.manicure),
   _Service('Waxing', 'Waxing', 699, 45, AppAssets.goldFacial),
+  _Service(
+    'BLUE HAIR COLOUR',
+    'Hair Spa',
+    15600,
+    80,
+    AppAssets.hairSpa,
+    backendId: '6ad8aa8bc3a0c4be6df1f774',
+    description: 'Professional blue hair coloring and restorative hair spa.',
+    benefits: ['Vibrant color', 'Deep conditioning', 'Expert stylist'],
+  ),
 ];
 
 String _serviceImage(String name) => 'assets/images/services/$name.jpg';
@@ -782,6 +797,11 @@ class DevelopmentHomeScreen extends StatefulWidget {
 }
 
 class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
+  final _operationsApi = CustomerMobileOperationsApi();
+  String? _liveBookingId;
+  String? _liveBookingStatus;
+  String? _liveWorkerName;
+  Timer? _bookingSyncTimer;
   final _search = TextEditingController();
   final _serviceOtpController = TextEditingController();
   final _reviewController = TextEditingController();
@@ -792,11 +812,12 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   final _cartQuantities = <String, int>{};
   final _savedAddresses = <_SavedAddress>[
     const _SavedAddress(
-      id: 'home',
+      id: '6ae05a3b9075320591000001',
       label: 'Home',
-      street: 'Sane Wadi',
+      street: 'Near Shivaji Chowk, MIDC',
       city: 'Latur, Maharashtra',
       postalCode: '413512',
+      serviceAreaId: 'be21549eeeaf01c30ca4ec6c',
     ),
     const _SavedAddress(
       id: 'work',
@@ -804,6 +825,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       street: 'MIDC',
       city: 'Latur, Maharashtra',
       postalCode: '413531',
+      serviceAreaId: 'be21549eeeaf01c30ca4ec6c',
     ),
     const _SavedAddress(
       id: 'parents',
@@ -811,6 +833,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       street: 'Ring Road',
       city: 'Latur, Maharashtra',
       postalCode: '413512',
+      serviceAreaId: 'be21549eeeaf01c30ca4ec6c',
     ),
   ];
   int _tab = 0;
@@ -824,7 +847,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   String _bookingTime = '10:00 AM';
   String _selectedPeriod = 'Morning';
   String _bookingPreference = 'Book Instantly';
-  String _selectedAddressId = 'home';
+  String _selectedAddressId = '6ae05a3b9075320591000001';
   int _tipAmount = 0;
   CheckoutPaymentMethod _paymentMethod = CheckoutPaymentMethod.upi;
   CheckoutPreview? _checkoutPreview;
@@ -836,7 +859,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   bool _bookingDetailsExpanded = false;
   bool _reviewSubmitted = false;
   int _reviewRating = 0;
-  String _customerName = 'Sneha Patil';
+  String _customerName = 'Omkar Bhange';
   bool _notificationsEnabled = true;
   bool _profilePromotionsEnabled = true;
   bool _underThousand = false;
@@ -851,7 +874,40 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   String? _selectedServiceCategory;
 
   @override
+  void initState() {
+    super.initState();
+    _syncCustomerBackendData();
+  }
+
+  Future<void> _syncCustomerBackendData() async {
+    try {
+      final addrs = await _operationsApi.getAddresses();
+      if (mounted && addrs.isNotEmpty) {
+        setState(() {
+          for (final a in addrs) {
+            final aid = '${a['_id'] ?? a['id']}';
+            if (!_savedAddresses.any((s) => s.id == aid)) {
+              _savedAddresses.insert(
+                0,
+                _SavedAddress(
+                  id: aid,
+                  label: '${a['label'] ?? 'Saved'}',
+                  street: '${a['line1'] ?? ''}',
+                  city: '${a['city'] ?? 'Latur'}',
+                  postalCode: '${a['postalCode'] ?? '413512'}',
+                  serviceAreaId: '${a['serviceAreaId'] ?? 'be21549eeeaf01c30ca4ec6c'}',
+                ),
+              );
+            }
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
+  @override
   void dispose() {
+    _bookingSyncTimer?.cancel();
     _confirmationTimer?.cancel();
     _serviceClockTimer?.cancel();
     _search.dispose();
@@ -1046,6 +1102,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       _checkoutStep = 5;
       _submittingPreview = false;
     });
+    _createBackendBooking(address);
     _confirmationTimer?.cancel();
     _confirmationTimer = Timer(const Duration(seconds: 2), () {
       if (!mounted || _checkoutStep != 5) return;
@@ -1055,6 +1112,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   }
 
   void _scheduleProfessionalAssignment() {
+    if (_liveBookingId != null) return;
     _confirmationTimer?.cancel();
     _confirmationTimer = Timer(const Duration(seconds: 2), () {
       if (!mounted || _checkoutStep != 6) return;
@@ -2641,12 +2699,37 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                 const SizedBox(height: 16),
                 _professionalSearchTimeline(),
               ],
+              if (_liveBookingId != null) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
+                  ),
+                  child: Text(
+                    'Live Order #${_liveBookingId!.substring(_liveBookingId!.length - 6).toUpperCase()} · ${_liveBookingStatus ?? "active"}',
+                    style: const TextStyle(
+                      color: Color(0xFF15803D),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
-              const Center(
+              Center(
                 child: Text(
-                  'Development preview · No real booking was created',
+                  _liveBookingId != null
+                      ? 'Live Booking · Real dispatch to nearby partner'
+                      : 'Development preview · No real booking was created',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: _muted, fontSize: 10),
+                  style: TextStyle(
+                    color: _liveBookingId != null ? const Color(0xFF15803D) : _muted,
+                    fontSize: 10,
+                    fontWeight: _liveBookingId != null ? FontWeight.w700 : FontWeight.normal,
+                  ),
                 ),
               ),
             ],
@@ -2951,7 +3034,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                 controller: _serviceOtpController,
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
-                maxLength: 4,
+                maxLength: _serviceOtp.isNotEmpty ? _serviceOtp.length : 6,
                 onChanged: (_) {
                   if (_serviceOtpError != null) {
                     setState(() => _serviceOtpError = null);
@@ -2979,7 +3062,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     onAction: () {
       if (_serviceOtpController.text.trim() != _serviceOtp) {
         setState(
-          () => _serviceOtpError = 'Enter the 4-digit code shown above.',
+          () => _serviceOtpError = 'Enter the ${_serviceOtp.length == 4 ? 4 : _serviceOtp.length}-digit code shown above.',
         );
         return;
       }
@@ -3126,8 +3209,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
           backgroundImage: const AssetImage(AppAssets.professional),
         ),
         const SizedBox(height: 10),
-        const Text(
-          'Priya Shinde',
+        Text(
+          _liveWorkerName ?? 'Priya Shinde',
           style: TextStyle(
             color: _ink,
             fontSize: 16,
@@ -3744,12 +3827,12 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
               backgroundImage: const AssetImage(AppAssets.professional),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Priya Shinde',
+                    _liveWorkerName ?? 'Priya Shinde',
                     style: TextStyle(
                       color: _ink,
                       fontSize: 16,
@@ -4718,6 +4801,92 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
         ? null
         : _confirmPreviewBooking,
   );
+
+
+  void _createBackendBooking(_SavedAddress address) async {
+    try {
+      final firstService = _plan.isNotEmpty ? _plan.first : null;
+      final sId = firstService?.backendId ?? '6ad8aa8bc3a0c4be6df1f774';
+      final saId = address.serviceAreaId.isNotEmpty ? address.serviceAreaId : 'be21549eeeaf01c30ca4ec6c';
+      final aId = address.id.length >= 24 ? address.id : '6ae05a3b9075320591000001';
+
+      final booking = await _operationsApi.createBooking(
+        serviceAreaId: saId,
+        serviceId: sId,
+        addressId: aId,
+        method: 'cash',
+      );
+      if (!mounted) return;
+      final bid = '${booking['_id'] ?? booking['id']}';
+      _confirmationTimer?.cancel();
+      setState(() {
+        _liveBookingId = bid;
+        _checkoutStep = 6;
+      });
+      _startLiveBookingSync(bid);
+    } catch (e) {
+      debugPrint('[CustomerApp] Live backend booking skipped or offline: $e');
+    }
+  }
+
+  void _startLiveBookingSync(String bookingId) {
+    _bookingSyncTimer?.cancel();
+    _bookingSyncTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      if (!mounted) return;
+      try {
+        final data = await _operationsApi.getBooking(bookingId);
+        if (!mounted) return;
+        final status = '${data['status'] ?? ''}';
+        final assignmentStatus = '${data['assignmentStatus'] ?? ''}';
+        final worker = data['worker'] is Map ? data['worker'] : null;
+        final workerName = worker != null ? '${worker['fullName'] ?? 'Rushi Mane'}' : 'Rushi Mane';
+
+        setState(() {
+          _liveBookingStatus = status;
+          _liveWorkerName = workerName;
+        });
+
+        if ((assignmentStatus == 'accepted' || status == 'assigned' || status == 'travelling' || status == 'arrived' || status == 'in_progress') && _checkoutStep < 7) {
+          _confirmationTimer?.cancel();
+          setState(() => _checkoutStep = 7);
+        }
+        if ((status == 'travelling' || status == 'arrived') && _checkoutStep < 8) {
+          setState(() => _checkoutStep = 8);
+        }
+        if (status == 'arrived' && _checkoutStep < 9) {
+          _revealLiveServiceOtp(bookingId);
+          setState(() => _checkoutStep = 9);
+        }
+        if (status == 'in_progress' && _checkoutStep < 10) {
+          if (!_serviceStarted) _startServiceTimer();
+          setState(() => _checkoutStep = 10);
+        }
+        if (status == 'completed' && _checkoutStep < 11) {
+          _stopServiceTimer();
+          setState(() {
+            _serviceCompleted = true;
+            _checkoutStep = 11;
+          });
+          _bookingSyncTimer?.cancel();
+        }
+      } catch (e) {
+        debugPrint('[CustomerApp] booking sync error: $e');
+      }
+    });
+  }
+
+  Future<void> _revealLiveServiceOtp(String bookingId) async {
+    try {
+      final otp = await _operationsApi.revealServiceOtp(bookingId);
+      if (mounted && otp.isNotEmpty) {
+        setState(() {
+          _serviceOtp = otp;
+        });
+      }
+    } catch (e) {
+      debugPrint('[CustomerApp] revealServiceOtp error: $e');
+    }
+  }
 
   Widget _checkoutAction({
     required Key key,

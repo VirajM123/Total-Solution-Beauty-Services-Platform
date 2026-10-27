@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../integration/worker_api.dart';
 import 'worker_booking_data.dart';
 import 'worker_demo_booking_store.dart';
 import 'worker_booking_details_screen.dart';
@@ -20,11 +21,13 @@ class WorkerBookingsScreen extends StatefulWidget {
     required this.orders,
     this.demoMode = true,
     this.onOrderTap,
+    this.operationsApi,
   });
 
   final List<WorkerDashboardOrder> orders;
   final bool demoMode;
   final ValueChanged<WorkerDashboardOrder>? onOrderTap;
+  final WorkerOperationsApi? operationsApi;
 
   @override
   State<WorkerBookingsScreen> createState() => _WorkerBookingsScreenState();
@@ -167,6 +170,7 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
               ? WorkerDemoBookingStore.resolve(order)
               : order,
           demoMode: widget.demoMode,
+          operationsApi: widget.operationsApi,
         ),
       ),
     );
