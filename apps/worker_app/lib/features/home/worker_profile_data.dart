@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
+
+import '../../integration/worker_api.dart';
+import '../../integration/worker_mobile_operations_api.dart';
 
 const workerServiceOptions = <String, List<String>>{
   'Hair': [
@@ -188,10 +192,18 @@ class SecureWorkerProfileStorage implements WorkerProfileStorage {
 }
 
 class WorkerProfileRepository extends ChangeNotifier {
-  WorkerProfileRepository(this._storage);
+  WorkerProfileRepository(
+    this._storage, {
+    WorkerOperationsApi? operationsApi,
+  }) : _operationsApi = operationsApi;
 
   final WorkerProfileStorage _storage;
   final Map<String, WorkerProfile?> _cache = {};
+  WorkerOperationsApi? _operationsApi;
+
+  void setOperationsApi(WorkerOperationsApi? api) {
+    _operationsApi = api;
+  }
 
   static String _digits(String mobile) {
     final digits = mobile.replaceAll(RegExp(r'\D'), '');
@@ -208,15 +220,123 @@ class WorkerProfileRepository extends ChangeNotifier {
   Future<WorkerProfile?> load(String mobile) async {
     final normalized = _digits(mobile);
     if (normalized.isEmpty) return null;
+
     final raw = await _storage.read(_storageKey(normalized));
-    final profile = raw == null
-        ? null
-        : WorkerProfile.fromJson(
-            (jsonDecode(raw) as Map).cast<String, Object?>(),
-          );
-    _cache[normalized] = profile;
-    notifyListeners();
-    return profile;
+    WorkerProfile? local;
+    if (raw != null) {
+      try {
+        local = WorkerProfile.fromJson(
+          (jsonDecode(raw) as Map).cast<String, Object?>(),
+        );
+        _cache[normalized] = local;
+        notifyListeners();
+      } catch (_) {}
+    }
+
+    if (local != null) {
+      if (_operationsApi is WorkerMobileOperationsApi) {
+        unawaited(_revalidateWithServer(normalized, mobile, local));
+      }
+      return local;
+    }
+
+    if (_operationsApi is WorkerMobileOperationsApi) {
+      final fromServer = await _revalidateWithServer(normalized, mobile, null);
+      if (fromServer != null) return fromServer;
+    }
+
+    return _cache[normalized];
+  }
+
+  Future<WorkerProfile?> _revalidateWithServer(
+    String normalized,
+    String mobile,
+    WorkerProfile? local,
+  ) async {
+    if (_operationsApi is! WorkerMobileOperationsApi) return null;
+    try {
+      final data = await (_operationsApi as WorkerMobileOperationsApi)
+          .fetchWorkerProfile();
+      final user = data['user'] as Map<String, dynamic>? ?? {};
+      final profile = data['profile'] as Map<String, dynamic>? ?? {};
+
+      final rawServices = profile['services'];
+      final List<String> servicesList;
+      if (rawServices is List && rawServices.isNotEmpty) {
+        servicesList = rawServices.cast<String>();
+      } else if (local != null && local.services.isNotEmpty) {
+        servicesList = local.services;
+      } else {
+        servicesList = const ['Hair Styling'];
+      }
+
+      final rawLangs = profile['languages'];
+      final List<String> languagesList;
+      if (rawLangs is List && rawLangs.isNotEmpty) {
+        languagesList = rawLangs.cast<String>();
+      } else if (local != null && local.languages.isNotEmpty) {
+        languagesList = local.languages;
+      } else {
+        languagesList = const ['English', 'Hindi'];
+      }
+
+      final dobStr = profile['dateOfBirth'] as String?;
+      final parsedDob = dobStr != null ? DateTime.tryParse(dobStr) : null;
+      final dob = parsedDob ?? local?.dateOfBirth ?? DateTime(1995, 1, 1);
+
+      final serverProfile = WorkerProfile(
+        mobile: (user['mobileNumber'] as String?) ??
+            (profile['mobileNumber'] as String?) ??
+            mobile,
+        fullName: (user['fullName'] as String?) ??
+            (profile['fullName'] as String?) ??
+            local?.fullName ??
+            'Worker',
+        email: (user['email'] as String?) ??
+            (profile['email'] as String?) ??
+            local?.email ??
+            '',
+        dateOfBirth: dob,
+        cityOrArea: (profile['cityOrArea'] as String?) ??
+            local?.cityOrArea ??
+            'Latur Central',
+        primaryCategory: (profile['primaryCategory'] as String?) ??
+            local?.primaryCategory ??
+            'Hair',
+        services: servicesList,
+        yearsOfExperience: (profile['experienceYears'] as num?)?.toInt() ??
+            local?.yearsOfExperience ??
+            2,
+        workMode: (profile['workMode'] as String?) ??
+            local?.workMode ??
+            'Salon-based',
+        travelRadiusKm: (profile['travelRadiusKm'] as num?)?.toInt() ??
+            local?.travelRadiusKm ??
+            10,
+        languages: languagesList,
+        about: (profile['about'] as String?) ??
+            local?.about ??
+            'Professional salon artist with Hii Beauty',
+        certificateDetails: (profile['certificateDetails'] as String?) ??
+            local?.certificateDetails ??
+            'Verified Specialist',
+        profilePhotoPath: local?.profilePhotoPath ??
+            (profile['profilePhotoPath'] as String?),
+        notificationsEnabled: (profile['notificationsEnabled'] as bool?) ??
+            local?.notificationsEnabled ??
+            true,
+      );
+
+      await _storage.write(
+        _storageKey(normalized),
+        jsonEncode(serverProfile.toJson()),
+      );
+      _cache[normalized] = serverProfile;
+      notifyListeners();
+      return serverProfile;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> save(WorkerProfile profile) async {
@@ -228,6 +348,34 @@ class WorkerProfileRepository extends ChangeNotifier {
     await _storage.write(_storageKey(normalized), jsonEncode(saved.toJson()));
     _cache[normalized] = saved;
     notifyListeners();
+
+    if (_operationsApi is WorkerMobileOperationsApi) {
+      await _syncToServer(saved);
+    }
+  }
+
+  Future<void> _syncToServer(WorkerProfile saved) async {
+    try {
+      final body = <String, dynamic>{
+        'fullName': saved.fullName,
+        if (saved.email.trim().isNotEmpty) 'email': saved.email.trim(),
+        'cityOrArea': saved.cityOrArea,
+        'about': saved.about,
+        'experienceYears': saved.yearsOfExperience,
+        'primaryCategory': saved.primaryCategory,
+        'services': saved.services,
+        'notificationsEnabled': saved.notificationsEnabled,
+        'languages': saved.languages,
+        'workMode': saved.workMode,
+        'travelRadiusKm': saved.travelRadiusKm,
+        'dateOfBirth': saved.dateOfBirth.toIso8601String(),
+        'certificateDetails': saved.certificateDetails,
+        if (saved.profilePhotoPath != null)
+          'profilePhotoPath': saved.profilePhotoPath,
+      };
+      await (_operationsApi as WorkerMobileOperationsApi)
+          .updateWorkerProfile(body);
+    } catch (_) {}
   }
 
   Future<String> savePhoto(String mobile, Uint8List bytes) async {

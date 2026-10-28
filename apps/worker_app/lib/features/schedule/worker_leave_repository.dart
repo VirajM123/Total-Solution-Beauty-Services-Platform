@@ -1,3 +1,5 @@
+import '../../integration/worker_api.dart';
+import '../../integration/worker_mobile_operations_api.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -185,5 +187,95 @@ class WorkerDemoLeaveStore {
       _loading = null;
       throw error;
     });
+  }
+}
+
+class WorkerBackendLeaveRepository extends WorkerLeaveRepository {
+  WorkerBackendLeaveRepository({
+    WorkerOperationsApi? operationsApi,
+  })  : _api = operationsApi is WorkerMobileOperationsApi
+            ? operationsApi
+            : WorkerMobileOperationsApi(),
+        super(SecureDemoLeaveStorage(), demoMode: false);
+
+  final WorkerMobileOperationsApi _api;
+  bool _backendInitialized = false;
+
+  @override
+  bool get isInitialized => _backendInitialized;
+
+  @override
+  Future<void> initialize() async {
+    await refresh();
+  }
+
+  Future<void> refresh() async {
+    try {
+      final items = await _api.fetchLeaves();
+      final parsed = <WorkerLeaveRequest>[];
+      for (final doc in items) {
+        final id = '${doc['_id'] ?? ''}';
+        final reason = '${doc['reason'] ?? 'Personal'}';
+        final startsAtStr = doc['startsAt'] as String?;
+        final endsAtStr = doc['endsAt'] as String?;
+        final createdAtStr = doc['createdAt'] as String?;
+        final rawStatus = '${doc['status'] ?? 'pending'}'.toLowerCase().trim();
+
+        final from = startsAtStr != null ? DateTime.tryParse(startsAtStr)?.toLocal() : null;
+        final to = endsAtStr != null ? DateTime.tryParse(endsAtStr)?.toLocal() : null;
+        final created = createdAtStr != null ? DateTime.tryParse(createdAtStr)?.toLocal() : null;
+
+        if (from == null || to == null) continue;
+
+        final status = switch (rawStatus) {
+          'approved' => WorkerLeaveStatus.approved,
+          'rejected' => WorkerLeaveStatus.rejected,
+          _ => WorkerLeaveStatus.pending,
+        };
+
+        parsed.add(
+          WorkerLeaveRequest(
+            id: id,
+            from: DateTime(from.year, from.month, from.day),
+            to: DateTime(to.year, to.month, to.day),
+            reason: reason,
+            createdAt: created ?? from,
+            status: status,
+          ),
+        );
+      }
+      _requests = List.unmodifiable(parsed);
+      _backendInitialized = true;
+      notifyListeners();
+    } catch (_) {
+      // Keep existing requests
+    }
+  }
+
+  @override
+  Future<WorkerLeaveRequest> saveDraft({
+    required DateTime from,
+    required DateTime to,
+    required String reason,
+  }) async {
+    final start = DateTime(from.year, from.month, from.day, 9, 0);
+    final end = DateTime(to.year, to.month, to.day, 18, 0);
+    final response = await _api.submitLeaveRequest(
+      startsAt: start,
+      endsAt: end,
+      reason: reason,
+    );
+    final id = '${response['_id'] ?? (response['leave'] is Map ? (response['leave'] as Map)['_id'] : '') ?? ''}';
+    final request = WorkerLeaveRequest(
+      id: id.isNotEmpty ? id : 'leave-${DateTime.now().microsecondsSinceEpoch}',
+      from: from,
+      to: to,
+      reason: reason,
+      createdAt: DateTime.now(),
+      status: WorkerLeaveStatus.pending,
+    );
+    _requests = List.unmodifiable([request, ..._requests]);
+    notifyListeners();
+    return request;
   }
 }

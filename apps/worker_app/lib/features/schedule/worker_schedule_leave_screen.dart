@@ -1,3 +1,4 @@
+import '../../integration/worker_api.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -39,11 +40,15 @@ class WorkerScheduleLeaveScreen extends StatefulWidget {
     this.demoMode = true,
     this.appointments = const [],
     this.orders,
+    this.leaveRepository,
+    this.operationsApi,
   });
 
   final bool demoMode;
   final List<WorkerScheduleAppointment> appointments;
   final List<WorkerDashboardOrder>? orders;
+  final WorkerLeaveRepository? leaveRepository;
+  final WorkerOperationsApi? operationsApi;
 
   @override
   State<WorkerScheduleLeaveScreen> createState() =>
@@ -57,17 +62,29 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
   bool _leaveLoading = true;
   bool _savingLeave = false;
   Object? _leaveError;
+  late final WorkerLeaveRepository _repo;
+  bool _isBackend = false;
 
   @override
   void initState() {
     super.initState();
-    if (_previewAllowed) {
-      WorkerDemoLeaveStore.repository.addListener(_onLeaveUpdated);
-      WorkerDemoBookingStore.repository.addListener(_onLeaveUpdated);
-      _loadLeave();
+    if (widget.leaveRepository != null) {
+      _repo = widget.leaveRepository!;
+      _isBackend = _repo is WorkerBackendLeaveRepository;
+    } else if (widget.operationsApi != null) {
+      _repo = WorkerBackendLeaveRepository(
+        operationsApi: widget.operationsApi,
+      );
+      _isBackend = true;
     } else {
-      _leaveLoading = false;
+      _repo = WorkerDemoLeaveStore.repository;
+      _isBackend = false;
     }
+    _repo.addListener(_onLeaveUpdated);
+    if (widget.demoMode && !_isBackend) {
+      WorkerDemoBookingStore.repository.addListener(_onLeaveUpdated);
+    }
+    _loadLeave();
   }
 
   void _onLeaveUpdated() {
@@ -76,7 +93,11 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
 
   Future<void> _loadLeave() async {
     try {
-      await WorkerDemoLeaveStore.initialize();
+      if (_repo is WorkerBackendLeaveRepository) {
+        await _repo.initialize();
+      } else if (_previewAllowed) {
+        await WorkerDemoLeaveStore.initialize();
+      }
       if (mounted) {
         setState(() {
           _leaveLoading = false;
@@ -95,17 +116,20 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
 
   @override
   void dispose() {
-    if (_previewAllowed) {
-      WorkerDemoLeaveStore.repository.removeListener(_onLeaveUpdated);
+    _repo.removeListener(_onLeaveUpdated);
+    if (widget.demoMode && !_isBackend) {
       WorkerDemoBookingStore.repository.removeListener(_onLeaveUpdated);
+    }
+    if (_isBackend && widget.leaveRepository == null) {
+      _repo.dispose();
     }
     super.dispose();
   }
 
   List<WorkerLeaveRequest> get _requests =>
-      _previewAllowed && !_leaveLoading && _leaveError == null
-      ? WorkerDemoLeaveStore.repository.requests
-      : const [];
+      (!_leaveLoading && _leaveError == null)
+          ? _repo.requests
+          : const [];
 
   static DateTime _day(DateTime value) =>
       DateTime(value.year, value.month, value.day);
@@ -223,10 +247,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
       );
 
   Future<void> _applyForLeave() async {
-    if (!_previewAllowed ||
-        _leaveLoading ||
-        _leaveError != null ||
-        _savingLeave) {
+    if (_leaveLoading || _leaveError != null || _savingLeave) {
       return;
     }
     DateTimeRange range = DateTimeRange(start: _selected, end: _selected);
@@ -248,18 +269,18 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Request leave · Demo',
-                style: TextStyle(
+              Text(
+                _isBackend ? 'Apply for Leave' : 'Request leave · Demo',
+                style: const TextStyle(
                   color: _deep,
                   fontWeight: FontWeight.w800,
                   fontSize: 19,
                 ),
               ),
               const SizedBox(height: 5),
-              const Text(
-                'Saved locally as a draft. No admin is notified.',
-                style: TextStyle(color: _muted, fontSize: 12),
+              Text(
+                _isBackend ? 'Submit request to salon management for approval.' : 'Saved locally as a draft. No admin is notified.',
+                style: const TextStyle(color: _muted, fontSize: 12),
               ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
@@ -322,7 +343,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                     reason: reason,
                   ),
                 ),
-                child: const Text('Save Demo Request'),
+                child: Text(_isBackend ? 'Submit Leave Request' : 'Save Demo Request'),
               ),
             ],
           ),
@@ -332,7 +353,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
     if (!mounted || result == null) return;
     setState(() => _savingLeave = true);
     try {
-      await WorkerDemoLeaveStore.repository.saveDraft(
+      await _repo.saveDraft(
         from: result.from,
         to: result.to,
         reason: result.reason,
@@ -340,8 +361,8 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
       if (!mounted) return;
       setState(() => _leaveTab = true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Draft saved locally. No admin approval requested.'),
+        SnackBar(
+          content: Text(_isBackend ? '✅ Leave request submitted to salon admin for review!' : 'Draft saved locally. No admin approval requested.'),
         ),
       );
     } catch (error) {
@@ -613,12 +634,12 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
       const SizedBox(height: 6),
       if (_requests.isEmpty)
         _card(
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: Center(
               child: Text(
-                'No demo leave requests yet.',
-                style: TextStyle(color: _muted, fontSize: 12),
+                _isBackend ? 'No leave requests submitted yet.' : 'No demo leave requests yet.',
+                style: const TextStyle(color: _muted, fontSize: 12),
               ),
             ),
           ),
@@ -652,9 +673,23 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                   style: const TextStyle(color: _muted, fontSize: 12),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Local demo only. No admin action or booking reassignment occurred.',
-                  style: TextStyle(color: _muted, fontSize: 11),
+                Text(
+                  _isBackend
+                      ? (request.status == WorkerLeaveStatus.approved
+                          ? 'Approved by salon admin. Assignments paused for these dates.'
+                          : request.status == WorkerLeaveStatus.rejected
+                              ? 'Request was declined by salon management.'
+                              : 'Pending salon admin review.')
+                      : 'Local demo only. No admin action or booking reassignment occurred.',
+                  style: TextStyle(
+                    color: request.status == WorkerLeaveStatus.approved
+                        ? const Color(0xFF00A95C)
+                        : request.status == WorkerLeaveStatus.rejected
+                            ? const Color(0xFFDC2626)
+                            : _muted,
+                    fontSize: 11,
+                    fontWeight: request.status == WorkerLeaveStatus.approved ? FontWeight.w600 : FontWeight.w400,
+                  ),
                 ),
               ],
             ),
@@ -727,17 +762,22 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                   ],
                 ),
               ),
-              if (widget.demoMode)
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(17, 0, 17, 7),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'DEMO PREVIEW · Changes are not sent to admin',
-                      style: TextStyle(color: _muted, fontSize: 9),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(17, 0, 17, 7),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _isBackend
+                        ? 'LIVE PRODUCTION · Leave requests synced with salon admin'
+                        : 'DEMO PREVIEW · Changes are not sent to admin',
+                    style: TextStyle(
+                      color: _isBackend ? const Color(0xFF00A95C) : _muted,
+                      fontSize: 9,
+                      fontWeight: _isBackend ? FontWeight.w700 : FontWeight.w400,
                     ),
                   ),
                 ),
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 17),
                 child: Row(

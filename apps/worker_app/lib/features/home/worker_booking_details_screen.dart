@@ -44,6 +44,7 @@ class _WorkerBookingDetailsScreenState
   Object? _storeError;
   String? _localStatus;
   bool _updatingProgress = false;
+  WorkerDashboardOrder? _liveOrder;
 
   bool get _isLiveMode =>
       (widget.operationsApi is WorkerMobileOperationsApi) ||
@@ -58,8 +59,9 @@ class _WorkerBookingDetailsScreenState
     if (s == 'travelling') return 'I Have Arrived at Location 📍';
     if (s == 'arrived') return 'Start Service · Enter Customer OTP 🔑';
     if (s == 'in_progress' || s == 'in progress') return 'Complete Service ✅';
-    if (s == 'completed') return 'Service Completed 🎉';
-    return 'Start Service Not Available';
+    if (s == 'completed') return 'Service Completed 🎉 (Back)';
+    if (s == 'cancelled' || s == 'canceled') return 'Booking Cancelled (Back)';
+    return 'Back to Bookings';
   }
 
   bool _canAct(String status) {
@@ -165,6 +167,16 @@ class _WorkerBookingDetailsScreenState
     } else {
       _storeLoading = false;
     }
+    if (_isLiveMode && widget.order.id.length >= 24) {
+      final api = _api is WorkerMobileOperationsApi
+          ? (_api as WorkerMobileOperationsApi)
+          : WorkerMobileOperationsApi();
+      api.fetchBookingDetails(widget.order.id).then((updated) {
+        if (mounted && updated != null) {
+          setState(() => _liveOrder = updated);
+        }
+      });
+    }
   }
 
   Future<void> _loadStore() async {
@@ -202,11 +214,12 @@ class _WorkerBookingDetailsScreenState
       : null;
 
   WorkerDashboardOrder get _currentOrder {
-    var order = (!widget.demoMode || widget.order.id.length >= 24)
-        ? widget.order
-        : (!_storeLoading && _storeError == null
-            ? WorkerDemoBookingStore.resolve(widget.order)
-            : widget.order);
+    var order = _liveOrder ??
+        ((!widget.demoMode || widget.order.id.length >= 24)
+            ? widget.order
+            : (!_storeLoading && _storeError == null
+                ? WorkerDemoBookingStore.resolve(widget.order)
+                : widget.order));
     if (_localStatus != null) {
       order = order.copyWith(status: _localStatus);
     }
@@ -584,7 +597,10 @@ class _WorkerBookingDetailsScreenState
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Booking ${order.id}',
+                                          order.customerPhone != null &&
+                                                  order.customerPhone!.isNotEmpty
+                                              ? '${order.customerPhone} · Booking ${order.id}'
+                                              : 'Booking ${order.id}',
                                           style: const TextStyle(
                                             color: _muted,
                                             fontSize: 12,
@@ -689,10 +705,10 @@ class _WorkerBookingDetailsScreenState
                             ),
                             const SizedBox(height: 14),
                             _card(
-                              const Column(
+                              Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
+                                  const Text(
                                     'Service Details',
                                     style: TextStyle(
                                       color: _deep,
@@ -700,17 +716,60 @@ class _WorkerBookingDetailsScreenState
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
-                                  SizedBox(height: 8),
+                                  const SizedBox(height: 8),
                                   Text(
-                                    'The full service description will be shown once booking details are available from the backend.',
-                                    style: TextStyle(
+                                    order.itemsDescription ??
+                                        (order.service.isNotEmpty
+                                            ? order.service
+                                            : 'The full service description will be shown once booking details are available from the backend.'),
+                                    style: const TextStyle(
                                       color: _muted,
                                       fontSize: 12.5,
                                       height: 1.5,
                                     ),
                                   ),
-                                  SizedBox(height: 18),
-                                  Text(
+                                  if (order.compensationRupees != null) ...[
+                                    const SizedBox(height: 10),
+                                    const Divider(color: _border),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.account_balance_wallet_outlined, size: 18, color: Color(0xFF14865E)),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Worker Compensation: ₹${order.compensationRupees}',
+                                            style: const TextStyle(
+                                              color: Color(0xFF14865E),
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                  if (order.paymentMethod != null) ...[
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.receipt_outlined, size: 18, color: _muted),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Payment: ${order.paymentMethod?.toUpperCase()} (${order.paymentStatus?.toUpperCase() ?? 'PENDING'})',
+                                            style: const TextStyle(
+                                              color: _muted,
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                  const SizedBox(height: 16),
+                                  const Text(
                                     'Customer Note',
                                     style: TextStyle(
                                       color: _deep,
@@ -718,9 +777,9 @@ class _WorkerBookingDetailsScreenState
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'No customer note available in this preview.',
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'No special requests noted for this appointment.',
                                     style: TextStyle(
                                       color: _muted,
                                       fontSize: 12.5,
@@ -776,9 +835,7 @@ class _WorkerBookingDetailsScreenState
                             onPressed: _isLiveMode
                                 ? (_canAct(order.status)
                                     ? _handleProgressAction
-                                    : (order.status.toLowerCase() == 'completed'
-                                        ? () => Navigator.of(context).maybePop()
-                                        : null))
+                                    : () => Navigator.of(context).maybePop())
                                 : (session?.serviceStage ==
                                         WorkerServiceStage.finished
                                     ? () => Navigator.of(context).maybePop()

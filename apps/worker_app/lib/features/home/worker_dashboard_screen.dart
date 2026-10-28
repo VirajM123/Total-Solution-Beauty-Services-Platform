@@ -1,3 +1,4 @@
+import '../schedule/worker_leave_repository.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -10,12 +11,14 @@ import 'worker_service_history_screen.dart';
 import 'worker_profile_settings_screen.dart';
 import 'worker_profile_data.dart';
 import 'worker_notifications_screen.dart';
+import 'worker_notification_repository.dart';
 import 'worker_payout_data.dart';
 import 'worker_payouts_screen.dart';
 import 'worker_incoming_booking_screen.dart';
 import 'worker_booking_details_screen.dart';
 import '../../app/slide_page_route.dart';
 import '../schedule/worker_schedule_leave_screen.dart';
+import '../../integration/worker_mobile_operations_api.dart';
 
 // Preserve the original public model import path for existing callers.
 export 'worker_booking_data.dart' show WorkerDashboardOrder;
@@ -58,6 +61,8 @@ class WorkerDashboardScreen extends StatefulWidget {
     this.profilePhotoPath,
     this.profileRepository,
     this.payoutRepository,
+    this.leaveRepository,
+    this.notificationRepository,
     this.isApproved = false,
     this.activeService = false,
     this.demoMode = true,
@@ -80,6 +85,8 @@ class WorkerDashboardScreen extends StatefulWidget {
   final String? profilePhotoPath;
   final WorkerProfileRepository? profileRepository;
   final WorkerPayoutRepository? payoutRepository;
+  final WorkerLeaveRepository? leaveRepository;
+  final WorkerNotificationRepository? notificationRepository;
 
   /// Must come from authenticated, backend-verified account state in production.
   final bool isApproved;
@@ -126,6 +133,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   void initState() {
     super.initState();
     _previewOnline = widget.initialOnline;
+    widget.notificationRepository?.addListener(_onNotificationChanged);
     if (widget.demoMode) {
       WorkerDemoBookingStore.repository.addListener(_onStoreChanged);
       _loadDemoStore();
@@ -134,11 +142,19 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     }
   }
 
+  void _onNotificationChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void didUpdateWidget(covariant WorkerDashboardScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialOnline != widget.initialOnline) {
       _previewOnline = widget.initialOnline;
+    }
+    if (oldWidget.notificationRepository != widget.notificationRepository) {
+      oldWidget.notificationRepository?.removeListener(_onNotificationChanged);
+      widget.notificationRepository?.addListener(_onNotificationChanged);
     }
   }
 
@@ -168,6 +184,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   @override
   void dispose() {
     _offersController.dispose();
+    widget.notificationRepository?.removeListener(_onNotificationChanged);
     if (widget.demoMode) {
       WorkerDemoBookingStore.repository.removeListener(_onStoreChanged);
     }
@@ -338,6 +355,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           orders: _orders,
           demoMode: widget.demoMode,
           onOrderTap: widget.onOrderTap,
+          operationsApi: widget.operationsApi,
         ),
       ),
     );
@@ -357,6 +375,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           repository: widget.profileRepository,
           isVerified: widget.isApproved && !widget.demoMode,
           onLogoutTap: widget.onLogoutTap,
+          operationsApi: widget.operationsApi,
         ),
       ),
     );
@@ -379,6 +398,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           orders: _orders,
           demoMode: widget.demoMode,
           onBookingTap: _openOrder,
+          repository: widget.notificationRepository,
+          operationsApi: widget.operationsApi as WorkerMobileOperationsApi?,
         ),
       ),
     );
@@ -390,6 +411,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
         page: WorkerScheduleLeaveScreen(
           demoMode: widget.demoMode,
           orders: _orders,
+          operationsApi: widget.operationsApi,
+          leaveRepository: widget.leaveRepository,
         ),
       ),
     );
@@ -559,7 +582,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                         ),
                       ),
                     ),
-                    if (pendingCount > 0)
+                    if (pendingCount > 0 ||
+                        (widget.notificationRepository?.unreadCount ?? 0) > 0)
                       Positioned(
                         right: 5,
                         top: 5,
@@ -1640,8 +1664,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             selectedIndex: _navIndex,
             onDestinationSelected: _navigate,
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-            destinations: const [
-              NavigationDestination(
+            destinations: [
+              const NavigationDestination(
                 icon: Icon(Icons.home_outlined, color: _muted),
                 selectedIcon: Icon(Icons.home_rounded, color: _pink),
                 label: 'Home',
@@ -1663,8 +1687,45 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 label: 'Payouts',
               ),
               NavigationDestination(
-                icon: Icon(Icons.notifications_none_outlined, color: _muted),
-                selectedIcon: Icon(Icons.notifications_rounded, color: _pink),
+                icon: (widget.notificationRepository?.unreadCount ?? 0) > 0
+                    ? Badge(
+                        backgroundColor: _pink,
+                        label: Text(
+                          '${widget.notificationRepository!.unreadCount}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.notifications_none_outlined,
+                          color: _muted,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.notifications_none_outlined,
+                        color: _muted,
+                      ),
+                selectedIcon:
+                    (widget.notificationRepository?.unreadCount ?? 0) > 0
+                        ? Badge(
+                            backgroundColor: _pink,
+                            label: Text(
+                              '${widget.notificationRepository!.unreadCount}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.notifications_rounded,
+                              color: _pink,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.notifications_rounded,
+                            color: _pink,
+                          ),
                 label: 'Alerts',
               ),
               NavigationDestination(

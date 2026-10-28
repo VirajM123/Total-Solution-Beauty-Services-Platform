@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../app/slide_page_route.dart';
 import 'worker_profile_data.dart';
+import '../../integration/worker_api.dart';
 import '../widgets/worker_design.dart';
 
 const _pink = WorkerDesign.pink;
@@ -25,6 +26,7 @@ class WorkerProfileSettingsScreen extends StatefulWidget {
     this.demoMode = true,
     this.onLogoutTap,
     this.repository,
+    this.operationsApi,
   });
 
   final String workerName;
@@ -33,6 +35,7 @@ class WorkerProfileSettingsScreen extends StatefulWidget {
   final bool demoMode;
   final VoidCallback? onLogoutTap;
   final WorkerProfileRepository? repository;
+  final WorkerOperationsApi? operationsApi;
 
   @override
   State<WorkerProfileSettingsScreen> createState() =>
@@ -50,6 +53,9 @@ class _WorkerProfileSettingsScreenState
   @override
   void initState() {
     super.initState();
+    if (widget.repository == null && widget.operationsApi != null) {
+      _repository.setOperationsApi(widget.operationsApi);
+    }
     _load();
   }
 
@@ -141,9 +147,11 @@ class _WorkerProfileSettingsScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Exit worker preview?'),
-        content: const Text(
-          'There is no authenticated server session to revoke. Your saved local profile and settings will remain on this device.',
+        title: Text(widget.demoMode ? 'Exit worker preview?' : 'Log out of worker session?'),
+        content: Text(
+          widget.demoMode
+              ? 'There is no authenticated server session to revoke. Your saved local profile and settings will remain on this device.'
+              : 'Are you sure you want to log out? Your server session will be revoked on this device.',
         ),
         actions: [
           TextButton(
@@ -152,7 +160,7 @@ class _WorkerProfileSettingsScreenState
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Exit preview'),
+            child: Text(widget.demoMode ? 'Exit preview' : 'Log out'),
           ),
         ],
       ),
@@ -313,6 +321,35 @@ class _WorkerProfileSettingsScreenState
                       ),
                     ),
                     const SizedBox(height: 8),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFA5D6A7)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.cloud_done_rounded, color: Color(0xFF2E7D32), size: 16),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'LIVE PRODUCTION · Profile synced with salon backend',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1B5E20),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                   ],
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -367,28 +404,52 @@ class _WorkerProfileSettingsScreenState
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              const Row(
-                                children: [
-                                  Icon(
-                                    Icons.info_outline_rounded,
-                                    color: _muted,
-                                    size: 13,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      'Server verification unavailable',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: _muted,
+                              if (widget.isVerified && !widget.demoMode)
+                                const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.verified_rounded,
+                                      color: Color(0xFF00A95C),
+                                      size: 13,
+                                    ),
+                                    SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        'VERIFIED PARTNER · Approved Salon Professional',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF00A95C),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                )
+                              else
+                                const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline_rounded,
+                                      color: _muted,
+                                      size: 13,
+                                    ),
+                                    SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        'Server verification unavailable',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: _muted,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                             ],
                           ),
                         ),
@@ -467,7 +528,7 @@ class _WorkerProfileSettingsScreenState
                         ? null
                         : _confirmExitPreview,
                     icon: const Icon(Icons.logout_rounded),
-                    label: const Text('Exit worker preview'),
+                    label: Text(widget.demoMode ? 'Exit worker preview' : 'Sign out'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _pink,
                       side: const BorderSide(color: _border),

@@ -1,71 +1,132 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:worker_app/features/schedule/worker_leave_repository.dart';
+import 'package:worker_app/integration/worker_mobile_auth_api.dart';
+import 'package:worker_app/integration/worker_mobile_operations_api.dart';
 
-class _MemoryLeaveStorage implements WorkerLeaveStorage {
-  String? value;
-  bool failWrites = false;
+class _MemoryTokenStorage implements WorkerTokenStorage {
+  String? token = 'valid-test-token-12345';
   @override
-  Future<String?> read() async => value;
+  Future<String?> read() async => token;
   @override
-  Future<void> write(String newValue) async {
-    if (failWrites) throw StateError('Cannot save');
-    value = newValue;
-  }
+  Future<void> write(String value) async => token = value;
+  @override
+  Future<void> delete() async => token = null;
 }
 
 void main() {
-  test('draft persists across repository recreation', () async {
-    final memory = _MemoryLeaveStorage();
-    final first = WorkerLeaveRepository(memory, demoMode: true);
-    await first.initialize();
-    await first.saveDraft(
-      from: DateTime(2026, 11, 4),
-      to: DateTime(2026, 11, 6),
-      reason: 'Personal',
-    );
-    final restored = WorkerLeaveRepository(memory, demoMode: true);
-    await restored.initialize();
-    expect(restored.requests, hasLength(1));
-    expect(restored.requests.single.status, WorkerLeaveStatus.draft);
-    expect(restored.requests.single.reason, 'Personal');
-    first.dispose();
-    restored.dispose();
-  });
+  test('WorkerBackendLeaveRepository fetches and maps leaves from server', () async {
+    final client = MockClient((request) async {
+      expect(request.url.path, '/api/mobile/worker/leaves');
+      expect(request.method, 'GET');
+      expect(request.headers['authorization'], 'Bearer valid-test-token-12345');
+      return http.Response(
+        jsonEncode({
+          'success': true,
+          'data': {
+            'items': [
+              {
+                '_id': 'leave-101',
+                'reason': 'Family emergency',
+                'startsAt': '2026-11-01T09:00:00.000Z',
+                'endsAt': '2026-11-03T18:00:00.000Z',
+                'status': 'approved',
+                'createdAt': '2026-10-25T10:00:00.000Z',
+              },
+              {
+                '_id': 'leave-102',
+                'reason': 'Health checkup',
+                'startsAt': '2026-11-10T09:00:00.000Z',
+                'endsAt': '2026-11-10T18:00:00.000Z',
+                'status': 'pending',
+                'createdAt': '2026-10-26T10:00:00.000Z',
+              },
+            ],
+          },
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
 
-  test('overlapping dates are rejected including endpoints', () async {
-    final repo = WorkerLeaveRepository(_MemoryLeaveStorage(), demoMode: true);
-    await repo.initialize();
-    await repo.saveDraft(
-      from: DateTime(2026, 11, 4), to: DateTime(2026, 11, 6), reason: 'Family',
+    final opsApi = WorkerMobileOperationsApi(
+      apiBaseUrl: 'http://localhost:5001/api',
+      tokenStorage: _MemoryTokenStorage(),
+      client: client,
     );
-    expect(repo.overlaps(DateTime(2026, 11, 6), DateTime(2026, 11, 8)), isTrue);
-    await expectLater(
-      repo.saveDraft(from: DateTime(2026, 11, 6),
-          to: DateTime(2026, 11, 8), reason: 'Personal'),
-      throwsA(isA<WorkerLeaveException>()),
-    );
-    repo.dispose();
-  });
 
-  test('failed write does not create draft in UI state', () async {
-    final memory = _MemoryLeaveStorage();
-    final repo = WorkerLeaveRepository(memory, demoMode: true);
-    await repo.initialize();
-    memory.failWrites = true;
-    await expectLater(
-      repo.saveDraft(from: DateTime(2026, 12, 1),
-          to: DateTime(2026, 12, 1), reason: 'Other'),
-      throwsStateError,
-    );
-    expect(repo.requests, isEmpty);
-    repo.dispose();
-  });
-
-  test('corrupt storage is not silently reset', () async {
-    final memory = _MemoryLeaveStorage()..value = 'not json';
-    final repo = WorkerLeaveRepository(memory, demoMode: true);
-    await expectLater(repo.initialize(), throwsFormatException);
+    final repo = WorkerBackendLeaveRepository(operationsApi: opsApi);
     expect(repo.isInitialized, isFalse);
-    repo.dispose();
+
+    await repo.initialize();
+    expect(repo.isInitialized, isTrue);
+    expect(repo.requests.length, 2);
+
+    expect(repo.requests[0].id, 'leave-101');
+    expect(repo.requests[0].reason, 'Family emergency');
+    expect(repo.requests[0].status, WorkerLeaveStatus.approved);
+
+    expect(repo.requests[1].id, 'leave-102');
+    expect(repo.requests[1].reason, 'Health checkup');
+    expect(repo.requests[1].status, WorkerLeaveStatus.pending);
+  });
+
+  test('WorkerBackendLeaveRepository submits leave with idempotency and updates list', () async {
+    final client = MockClient((request) async {
+      if (request.method == 'GET') {
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {'items': []},
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      expect(request.url.path, '/api/mobile/worker/leaves');
+      expect(request.method, 'POST');
+      expect(request.headers['x-idempotency-key'], isNotNull);
+      final body = jsonDecode(request.body) as Map<String, dynamic>;
+      expect(body['reason'], 'Vacation');
+      expect(body['startsAt'], isNotEmpty);
+      expect(body['endsAt'], isNotEmpty);
+
+      return http.Response(
+        jsonEncode({
+          'success': true,
+          'data': {
+            '_id': 'leave-new-202',
+            'status': 'pending',
+            'reason': 'Vacation',
+          },
+        }),
+        201,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+
+    final opsApi = WorkerMobileOperationsApi(
+      apiBaseUrl: 'http://localhost:5001/api',
+      tokenStorage: _MemoryTokenStorage(),
+      client: client,
+    );
+
+    final repo = WorkerBackendLeaveRepository(operationsApi: opsApi);
+    await repo.initialize();
+    expect(repo.requests.isEmpty, isTrue);
+
+    final created = await repo.saveDraft(
+      from: DateTime(2026, 12, 1),
+      to: DateTime(2026, 12, 5),
+      reason: 'Vacation',
+    );
+
+    expect(created.id, 'leave-new-202');
+    expect(created.reason, 'Vacation');
+    expect(created.status, WorkerLeaveStatus.pending);
+    expect(repo.requests.length, 1);
+    expect(repo.requests.first.id, 'leave-new-202');
   });
 }

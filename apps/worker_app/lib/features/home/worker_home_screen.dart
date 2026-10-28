@@ -1,3 +1,4 @@
+import '../schedule/worker_leave_repository.dart';
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -5,8 +6,8 @@ import 'package:flutter/material.dart';
 import '../../integration/worker_api.dart';
 import '../../integration/worker_mobile_operations_api.dart';
 import '../login/worker_login_screen.dart';
-import 'worker_booking_data.dart';
 import 'worker_dashboard_screen.dart';
+import 'worker_notification_repository.dart';
 import 'worker_profile_data.dart';
 import 'worker_payout_data.dart';
 import 'worker_incoming_booking_screen.dart';
@@ -19,6 +20,7 @@ class WorkerHomeScreen extends StatefulWidget {
     this.demoMode = false,
     this.profileRepository,
     this.payoutRepository,
+    this.notificationRepository,
     this.operationsApi,
   });
 
@@ -26,6 +28,7 @@ class WorkerHomeScreen extends StatefulWidget {
   final bool demoMode;
   final WorkerProfileRepository? profileRepository;
   final WorkerPayoutRepository? payoutRepository;
+  final WorkerNotificationRepository? notificationRepository;
   final WorkerOperationsApi? operationsApi;
 
   @override
@@ -42,6 +45,8 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
   final Set<String> _handledOfferIds = {};
   late final WorkerOperationsApi _operationsApi;
   late final WorkerPayoutRepository _payoutRepository;
+  late final WorkerLeaveRepository _leaveRepository;
+  late final WorkerNotificationRepository _notificationRepository;
   WorkerProfileRepository get _repository =>
       widget.profileRepository ?? WorkerProfileStore.repository;
 
@@ -55,8 +60,28 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
               ? (_operationsApi as WorkerMobileOperationsApi)
               : null,
         );
+    _leaveRepository = WorkerBackendLeaveRepository(
+      operationsApi: _operationsApi is WorkerMobileOperationsApi
+          ? (_operationsApi as WorkerMobileOperationsApi)
+          : null,
+    );
+    _notificationRepository = widget.notificationRepository ??
+        WorkerNotificationRepository(
+          operationsApi: widget.operationsApi is WorkerMobileOperationsApi
+              ? (widget.operationsApi as WorkerMobileOperationsApi)
+              : null,
+        );
+    _notificationRepository.addListener(_onNotificationsChanged);
+    _notificationRepository.load();
+    if (widget.profileRepository == null && widget.operationsApi != null) {
+      _repository.setOperationsApi(widget.operationsApi);
+    }
     _repository.addListener(_profileChanged);
     _loadProfile();
+  }
+
+  void _onNotificationsChanged() {
+    if (mounted) setState(() {});
   }
 
   void _startOfferPolling() {
@@ -257,8 +282,13 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
   void dispose() {
     _stopOfferPolling();
     _repository.removeListener(_profileChanged);
+    _notificationRepository.removeListener(_onNotificationsChanged);
     if (widget.payoutRepository == null) {
       _payoutRepository.dispose();
+    }
+    _leaveRepository.dispose();
+    if (widget.notificationRepository == null) {
+      _notificationRepository.dispose();
     }
     super.dispose();
   }
@@ -313,6 +343,8 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
       workerPhone: widget.phoneNumber,
       profileRepository: _repository,
       payoutRepository: _payoutRepository,
+      leaveRepository: _leaveRepository,
+      notificationRepository: _notificationRepository,
       workerName: _profile?.fullName.isNotEmpty == true
           ? _profile!.fullName
           : 'Hi Beauty Partner',

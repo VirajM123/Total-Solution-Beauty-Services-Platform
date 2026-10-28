@@ -1,3 +1,5 @@
+import '../../integration/worker_api.dart';
+import '../../integration/worker_mobile_operations_api.dart';
 import 'package:flutter/material.dart';
 import 'worker_booking_data.dart';
 import 'worker_demo_booking_store.dart';
@@ -18,11 +20,13 @@ class WorkerServiceHistoryScreen extends StatefulWidget {
     required this.orders,
     this.demoMode = true,
     this.onOrderTap,
+    this.operationsApi,
   });
 
   final List<WorkerDashboardOrder> orders;
   final bool demoMode;
   final ValueChanged<WorkerDashboardOrder>? onOrderTap;
+  final WorkerOperationsApi? operationsApi;
 
   @override
   State<WorkerServiceHistoryScreen> createState() =>
@@ -67,14 +71,43 @@ class _WorkerServiceHistoryScreenState
   String _filter = 'All';
   bool _loading = false;
   Object? _error;
+  List<WorkerDashboardOrder>? _liveOrders;
+
+  bool get _isLive => widget.operationsApi != null;
 
   @override
   void initState() {
     super.initState();
     _search.addListener(_refresh);
-    if (widget.demoMode) {
+    if (widget.demoMode && !_isLive) {
       WorkerDemoBookingStore.repository.addListener(_refresh);
       _load();
+    } else if (_isLive) {
+      _loadLiveHistory();
+    }
+  }
+
+  Future<void> _loadLiveHistory() async {
+    if (widget.operationsApi is! WorkerMobileOperationsApi) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final fetched = await (widget.operationsApi as WorkerMobileOperationsApi).fetchWorkerOrders();
+      if (mounted) {
+        setState(() {
+          _liveOrders = fetched;
+          _loading = false;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = error;
+        });
+      }
     }
   }
 
@@ -119,7 +152,8 @@ class _WorkerServiceHistoryScreenState
       SlidePageRoute<void>(
         page: WorkerBookingDetailsScreen(
           order: order,
-          demoMode: widget.demoMode,
+          demoMode: widget.demoMode && !_isLive,
+          operationsApi: widget.operationsApi,
         ),
       ),
     );
@@ -127,9 +161,11 @@ class _WorkerServiceHistoryScreenState
 
   @override
   Widget build(BuildContext context) {
-    final source = widget.demoMode && !_loading && _error == null
-        ? WorkerDemoBookingStore.resolveAll(widget.orders)
-        : widget.orders;
+    final source = _isLive && _liveOrders != null
+        ? _liveOrders!
+        : (widget.demoMode && !_loading && _error == null
+            ? WorkerDemoBookingStore.resolveAll(widget.orders)
+            : widget.orders);
     final visible = filterWorkerServiceHistory(
       source,
       filter: _filter,
@@ -204,7 +240,17 @@ class _WorkerServiceHistoryScreenState
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (widget.demoMode) ...[
+                            if (_isLive) ...[
+                              const Text(
+                                'LIVE PRODUCTION · Service history synced with salon backend',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF14865E),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                            ] else if (widget.demoMode) ...[
                               const Text(
                                 'DEMO PREVIEW · No live bookings or verified payments',
                                 style: TextStyle(fontSize: 9, color: _muted),
@@ -367,7 +413,10 @@ class _WorkerServiceHistoryScreenState
                                   ),
                                 ),
                               )
-                            : ListView.separated(
+                            : RefreshIndicator(
+      onRefresh: _isLive ? _loadLiveHistory : _load,
+      color: _pink,
+      child: ListView.separated(
                                 keyboardDismissBehavior:
                                     ScrollViewKeyboardDismissBehavior.onDrag,
                                 padding: const EdgeInsets.fromLTRB(
@@ -525,6 +574,7 @@ class _WorkerServiceHistoryScreenState
                                   );
                                 },
                               ),
+                                  ), // RefreshIndicator
                       ),
                     ],
                   ),

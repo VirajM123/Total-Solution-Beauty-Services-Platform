@@ -14,6 +14,11 @@ class WorkerDashboardOrder {
     this.duration = '60 min',
     this.appointmentDate,
     this.completedAt,
+    this.customerPhone,
+    this.itemsDescription,
+    this.paymentMethod,
+    this.paymentStatus,
+    this.compensationRupees,
   });
 
   final String id;
@@ -33,7 +38,22 @@ class WorkerDashboardOrder {
   /// be used to infer either the date or the worker's earnings.
   final DateTime? completedAt;
 
-  WorkerDashboardOrder copyWith({String? status, DateTime? appointmentDate}) =>
+  final String? customerPhone;
+  final String? itemsDescription;
+  final String? paymentMethod;
+  final String? paymentStatus;
+  final int? compensationRupees;
+
+  WorkerDashboardOrder copyWith({
+    String? status,
+    DateTime? appointmentDate,
+    DateTime? completedAt,
+    String? customerPhone,
+    String? itemsDescription,
+    String? paymentMethod,
+    String? paymentStatus,
+    int? compensationRupees,
+  }) =>
       WorkerDashboardOrder(
         id: id,
         customer: customer,
@@ -44,7 +64,12 @@ class WorkerDashboardOrder {
         status: status ?? this.status,
         duration: duration,
         appointmentDate: appointmentDate ?? this.appointmentDate,
-        completedAt: completedAt,
+        completedAt: completedAt ?? this.completedAt,
+        customerPhone: customerPhone ?? this.customerPhone,
+        itemsDescription: itemsDescription ?? this.itemsDescription,
+        paymentMethod: paymentMethod ?? this.paymentMethod,
+        paymentStatus: paymentStatus ?? this.paymentStatus,
+        compensationRupees: compensationRupees ?? this.compensationRupees,
       );
 }
 

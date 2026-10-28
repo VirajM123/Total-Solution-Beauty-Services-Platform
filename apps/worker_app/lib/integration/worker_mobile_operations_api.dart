@@ -46,12 +46,14 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
     String path, {
     Map<String, dynamic>? body,
     String? token,
+    String? idempotencyKey,
   }) async {
     final uri = _uri(path);
     final headers = {
       'Accept': 'application/json',
       if (body != null) 'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
+      if (idempotencyKey != null) 'x-idempotency-key': idempotencyKey,
     };
     try {
       final response = await switch (method) {
@@ -286,6 +288,26 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
     };
     final durationMinutes = doc['durationMinutes'] ?? 60;
 
+    final customerPhone = customerSnapshot?['mobileNumber']?.toString();
+    final paymentMethod = doc['paymentMethod']?.toString();
+    final paymentStatus = doc['paymentStatus']?.toString();
+    final compensationPaise = doc['compensationPaise'] is num
+        ? (doc['compensationPaise'] as num).toInt()
+        : null;
+    final compensationRupees =
+        compensationPaise != null ? compensationPaise ~/ 100 : null;
+
+    String? itemsDescription;
+    if (items != null && items.isNotEmpty) {
+      itemsDescription = items.map((i) {
+        final name = i['name'] ?? 'Service';
+        final qty = i['quantity'] ?? 1;
+        final pricePaise = i['pricePaise'] is num ? (i['pricePaise'] as num).toInt() : 0;
+        final priceRupees = pricePaise ~/ 100;
+        return '$name (x$qty) - ₹$priceRupees';
+      }).join('\n');
+    }
+
     return WorkerDashboardOrder(
       id: id,
       customer: customerName,
@@ -297,7 +319,27 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
       duration: '$durationMinutes min',
       appointmentDate: startsAt,
       completedAt: completedAt,
+      customerPhone: customerPhone,
+      itemsDescription: itemsDescription,
+      paymentMethod: paymentMethod,
+      paymentStatus: paymentStatus,
+      compensationRupees: compensationRupees,
     );
+  }
+
+  Future<WorkerDashboardOrder?> fetchBookingDetails(String bookingId) async {
+    final token = await _storage.read();
+    if (token == null) return null;
+    try {
+      final doc = await _request(
+        'GET',
+        '/mobile/worker/bookings/$bookingId',
+        token: token,
+      );
+      return _mapOrder(doc);
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -349,6 +391,115 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
   @override
   Future<WorkerPage<WorkerSettlementRecord>> settlements({int page = 1}) async {
     return WorkerPage(items: const [], page: page, hasMore: false);
+  }
+
+
+  Future<List<Map<String, dynamic>>> fetchLeaves() async {
+    final token = await _storage.read();
+    if (token == null) return const [];
+    try {
+      final data = await _request(
+        'GET',
+        '/mobile/worker/leaves',
+        token: token,
+      );
+      final items = data['items'] as List?;
+      if (items == null) return const [];
+      return items.whereType<Map<String, dynamic>>().toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchWorkerProfile() async {
+    final token = await _storage.read();
+    if (token == null) {
+      throw const WorkerAuthException('UNAUTHENTICATED', 'Sign in is required.');
+    }
+    return await _request(
+      'GET',
+      '/mobile/worker/profile',
+      token: token,
+    );
+  }
+
+  Future<Map<String, dynamic>> updateWorkerProfile(Map<String, dynamic> body) async {
+    final token = await _storage.read();
+    if (token == null) {
+      throw const WorkerAuthException('UNAUTHENTICATED', 'Sign in is required.');
+    }
+    return await _request(
+      'PATCH',
+      '/mobile/worker/profile',
+      token: token,
+      body: body,
+    );
+  }
+
+  Future<Map<String, dynamic>> submitLeaveRequest({
+    required DateTime startsAt,
+    required DateTime endsAt,
+    required String reason,
+  }) async {
+    final token = await _storage.read();
+    if (token == null) {
+      throw Exception('Authentication required to submit leave request');
+    }
+    final key = 'idem-leave-${DateTime.now().microsecondsSinceEpoch}';
+    return await _request(
+      'POST',
+      '/mobile/worker/leaves',
+      token: token,
+      idempotencyKey: key,
+      body: {
+        'startsAt': startsAt.toUtc().toIso8601String(),
+        'endsAt': endsAt.toUtc().toIso8601String(),
+        'reason': reason,
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> fetchNotifications() async {
+    final token = await _storage.read();
+    if (token == null) return const [];
+    final data = await _request(
+      'GET',
+      '/mobile/worker/notifications',
+      token: token,
+    );
+    final items = data['items'] as List?;
+    if (items == null) return const [];
+    return items.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
+
+  Future<bool> markNotificationAsRead(String notificationId) async {
+    final token = await _storage.read();
+    if (token == null) return false;
+    try {
+      await _request(
+        'PATCH',
+        '/mobile/worker/notifications/$notificationId/read',
+        token: token,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> markAllNotificationsAsRead() async {
+    final token = await _storage.read();
+    if (token == null) return false;
+    try {
+      await _request(
+        'POST',
+        '/mobile/worker/notifications/read-all',
+        token: token,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   void close() => _client.close();

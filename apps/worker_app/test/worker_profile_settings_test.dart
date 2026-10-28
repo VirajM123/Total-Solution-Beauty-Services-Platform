@@ -1,9 +1,25 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:worker_app/integration/worker_mobile_auth_api.dart';
+import 'package:worker_app/integration/worker_mobile_operations_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:worker_app/features/home/worker_profile_data.dart';
 import 'package:worker_app/features/home/worker_profile_settings_screen.dart';
 import 'package:worker_app/features/home/worker_home_screen.dart';
 import 'package:worker_app/features/registration/screens/worker_review_submit_screen.dart';
+
+
+class _TestTokenStorage implements WorkerTokenStorage {
+  String? token = 'valid-test-token-12345';
+  @override
+  Future<String?> read() async => token;
+  @override
+  Future<void> write(String value) async => token = value;
+  @override
+  Future<void> delete() async => token = null;
+}
 
 class _MemoryProfileStorage implements WorkerProfileStorage {
   final values = <String, String>{};
@@ -321,5 +337,120 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Exit preview'));
     await tester.pumpAndSettle();
     expect(exited, isTrue);
+  });
+
+  test('WorkerProfileRepository live loads and live patches profile to server with MockClient', () async {
+    var patchCalled = false;
+    Map<String, dynamic>? patchedBody;
+
+    final client = MockClient((request) async {
+      if (request.method == 'GET' && request.url.path == '/api/mobile/worker/profile') {
+        expect(request.headers['authorization'], 'Bearer valid-test-token-12345');
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'user': {
+                '_id': 'user-101',
+                'fullName': 'Rushi Mane',
+                'mobileNumber': '+919850905140',
+                'email': 'rushi@hiibeauty.test',
+              },
+              'profile': {
+                '_id': 'worker-101',
+                'userId': 'user-101',
+                'experienceYears': 3,
+                'status': 'approved',
+                'isOnline': true,
+                'cityOrArea': 'Latur Central',
+                'primaryCategory': 'Hair',
+                'services': ['Haircut', 'Hair Spa'],
+                'languages': ['English', 'Marathi'],
+                'about': 'Master Hair Stylist',
+                'certificateDetails': 'Certified Salon Pro',
+                'notificationsEnabled': true,
+              },
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      if (request.method == 'PATCH' && request.url.path == '/api/mobile/worker/profile') {
+        patchCalled = true;
+        patchedBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'user': {'fullName': patchedBody!['fullName']},
+              'profile': patchedBody,
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      return http.Response('{"success":false}', 404);
+    });
+
+    final opsApi = WorkerMobileOperationsApi(
+      apiBaseUrl: 'http://localhost:5001/api',
+      tokenStorage: _TestTokenStorage(),
+      client: client,
+    );
+
+    final storage = _MemoryProfileStorage();
+    final repo = WorkerProfileRepository(storage, operationsApi: opsApi);
+
+    // Initial load from server
+    final profile = await repo.load('9850905140');
+    expect(profile, isNotNull);
+    expect(profile?.fullName, 'Rushi Mane');
+    expect(profile?.cityOrArea, 'Latur Central');
+    expect(profile?.primaryCategory, 'Hair');
+    expect(profile?.services, ['Haircut', 'Hair Spa']);
+
+    // Save changes
+    final updated = profile!.copyWith(
+      fullName: 'Rushi Mane Senior',
+      about: 'Senior Master Stylist',
+    );
+    await repo.save(updated);
+
+    expect(patchCalled, isTrue);
+    expect(patchedBody?['fullName'], 'Rushi Mane Senior');
+    expect(patchedBody?['about'], 'Senior Master Stylist');
+    expect(patchedBody?['cityOrArea'], 'Latur Central');
+  });
+
+  testWidgets('WorkerProfileSettingsScreen shows verified partner badge and live production banner in live mode', (tester) async {
+    tester.view.physicalSize = const Size(400, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = _MemoryProfileStorage();
+    final repo = WorkerProfileRepository(storage);
+    await repo.save(_profile(fullName: 'Rushi Mane', mobile: '9850905140'));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WorkerProfileSettingsScreen(
+          workerName: 'Rushi Mane',
+          phoneNumber: '9850905140',
+          demoMode: false,
+          isVerified: true,
+          onLogoutTap: () {},
+          repository: repo,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('VERIFIED PARTNER · Approved Salon Professional'), findsOneWidget);
+    expect(find.text('LIVE PRODUCTION · Profile synced with salon backend'), findsOneWidget);
+    expect(find.text('Sign out'), findsOneWidget);
+    expect(find.text('Exit worker preview'), findsNothing);
   });
 }
