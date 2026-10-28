@@ -45,7 +45,12 @@ class _WorkerBookingDetailsScreenState
   String? _localStatus;
   bool _updatingProgress = false;
 
-  bool get _isLiveMode => widget.operationsApi is WorkerMobileOperationsApi;
+  bool get _isLiveMode =>
+      (widget.operationsApi is WorkerMobileOperationsApi) ||
+      widget.order.id.length >= 24;
+
+  WorkerOperationsApi get _api =>
+      widget.operationsApi ?? WorkerMobileOperationsApi();
 
   String _progressButtonText(String status) {
     final s = status.toLowerCase().trim();
@@ -68,7 +73,9 @@ class _WorkerBookingDetailsScreenState
       await _startServicePreview();
       return;
     }
-    final api = widget.operationsApi as WorkerMobileOperationsApi;
+    final api = _api is WorkerMobileOperationsApi
+        ? (_api as WorkerMobileOperationsApi)
+        : WorkerMobileOperationsApi();
     final s = _currentOrder.status.toLowerCase().trim();
 
     if (s == 'assigned' || s == 'accepted') {
@@ -152,7 +159,7 @@ class _WorkerBookingDetailsScreenState
   @override
   void initState() {
     super.initState();
-    if (widget.demoMode) {
+    if (widget.demoMode && widget.order.id.length < 24) {
       WorkerDemoBookingStore.repository.addListener(_onStoreUpdated);
       _loadStore();
     } else {
@@ -183,20 +190,23 @@ class _WorkerBookingDetailsScreenState
 
   @override
   void dispose() {
-    if (widget.demoMode)
+    if (widget.demoMode && widget.order.id.length < 24) {
       WorkerDemoBookingStore.repository.removeListener(_onStoreUpdated);
+    }
     super.dispose();
   }
 
   WorkerBookingSession? get _savedSession =>
-      widget.demoMode && !_storeLoading && _storeError == null
+      widget.demoMode && widget.order.id.length < 24 && !_storeLoading && _storeError == null
       ? WorkerDemoBookingStore.session(widget.order.id)
       : null;
 
   WorkerDashboardOrder get _currentOrder {
-    var order = widget.demoMode && !_storeLoading && _storeError == null
-        ? WorkerDemoBookingStore.resolve(widget.order)
-        : widget.order;
+    var order = (!widget.demoMode || widget.order.id.length >= 24)
+        ? widget.order
+        : (!_storeLoading && _storeError == null
+            ? WorkerDemoBookingStore.resolve(widget.order)
+            : widget.order);
     if (_localStatus != null) {
       order = order.copyWith(status: _localStatus);
     }

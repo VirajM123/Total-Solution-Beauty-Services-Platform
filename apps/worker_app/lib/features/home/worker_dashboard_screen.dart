@@ -318,6 +318,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
         builder: (_) => WorkerBookingsScreen(
           orders: _orders,
           demoMode: widget.demoMode,
+          operationsApi: widget.operationsApi,
           onOrderTap: widget.onOrderTap,
         ),
       ),

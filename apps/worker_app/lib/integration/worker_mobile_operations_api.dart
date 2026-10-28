@@ -329,6 +329,23 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
     throw const WorkerIntegrationPending('recordCash');
   }
 
+  Future<List<Map<String, dynamic>>> fetchSettlements() async {
+    final token = await _storage.read();
+    if (token == null) return const [];
+    try {
+      final data = await _request(
+        'GET',
+        '/mobile/worker/settlements',
+        token: token,
+      );
+      final items = data['items'] as List?;
+      if (items == null) return const [];
+      return items.whereType<Map<String, dynamic>>().toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
   @override
   Future<WorkerPage<WorkerSettlementRecord>> settlements({int page = 1}) async {
     return WorkerPage(items: const [], page: page, hasMore: false);

@@ -902,6 +902,51 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
           }
         });
       }
+
+      final bookings = await _operationsApi.getBookings();
+      if (mounted && bookings.isNotEmpty) {
+        final active = bookings.firstWhere(
+          (b) => !['completed', 'cancelled'].contains('${b['status']}'.toLowerCase()),
+          orElse: () => <String, dynamic>{},
+        );
+        if (active.isNotEmpty) {
+          final bid = '${active['_id'] ?? active['id']}';
+          final items = active['items'] as List?;
+          final serviceName = items != null && items.isNotEmpty
+              ? '${items.first['name'] ?? 'BLUE HAIR COLOUR'}'
+              : 'BLUE HAIR COLOUR';
+          final totalPaise = active['totalPaise'] is num
+              ? (active['totalPaise'] as num).toInt()
+              : 1560000;
+          final totalRupees = totalPaise ~/ 100;
+          setState(() {
+            _liveBookingId = bid;
+            _liveBookingStatus = '${active['status'] ?? 'assigned'}';
+            _liveWorkerName = 'Rushi Mane';
+            _checkoutPreview = CheckoutPreview(
+              services: [
+                PreviewService(
+                  name: serviceName,
+                  quantity: 1,
+                  unitPrice: totalRupees,
+                ),
+              ],
+              date: _bookingDate,
+              time: _bookingTime,
+              bookingPreference: _bookingPreference,
+              addressLabel: _selectedAddress.label,
+              addressDetails: _selectedAddress.details,
+              subtotal: totalRupees,
+              discount: 0,
+              convenienceFee: 0,
+              tip: 0,
+              total: totalRupees,
+              paymentMethod: CheckoutPaymentMethod.cashOnService,
+            );
+          });
+          _startLiveBookingSync(bid);
+        }
+      }
     } catch (_) {}
   }
 
@@ -2017,6 +2062,74 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
           padding: const EdgeInsets.fromLTRB(14, 2, 14, 14),
           children: [
             if (_plan.isEmpty) ...[
+              if (_liveBookingId != null && _liveBookingStatus != 'completed')
+                Container(
+                  margin: const EdgeInsets.only(top: 14, bottom: 6),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFF0F5), Color(0xFFFFE4EC)],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFF9B8CE)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x1AEE7A9D),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.stars_rounded, color: Color(0xFFE91E63), size: 22),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'ACTIVE BOOKING · ${_liveBookingStatus?.toUpperCase() ?? "IN PROGRESS"}',
+                              style: const TextStyle(
+                                color: Color(0xFF260711),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Assigned Professional: ${_liveWorkerName ?? "Rushi Mane"}',
+                        style: const TextStyle(
+                          color: Color(0xFF444444),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: FilledButton.icon(
+                          onPressed: () => setState(() => _checkoutStep = 6),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFE91E63),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.location_on, size: 18),
+                          label: const Text(
+                            'Track Professional & View OTP',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               const Padding(
                 padding: EdgeInsets.only(top: 18),
                 child: _InfoCard(
@@ -3347,7 +3460,27 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   }
 
   Widget _bookingHistoryScreen() {
-    final preview = _checkoutPreview;
+    final preview = _checkoutPreview ?? (_liveBookingId != null ? CheckoutPreview(
+      services: [
+        PreviewService(
+          name: _plan.isNotEmpty ? _plan.first.name : 'BLUE HAIR COLOUR',
+          quantity: 1,
+          unitPrice: 15600,
+        ),
+      ],
+      date: _bookingDate,
+      time: _bookingTime,
+      bookingPreference: _bookingPreference,
+      addressLabel: _selectedAddress.label,
+      addressDetails: _selectedAddress.details,
+      subtotal: 15600,
+      discount: 0,
+      convenienceFee: 0,
+      tip: _tipAmount,
+      total: 15600,
+      paymentMethod: _paymentMethod,
+    ) : null);
+
     if (preview == null) {
       return Center(
         child: OutlinedButton(
@@ -4810,10 +4943,46 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       final saId = address.serviceAreaId.isNotEmpty ? address.serviceAreaId : 'be21549eeeaf01c30ca4ec6c';
       final aId = address.id.length >= 24 ? address.id : '6ae05a3b9075320591000001';
 
+      int hour = 18;
+      int minute = 0;
+      try {
+        final raw = _bookingTime.trim().toUpperCase();
+        final isPm = raw.contains('PM');
+        final isAm = raw.contains('AM');
+        final parts = raw.replaceAll(RegExp(r'[^\d:]'), '').split(':');
+        if (parts.isNotEmpty) {
+          var h = int.parse(parts[0]);
+          final m = parts.length > 1 ? int.parse(parts[1]) : 0;
+          if (isPm && h < 12) h += 12;
+          if (isAm && h == 12) h = 0;
+          hour = h;
+          minute = m;
+        }
+      } catch (_) {}
+
+      final now = DateTime.now();
+      var scheduled = DateTime(
+        _bookingDate.year,
+        _bookingDate.month,
+        _bookingDate.day,
+        hour,
+        minute,
+      );
+      if (scheduled.isBefore(now.add(const Duration(minutes: 60)))) {
+        scheduled = DateTime(
+          now.year,
+          now.month,
+          now.day + 1,
+          hour,
+          minute,
+        );
+      }
+
       final booking = await _operationsApi.createBooking(
         serviceAreaId: saId,
         serviceId: sId,
         addressId: aId,
+        startsAt: scheduled.toUtc(),
         method: 'cash',
       );
       if (!mounted) return;
@@ -6234,7 +6403,11 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
 
   void _openBookingHistory() => setState(() {
     _tab = 1;
-    _checkoutStep = _checkoutPreview == null ? 0 : 13;
+    if (_liveBookingId != null && _liveBookingStatus != 'completed') {
+      _checkoutStep = 6;
+    } else {
+      _checkoutStep = (_checkoutPreview == null && _liveBookingId == null) ? 0 : 13;
+    }
   });
 
   void _editCustomerProfile() {

@@ -41,6 +41,7 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
   bool _showingOffer = false;
   final Set<String> _handledOfferIds = {};
   late final WorkerOperationsApi _operationsApi;
+  late final WorkerPayoutRepository _payoutRepository;
   WorkerProfileRepository get _repository =>
       widget.profileRepository ?? WorkerProfileStore.repository;
 
@@ -48,6 +49,12 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
   void initState() {
     super.initState();
     _operationsApi = widget.operationsApi ?? WorkerMobileOperationsApi();
+    _payoutRepository = widget.payoutRepository ??
+        WorkerBackendPayoutRepository(
+          operationsApi: _operationsApi is WorkerMobileOperationsApi
+              ? (_operationsApi as WorkerMobileOperationsApi)
+              : null,
+        );
     _repository.addListener(_profileChanged);
     _loadProfile();
   }
@@ -250,6 +257,9 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
   void dispose() {
     _stopOfferPolling();
     _repository.removeListener(_profileChanged);
+    if (widget.payoutRepository == null) {
+      _payoutRepository.dispose();
+    }
     super.dispose();
   }
 
@@ -302,7 +312,7 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
       },
       workerPhone: widget.phoneNumber,
       profileRepository: _repository,
-      payoutRepository: widget.payoutRepository,
+      payoutRepository: _payoutRepository,
       workerName: _profile?.fullName.isNotEmpty == true
           ? _profile!.fullName
           : 'Hi Beauty Partner',
