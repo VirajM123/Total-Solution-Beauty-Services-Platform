@@ -7,7 +7,7 @@ const collections={
  WorkerLeave:'worker_leaves',WorkerDocument:'worker_documents',WorkerLocation:'worker_locations',
  Package:'service_packages',Offer:'offers',CouponRedemption:'coupon_redemptions',Banner:'promotional_banners',
  AppSetting:'app_settings',Cart:'carts',Booking:'bookings',BookingEvent:'booking_events',BookingSlot:'booking_slots',
- Assignment:'booking_assignments',ServiceEvent:'service_events',ServiceOtp:'service_otp_challenges',
+ Assignment:'booking_assignments',ServiceEvent:'service_events',ServiceOtp:'service_otp_challenges',BookingControlOtp:'booking_control_otps',
  Payment:'payments',PaymentEvent:'payment_events',Settlement:'worker_settlements',SettlementItem:'worker_settlement_items',
  Notification:'notifications',Review:'reviews',SupportTicket:'support_tickets',LoginOtp:'otp_challenges',
 }

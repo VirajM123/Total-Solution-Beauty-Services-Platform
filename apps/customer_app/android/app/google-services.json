@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "408967632086",
+    "project_id": "hii-beauty-830bb",
+    "storage_bucket": "hii-beauty-830bb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:408967632086:android:af7cc55af3cc159d636577",
+        "android_client_info": {
+          "package_name": "com.totalsolution.customer_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCIMFTFXmWFEf1CsWHZl5otCb5Er5XQBOE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

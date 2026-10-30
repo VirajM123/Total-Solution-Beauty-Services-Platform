@@ -18,7 +18,13 @@ class WorkerDashboardOrder {
     this.itemsDescription,
     this.paymentMethod,
     this.paymentStatus,
+    this.customerPayablePaise,
     this.compensationRupees,
+    this.serviceStartedAt,
+    this.serviceEndsAt,
+    this.serviceFinishedAt,
+    this.cashCollectionReportedAt,
+    this.durationExtension,
   });
 
   final String id;
@@ -42,7 +48,17 @@ class WorkerDashboardOrder {
   final String? itemsDescription;
   final String? paymentMethod;
   final String? paymentStatus;
+  final int? customerPayablePaise;
+  int get exactCustomerPayablePaise =>
+      customerPayablePaise ?? customerPayable * 100;
+  String get formattedCustomerPayable =>
+      formatCustomerPaise(exactCustomerPayablePaise);
   final int? compensationRupees;
+  final DateTime? serviceStartedAt;
+  final DateTime? serviceEndsAt;
+  final DateTime? serviceFinishedAt;
+  final DateTime? cashCollectionReportedAt;
+  final Map<String, dynamic>? durationExtension;
 
   WorkerDashboardOrder copyWith({
     String? status,
@@ -52,25 +68,37 @@ class WorkerDashboardOrder {
     String? itemsDescription,
     String? paymentMethod,
     String? paymentStatus,
+    int? customerPayablePaise,
     int? compensationRupees,
-  }) =>
-      WorkerDashboardOrder(
-        id: id,
-        customer: customer,
-        service: service,
-        time: time,
-        location: location,
-        customerPayable: customerPayable,
-        status: status ?? this.status,
-        duration: duration,
-        appointmentDate: appointmentDate ?? this.appointmentDate,
-        completedAt: completedAt ?? this.completedAt,
-        customerPhone: customerPhone ?? this.customerPhone,
-        itemsDescription: itemsDescription ?? this.itemsDescription,
-        paymentMethod: paymentMethod ?? this.paymentMethod,
-        paymentStatus: paymentStatus ?? this.paymentStatus,
-        compensationRupees: compensationRupees ?? this.compensationRupees,
-      );
+    DateTime? serviceStartedAt,
+    DateTime? serviceEndsAt,
+    DateTime? serviceFinishedAt,
+    DateTime? cashCollectionReportedAt,
+    Map<String, dynamic>? durationExtension,
+  }) => WorkerDashboardOrder(
+    id: id,
+    customer: customer,
+    service: service,
+    time: time,
+    location: location,
+    customerPayable: customerPayable,
+    status: status ?? this.status,
+    duration: duration,
+    appointmentDate: appointmentDate ?? this.appointmentDate,
+    completedAt: completedAt ?? this.completedAt,
+    customerPhone: customerPhone ?? this.customerPhone,
+    itemsDescription: itemsDescription ?? this.itemsDescription,
+    paymentMethod: paymentMethod ?? this.paymentMethod,
+    paymentStatus: paymentStatus ?? this.paymentStatus,
+    customerPayablePaise: customerPayablePaise ?? this.customerPayablePaise,
+    compensationRupees: compensationRupees ?? this.compensationRupees,
+    serviceStartedAt: serviceStartedAt ?? this.serviceStartedAt,
+    serviceEndsAt: serviceEndsAt ?? this.serviceEndsAt,
+    serviceFinishedAt: serviceFinishedAt ?? this.serviceFinishedAt,
+    cashCollectionReportedAt:
+        cashCollectionReportedAt ?? this.cashCollectionReportedAt,
+    durationExtension: durationExtension ?? this.durationExtension,
+  );
 }
 
 /// Explicit, deterministic demo dates keep every worker preview on one dataset.
@@ -119,4 +147,12 @@ String formatCustomerRupees(int amount) {
     (_) => ',',
   );
   return '₹$prefix,$last';
+}
+
+String formatCustomerPaise(int amountPaise) {
+  final whole = formatCustomerRupees(amountPaise ~/ 100);
+  final remainder = amountPaise.abs() % 100;
+  return remainder == 0
+      ? whole
+      : whole + '.' + remainder.toString().padLeft(2, '0');
 }

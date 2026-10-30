@@ -11,6 +11,7 @@ class WorkerPayoutRecord {
     required this.id,
     required this.payoutId,
     required this.amountRupees,
+    this.amountPaise,
     required this.serviceCount,
     required this.date,
     required this.status,
@@ -20,6 +21,8 @@ class WorkerPayoutRecord {
   final String id;
   final String payoutId;
   final int amountRupees;
+  final int? amountPaise;
+  int get exactAmountPaise => amountPaise ?? amountRupees * 100;
   final int serviceCount;
   final DateTime date;
   final WorkerPayoutStatus status;
@@ -37,12 +40,22 @@ abstract class WorkerPayoutRepository extends ChangeNotifier {
   Future<void> refresh();
 }
 
-
 class WorkerBackendPayoutRepository extends WorkerPayoutRepository {
   WorkerBackendPayoutRepository({WorkerMobileOperationsApi? operationsApi})
-      : _api = operationsApi ?? WorkerMobileOperationsApi();
+    : _api = operationsApi ?? WorkerMobileOperationsApi(),
+      _ownsApi = operationsApi == null;
 
   final WorkerMobileOperationsApi _api;
+  final bool _ownsApi;
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    if (_ownsApi) _api.close();
+    super.dispose();
+  }
+
   WorkerPayoutLoadStatus _loadStatus = WorkerPayoutLoadStatus.idle;
   Object? _error;
   List<WorkerPayoutRecord> _records = const [];
@@ -58,6 +71,7 @@ class WorkerBackendPayoutRepository extends WorkerPayoutRepository {
 
   @override
   Future<void> refresh() async {
+    if (_disposed || _loadStatus == WorkerPayoutLoadStatus.loading) return;
     _loadStatus = WorkerPayoutLoadStatus.loading;
     _error = null;
     notifyListeners();
@@ -106,6 +120,7 @@ class WorkerBackendPayoutRepository extends WorkerPayoutRepository {
             id: id,
             payoutId: payoutId,
             amountRupees: amountRupees,
+            amountPaise: paise,
             serviceCount: serviceCount,
             date: date,
             status: status,
@@ -118,6 +133,6 @@ class WorkerBackendPayoutRepository extends WorkerPayoutRepository {
       _error = e;
       _loadStatus = WorkerPayoutLoadStatus.error;
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 }

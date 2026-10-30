@@ -50,7 +50,7 @@ Use the same Node origin used by Admin and Worker; database selection belongs to
 
     flutter run -t lib/main_prod.dart --dart-define=API_BASE_URL=https://your-backend.example/api
 
-For Android emulator debug development, explicitly use `http://10.0.2.2:5000/api` when that is the approved local backend. Release/profile transport requires HTTPS. No default production URL, embedded credential or silent fixture fallback exists. Android INTERNET permission is enabled. Local HTTP cleartext is not enabled for release/profile; use HTTPS for profile builds.
+For local final testing, use the Admin backend on port 5001. For an Android emulator, explicitly use `http://10.0.2.2:5001/api`; for Flutter web, use `http://localhost:5001/api` and the configured allowed web origin. Release/profile transport requires HTTPS. No default production URL, embedded credential or silent fixture fallback exists. Android INTERNET permission is enabled. Local HTTP cleartext is not enabled for release/profile; use HTTPS for profile builds.
 
 The Customer app's `src/debug/AndroidManifest.xml` enables cleartext only for Android debug builds so the emulator can reach a local development server; release/profile manifests are unchanged.
 
@@ -93,11 +93,11 @@ The following Phase 1 catalog validation covers source DTO parsing and widget be
 - Full Customer Flutter suite: PASSED, 73 tests.
 - Focused catalog repository/navigation suite: PASSED, including packages/offers DTOs, server-provided prices/durations, refresh showing an Admin-side offer change, empty/error/retry states, and HTTPS-only media handling.
 - `flutter analyze`: PASSED, no issues.
-- Android debug APK: PASSED with `main_prod.dart` and `API_BASE_URL=http://10.0.2.2:5000/api`. Gradle emitted an SDK XML tooling-version warning, but produced the debug APK. Debug-only cleartext access is enabled for a local emulator backend; release/profile still require HTTPS.
+- Android debug APK: PASSED with `main_prod.dart` and `API_BASE_URL=http://10.0.2.2:5001/api`. Gradle emitted an SDK XML tooling-version warning, but produced the debug APK. Debug-only cleartext access is enabled for a local emulator backend; release/profile still require HTTPS.
 - Live backend/device verification: NOT PERFORMED. No Android device or emulator is connected/available, and `http://127.0.0.1:5000/health/ready` did not respond. The endpoint host/runtime configuration and real catalog records therefore remain unverified from this app session.
 - Media: no runtime storage/media host configuration was provided for live validation. Backend publishing requires persistent public media; absent or unsupported image URLs render the catalog placeholder.
 - Backend contract note: public `/catalog/*` paths are absent from the current OpenAPI document. The existing route source defines them; no backend changes were made.
-- Next step: run the existing backend configured for `hii_beauty_dev` with its public platform routes and persistent media storage enabled, connect an Android emulator/device, then launch with its reachable HTTPS API base (or the emulator-only `http://10.0.2.2:5000/api` in debug) and smoke-test categories, category-filtered services, packages, offers and media.
+- Next step: run the Admin backend configured for `hii_beauty_dev` with its public platform routes and persistent media storage enabled, connect an Android emulator/device, then launch with its reachable HTTPS API base (or the emulator-only `http://10.0.2.2:5001/api` in debug) and smoke-test categories, category-filtered services, packages, offers and media.
 
 ## Modified file inventory
 

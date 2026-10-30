@@ -1,9 +1,11 @@
+import 'dart:async';
+import '../integration/mobile_push.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
 import 'customer_app.dart';
 
-void bootstrap(AppConfig config) {
+Future<void> bootstrap(AppConfig config) async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterError.onError = FlutterError.presentError;
   PlatformDispatcher.instance.onError = (error, stack) {
@@ -11,4 +13,9 @@ void bootstrap(AppConfig config) {
     return false;
   };
   runApp(CustomerApp(config: config));
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(
+      MobilePush.initialize(appType: 'customer', apiBaseUrl: config.apiBaseUrl),
+    );
+  });
 }

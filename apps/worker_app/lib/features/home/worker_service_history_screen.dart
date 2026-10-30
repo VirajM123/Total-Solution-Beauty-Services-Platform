@@ -94,7 +94,8 @@ class _WorkerServiceHistoryScreenState
       _error = null;
     });
     try {
-      final fetched = await (widget.operationsApi as WorkerMobileOperationsApi).fetchWorkerOrders();
+      final fetched = await (widget.operationsApi as WorkerMobileOperationsApi)
+          .fetchWorkerOrders();
       if (mounted) {
         setState(() {
           _liveOrders = fetched;
@@ -164,8 +165,8 @@ class _WorkerServiceHistoryScreenState
     final source = _isLive && _liveOrders != null
         ? _liveOrders!
         : (widget.demoMode && !_loading && _error == null
-            ? WorkerDemoBookingStore.resolveAll(widget.orders)
-            : widget.orders);
+              ? WorkerDemoBookingStore.resolveAll(widget.orders)
+              : widget.orders);
     final visible = filterWorkerServiceHistory(
       source,
       filter: _filter,
@@ -414,167 +415,172 @@ class _WorkerServiceHistoryScreenState
                                 ),
                               )
                             : RefreshIndicator(
-      onRefresh: _isLive ? _loadLiveHistory : _load,
-      color: _pink,
-      child: ListView.separated(
-                                keyboardDismissBehavior:
-                                    ScrollViewKeyboardDismissBehavior.onDrag,
-                                padding: const EdgeInsets.fromLTRB(
-                                  14,
-                                  0,
-                                  14,
-                                  14,
-                                ),
-                                itemCount: visible.length,
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(height: 7),
-                                itemBuilder: (context, index) {
-                                  final order = visible[index];
-                                  final isCancelled = const {
-                                    'cancelled',
-                                    'canceled',
-                                  }.contains(order.status.trim().toLowerCase());
-                                  final color = isCancelled
-                                      ? const Color(0xFF99606C)
-                                      : const Color(0xFF14865E);
-                                  final date = order.appointmentDate;
-                                  final dateLabel = date == null
-                                      ? 'Date not available'
-                                      : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-                                  return Material(
-                                    color: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(13),
-                                      side: const BorderSide(color: _border),
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: InkWell(
-                                      key: Key('history-order-${order.id}'),
-                                      onTap: () => _open(order),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 9,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              width: 42,
-                                              height: 44,
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFFFE6EF),
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
+                                onRefresh: _isLive ? _loadLiveHistory : _load,
+                                color: _pink,
+                                child: ListView.separated(
+                                  keyboardDismissBehavior:
+                                      ScrollViewKeyboardDismissBehavior.onDrag,
+                                  padding: const EdgeInsets.fromLTRB(
+                                    14,
+                                    0,
+                                    14,
+                                    14,
+                                  ),
+                                  itemCount: visible.length,
+                                  separatorBuilder: (_, _) =>
+                                      const SizedBox(height: 7),
+                                  itemBuilder: (context, index) {
+                                    final order = visible[index];
+                                    final isCancelled =
+                                        const {
+                                          'cancelled',
+                                          'canceled',
+                                        }.contains(
+                                          order.status.trim().toLowerCase(),
+                                        );
+                                    final color = isCancelled
+                                        ? const Color(0xFF99606C)
+                                        : const Color(0xFF14865E);
+                                    final date = order.appointmentDate;
+                                    final dateLabel = date == null
+                                        ? 'Date not available'
+                                        : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+                                    return Material(
+                                      color: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(13),
+                                        side: const BorderSide(color: _border),
+                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: InkWell(
+                                        key: Key('history-order-${order.id}'),
+                                        onTap: () => _open(order),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 9,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 42,
+                                                height: 44,
+                                                decoration: BoxDecoration(
+                                                  color: const Color(
+                                                    0xFFFFE6EF,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                child: const Icon(
+                                                  Icons.spa_rounded,
+                                                  color: _pink,
+                                                  size: 22,
+                                                ),
                                               ),
-                                              child: const Icon(
-                                                Icons.spa_rounded,
-                                                color: _pink,
-                                                size: 22,
+                                              const SizedBox(width: 9),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      order.service,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        color: _deep,
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      '${order.customer}  ·  ${order.id}',
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        color: _muted,
+                                                        fontSize: 10,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 3),
+                                                    Text(
+                                                      '$dateLabel  ·  ${order.time}',
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        color: _muted,
+                                                        fontSize: 9,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 3),
+                                                    Text(
+                                                      'Customer bill ${order.formattedCustomerPayable}',
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        color: _deep,
+                                                        fontSize: 10,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
-                                            ),
-                                            const SizedBox(width: 9),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
+                                              const SizedBox(width: 5),
+                                              Column(
+                                                mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  Text(
-                                                    order.service,
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                      color: _deep,
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                      fontSize: 13,
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 7,
+                                                          vertical: 4,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: color.withValues(
+                                                        alpha: 0.10,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            7,
+                                                          ),
+                                                    ),
+                                                    child: Text(
+                                                      isCancelled
+                                                          ? 'Cancelled'
+                                                          : 'Completed',
+                                                      style: TextStyle(
+                                                        color: color,
+                                                        fontSize: 9,
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                      ),
                                                     ),
                                                   ),
-                                                  const SizedBox(height: 2),
-                                                  Text(
-                                                    '${order.customer}  ·  ${order.id}',
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                      color: _muted,
-                                                      fontSize: 10,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 3),
-                                                  Text(
-                                                    '$dateLabel  ·  ${order.time}',
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                      color: _muted,
-                                                      fontSize: 9,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 3),
-                                                  Text(
-                                                    'Customer bill ${formatCustomerRupees(order.customerPayable)}',
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                      color: _deep,
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                    ),
+                                                  const SizedBox(height: 5),
+                                                  const Icon(
+                                                    Icons.chevron_right_rounded,
+                                                    color: _pink,
+                                                    size: 17,
                                                   ),
                                                 ],
                                               ),
-                                            ),
-                                            const SizedBox(width: 5),
-                                            Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 7,
-                                                        vertical: 4,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: color.withValues(
-                                                      alpha: 0.10,
-                                                    ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          7,
-                                                        ),
-                                                  ),
-                                                  child: Text(
-                                                    isCancelled
-                                                        ? 'Cancelled'
-                                                        : 'Completed',
-                                                    style: TextStyle(
-                                                      color: color,
-                                                      fontSize: 9,
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 5),
-                                                const Icon(
-                                                  Icons.chevron_right_rounded,
-                                                  color: _pink,
-                                                  size: 17,
-                                                ),
-                                              ],
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  );
-                                },
-                              ),
-                                  ), // RefreshIndicator
+                                    );
+                                  },
+                                ),
+                              ), // RefreshIndicator
                       ),
                     ],
                   ),

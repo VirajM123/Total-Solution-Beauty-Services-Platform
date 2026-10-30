@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
 import '../integration/customer_auth_api.dart';
+import '../integration/customer_mobile_operations_api.dart';
 import '../features/home/development_home_screen.dart';
 import '../features/catalog/catalog_screen.dart';
 import '../features/login/login_screen.dart';
@@ -11,9 +12,10 @@ import '../features/splash/splash_screen.dart';
 import 'route_names.dart';
 
 class AppRouter {
-  const AppRouter(this.config, this.auth);
+  const AppRouter(this.config, this.auth, {this.operationsApi});
   final AppConfig config;
   final CustomerAuthApi auth;
+  final CustomerMobileOperationsApi? operationsApi;
 
   Route<dynamic> generate(RouteSettings settings) {
     final Widget page = switch (settings.name) {
@@ -27,15 +29,17 @@ class AppRouter {
             ? settings.arguments! as CustomerRegistrationArgs
             : null,
       ),
-      RouteNames.otp
-          when settings.arguments is CustomerOtpRouteArgs =>
+      RouteNames.otp when settings.arguments is CustomerOtpRouteArgs =>
         CustomerOtpScreen(
           args: settings.arguments! as CustomerOtpRouteArgs,
           auth: auth,
         ),
-      RouteNames.home when config.mockAuthEnabled =>
-        const DevelopmentHomeScreen(),
-      RouteNames.home => CatalogScreen(config: config),
+      RouteNames.home => DevelopmentHomeScreen(
+        operationsApi: operationsApi ?? CustomerMobileOperationsApi(
+          apiBaseUrl: config.apiBaseUrl,
+        ),
+        ownsOperationsApi: operationsApi == null,
+      ),
       RouteNames.catalog => CatalogScreen(config: config),
       _ => LoginScreen(config: config, authApi: auth),
     };

@@ -5,9 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-
 import '../../../app/slide_page_route.dart';
-import '../../home/worker_profile_data.dart';
 import 'worker_document_verification_screen.dart';
 import '../../../integration/worker_api.dart';
 import '../../../integration/worker_mobile_auth_api.dart';
@@ -69,12 +67,17 @@ class _WorkerProfessionalDetailsScreenState
   List<Map<String, dynamic>> _catalogServices = [];
   List<Map<String, dynamic>> _catalogAreas = [];
   bool _loadingCatalog = false;
-
-
+  String? _catalogError;
+  late final Future<void> _catalogReady;
 
   Future<void> _fetchCatalog() async {
     final api = widget.authApi ?? WorkerMobileAuthApi();
-    if (mounted) setState(() => _loadingCatalog = true);
+    if (mounted) {
+      setState(() {
+        _loadingCatalog = true;
+        _catalogError = null;
+      });
+    }
     try {
       final svcs = await api.fetchServices();
       final areas = await api.fetchServiceAreas();
@@ -83,11 +86,17 @@ class _WorkerProfessionalDetailsScreenState
         _catalogServices = svcs;
         _catalogAreas = areas;
       });
-    } catch (_) {}
-    finally {
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _catalogError = error.toString();
+        });
+      }
+    } finally {
       if (mounted) setState(() => _loadingCatalog = false);
     }
   }
+
   final _about = TextEditingController();
   final _certificate = TextEditingController();
 
@@ -178,15 +187,24 @@ class _WorkerProfessionalDetailsScreenState
 
   Future<void> _restoreDraft() async {
     try {
+      await _catalogReady;
+      if (_catalogError != null) return;
       final raw = await _draftStorage.read(key: _draftKey);
       if (!mounted || raw == null) return;
       final decoded = jsonDecode(raw);
       if (decoded is! Map || decoded['version'] != 1) return;
       final cat = decoded['category'];
+      final availableCategories = _catalogServices
+          .map((service) => _categoryName(service))
+          .where((name) => name.isNotEmpty)
+          .toSet();
       final selectedCategory =
-          cat is String && workerServiceOptions.containsKey(cat) ? cat : null;
-      final validServices =
-          workerServiceOptions[selectedCategory] ?? const <String>[];
+          cat is String && availableCategories.contains(cat) ? cat : null;
+      final validServices = _catalogServices
+          .where((service) => _categoryName(service) == selectedCategory)
+          .map((service) => service['name'])
+          .whereType<String>()
+          .toSet();
       final rawServices = decoded['services'];
       final rawLanguages = decoded['languages'];
       final rawYears = decoded['years'];
@@ -302,7 +320,7 @@ class _WorkerProfessionalDetailsScreenState
   @override
   void initState() {
     super.initState();
-    _fetchCatalog();
+    _catalogReady = _fetchCatalog();
     _about.addListener(_onDraftChanged);
     _certificate.addListener(_onDraftChanged);
     _restoreDraft();
@@ -324,6 +342,10 @@ class _WorkerProfessionalDetailsScreenState
   }
 
   void _continue() {
+    if (_loadingCatalog || _catalogError != null || _catalogServices.isEmpty) {
+      _notice('Load published services from the backend before continuing.');
+      return;
+    }
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_category == null) {
       _notice('Select your primary beauty category.');
@@ -392,6 +414,13 @@ class _WorkerProfessionalDetailsScreenState
     ),
   );
 
+  String _categoryName(Map<String, dynamic> service) {
+    final category = service['category'];
+    return category is Map && category['name'] is String
+        ? category['name'] as String
+        : '';
+  }
+
   InputDecoration _decoration(String hint, IconData icon) => InputDecoration(
     hintText: hint,
     hintStyle: const TextStyle(color: Color(0xFF8C737E), fontSize: 13),
@@ -414,14 +443,14 @@ class _WorkerProfessionalDetailsScreenState
   Widget build(BuildContext context) {
     final homeVisits = _workMode != 'Salon-based';
     final catalogCategoryNames = _catalogServices
-        .map((s) => s['category'] is Map ? (s['category']['name'] as String? ?? '') : '')
+        .map(_categoryName)
         .where((c) => c.isNotEmpty)
         .toSet()
         .toList();
     final categoryOptions = {
       ...catalogCategoryNames,
-      ...workerServiceOptions.keys,
-      if (_category != null) _category!,
+      if (_category != null && catalogCategoryNames.contains(_category!))
+        _category!,
     }.toList();
 
     final List<String> services;
@@ -429,15 +458,11 @@ class _WorkerProfessionalDetailsScreenState
       services = const <String>[];
     } else {
       final matchedCatalogServices = _catalogServices
-          .where((s) => s['category'] is Map && s['category']['name'] == _category)
+          .where((s) => _categoryName(s) == _category)
           .map((s) => s['name'] as String? ?? '')
           .where((n) => n.isNotEmpty)
           .toList();
-      if (matchedCatalogServices.isNotEmpty) {
-        services = matchedCatalogServices;
-      } else {
-        services = workerServiceOptions[_category] ?? const <String>[];
-      }
+      services = matchedCatalogServices;
     }
 
     return Scaffold(
@@ -554,11 +579,44 @@ class _WorkerProfessionalDetailsScreenState
                           hint:
                               'Choose the category that best describes your work.',
                         ),
+                        if (_loadingCatalog)
+                          const LinearProgressIndicator()
+                        else if (_catalogError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Could not load published services: $_catalogError',
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: _fetchCatalog,
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('Retry'),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (_catalogServices.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 10),
+                            child: Text(
+                              'No published services are available yet.',
+                              style: TextStyle(color: _muted, fontSize: 12),
+                            ),
+                          ),
                         DropdownButtonFormField<String>(
                           initialValue: _category,
                           isExpanded: true,
                           decoration: _decoration(
-                            'Select a category',
+                            categoryOptions.isEmpty
+                                ? 'No published categories'
+                                : 'Select a category',
                             Icons.auto_awesome_outlined,
                           ),
                           items: categoryOptions
@@ -569,11 +627,13 @@ class _WorkerProfessionalDetailsScreenState
                                 ),
                               )
                               .toList(),
-                          onChanged: (value) => setState(() {
-                            _category = value;
-                            _services.clear();
-                            _onDraftChanged();
-                          }),
+                          onChanged: categoryOptions.isEmpty
+                              ? null
+                              : (value) => setState(() {
+                                  _category = value;
+                                  _services.clear();
+                                  _onDraftChanged();
+                                }),
                         ),
                         const SizedBox(height: 14),
                         _sectionTitle(

@@ -22,16 +22,19 @@ function attachRealtime(server,{db,models,sessionSecret,origins}){
  io.use((socket,next)=>authenticate(socket).then(auth=>{socket.data.userId=auth.user._id;next()}).catch(()=>next(Error('Authentication required'))))
  io.on('connection',socket=>{
   // No client-controlled room subscriptions and no private global broadcasts.
-  let since=new Date(),busy=false
+  let since=new Date(),lastId=null,busy=false
   const timer=setInterval(async()=>{
    if(busy)return;busy=true
    try{
     const auth=await authenticate(socket)
     const cutoff=new Date()
-    const events=await db.collection('notifications').find({recipientUserId:auth.user._id,createdAt:{$gte:since,$lt:cutoff}},{projection:{type:1,entityId:1,createdAt:1}}).sort({createdAt:1}).limit(100).toArray()
+    const filter={recipientUserId:auth.user._id,createdAt:{$gte:since,$lt:cutoff}}
+    if(lastId)filter.$or=[{createdAt:{$gt:since}},{createdAt:since,_id:{$gt:lastId}}]
+    const events=await db.collection('notifications').find(filter,{projection:{type:1,entityId:1,createdAt:1}}).sort({createdAt:1,_id:1}).limit(100).toArray()
     if(events.length)socket.emit('notifications.changed',{events:require('../platform/core').serialize(events),refetch:true})
     // If the bounded batch fills, retain the cursor; clients deduplicate by notification ID.
     since=events.length===100?events[events.length-1].createdAt:cutoff
+    lastId=events.length===100?events[events.length-1]._id:null
    }catch{socket.disconnect(true)}finally{busy=false}
   },5000)
   timer.unref()

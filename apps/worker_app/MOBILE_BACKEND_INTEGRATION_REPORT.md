@@ -32,7 +32,7 @@ WorkerEnvironment.apiOrigin validates API_BASE_URL, rejects credentials/query/fr
 
 Default debug and release builds fail closed. Explicit UI preview:
 
-    flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5000/api --dart-define=WORKER_DEVELOPMENT_PREVIEW=true
+    flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5001/api --dart-define=WORKER_DEVELOPMENT_PREVIEW=true
 
 Profile/release cannot activate this flag. Registration OTP/review/home guards use this policy. Existing main_dev/main_prod remain placeholders; use main.dart. No sensitive tokens/credentials are embedded.
 

@@ -20,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _timer = Timer(const Duration(seconds: 2), () {
-        if (mounted) {
+        if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
           Navigator.of(context).pushReplacementNamed(RouteNames.onboarding);
         }
       });

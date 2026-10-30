@@ -17,11 +17,11 @@ function ensureTransition(current,action,actor,booking){
  }
  if(actor!=='worker'||String(booking.workerId)!==String(booking.actorUserId))fail(403,'FORBIDDEN','Only the assigned worker can progress service.')
  const transition=transitions[action]
- if(!transition||current!==transition[0]||booking.assignmentStatus!=='accepted')fail(409,'INVALID_TRANSITION','Booking state does not allow this operation.')
+ if(!transition||current!==transition[0]||!['accepted','assigned'].includes(booking.assignmentStatus))fail(409,'INVALID_TRANSITION','Booking state does not allow this operation.')
  return transition[1]
 }
 function collectionEvidence(booking,input,actor){
- if(booking.status!=='completed')fail(409,'SERVICE_NOT_COMPLETED','Collection is only allowed after service completion.')
+ if(booking.status!=='completed'&&!(booking.status==='in_progress'&&booking.serviceFinishedAt))fail(409,'SERVICE_NOT_FINISHED','Payment can only be reconciled after the worker finishes the service.')
  if(paise(input.amountPaise)!==paise(booking.totalPaise))fail(400,'AMOUNT_MISMATCH','Only full payment of the booking snapshot is supported.')
  if(!['cash','upi'].includes(input.method))fail(400,'INVALID_METHOD','Only Cash and UPI after completion are supported.')
  if(input.method==='upi'&&(actor!=='admin'||!input.evidenceReference?.trim()))fail(403,'UPI_NOT_VERIFIED','UPI requires authorized reconciliation with confirmed evidence.')

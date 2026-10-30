@@ -48,6 +48,14 @@ Widget _carousel({
 );
 
 void main() {
+  testWidgets('empty banner image uses fallback without an asset request', (tester) async {
+    await tester.pumpWidget(_carousel(banners: const [
+      PromotionalBanner(id: 'empty-image', title: 'Announcement', imageAsset: ''),
+    ]));
+    expect(find.byIcon(Icons.spa_outlined), findsOneWidget);
+    expect(find.byType(Image), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('renders no carousel when there are no banners', (tester) async {
     await tester.pumpWidget(_carousel(banners: const []));
 
@@ -66,7 +74,10 @@ void main() {
       ),
     );
     await tester.pump(const Duration(seconds: 6));
-    await tester.tap(find.text('First slide'));
+    expect(find.text('First slide'), findsNothing);
+    expect(find.text('First subtitle'), findsNothing);
+    expect(find.text('Explore'), findsNothing);
+    await tester.tap(find.byType(Image));
 
     expect(tappedBanner?.id, 'first');
     expect(find.bySemanticsLabel('Banner 1 of 1'), findsNothing);

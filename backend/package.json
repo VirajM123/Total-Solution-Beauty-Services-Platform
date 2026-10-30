@@ -8,18 +8,22 @@
     "dev": "nodemon src/server.js",
     "test": "node --require ./tests/isolate-env.cjs --test tests/*.test.js",
     "admin:inspect": "node scripts/admin-bootstrap.js --inspect",
-    "admin:bootstrap": "node scripts/admin-bootstrap.js --create"
+    "admin:bootstrap": "node scripts/admin-bootstrap.js --create",
+    "provision:push": "node scripts/provision-push.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1154.0",
+    "@aws-sdk/s3-request-presigner": "^3.1154.0",
     "argon2": "^0.45.1",
     "cors": "^2.8.6",
     "dotenv": "^18.0.8",
     "express": "^5.3.0",
     "express-rate-limit": "^8.7.1",
+    "firebase-admin": "^14.5.0",
     "helmet": "^8.3.0",
     "mongoose": "^9.11.2",
     "pino": "^10.4.0",

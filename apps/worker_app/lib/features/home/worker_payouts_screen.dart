@@ -1,3 +1,4 @@
+import 'worker_booking_data.dart' show formatCustomerPaise;
 import 'package:flutter/material.dart';
 
 import 'worker_payout_data.dart';
@@ -91,7 +92,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
 
   int get _paidTotal => _allRecords
       .where((record) => record.status == WorkerPayoutStatus.paid)
-      .fold(0, (total, record) => total + record.amountRupees);
+      .fold(0, (total, record) => total + record.exactAmountPaise);
 
   int get _paidCount => _allRecords
       .where((record) => record.status == WorkerPayoutStatus.paid)
@@ -171,7 +172,10 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-              _detailRow('Payout amount', _rupees(record.amountRupees)),
+              _detailRow(
+                'Payout amount',
+                formatCustomerPaise(record.exactAmountPaise),
+              ),
               _detailRow('Status', _statusLabel(record.status)),
               _detailRow('Payout date', _formatDate(record.date)),
               _detailRow('Services', '${record.serviceCount}'),
@@ -459,7 +463,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                   _isLoading
                       ? 'Loading…'
                       : canShowTotal
-                      ? _rupees(_paidTotal)
+                      ? formatCustomerPaise(_paidTotal)
                       : '—',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -767,7 +771,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    _rupees(record.amountRupees),
+                    formatCustomerPaise(record.exactAmountPaise),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -1014,16 +1018,6 @@ String _statusLabel(WorkerPayoutStatus status) => switch (status) {
   WorkerPayoutStatus.pending => 'Pending',
   WorkerPayoutStatus.adjusted => 'Adjusted',
 };
-
-String _rupees(int amount) {
-  final raw = amount.toString();
-  if (raw.length <= 3) return '₹$raw';
-  final lastThree = raw.substring(raw.length - 3);
-  final leading = raw
-      .substring(0, raw.length - 3)
-      .replaceAllMapped(RegExp(r'\B(?=(\d{2})+(?!\d))'), (_) => ',');
-  return '₹$leading,$lastThree';
-}
 
 String _monthYear(DateTime date) => '${_month(date.month)} ${date.year}';
 

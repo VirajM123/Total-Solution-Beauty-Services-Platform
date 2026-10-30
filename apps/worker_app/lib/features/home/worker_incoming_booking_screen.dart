@@ -150,7 +150,9 @@ class _WorkerIncomingBookingScreenState
         automaticallyImplyLeading: false,
         title: const Text(
           'New Booking Request',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
         ),
         actions: [
           IconButton(
@@ -352,12 +354,14 @@ class _WorkerIncomingBookingScreenState
                                                 color: _muted,
                                               ),
                                               const SizedBox(width: 4),
-                                              Text(
-                                                widget.order.duration,
-                                                style: const TextStyle(
-                                                  color: _muted,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
+                                              Flexible(
+                                                child: Text(
+                                                  widget.order.duration,
+                                                  style: const TextStyle(
+                                                    color: _muted,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
                                                 ),
                                               ),
                                             ],
@@ -386,12 +390,11 @@ class _WorkerIncomingBookingScreenState
                                                 const SizedBox(width: 3),
                                                 Text(
                                                   widget.distanceKm ??
-                                                      '2.8 km away',
+                                                      'Distance unavailable',
                                                   style: const TextStyle(
                                                     color: Color(0xFF1D4ED8),
                                                     fontSize: 10,
-                                                    fontWeight:
-                                                        FontWeight.w700,
+                                                    fontWeight: FontWeight.w700,
                                                   ),
                                                 ),
                                               ],
@@ -407,9 +410,9 @@ class _WorkerIncomingBookingScreenState
                                   children: [
                                     Text(
                                       widget.order.customerPayable > 0
-                                          ? formatCustomerRupees(
-                                            widget.order.customerPayable,
-                                          )
+                                          ? widget
+                                                .order
+                                                .formattedCustomerPayable
                                           : '₹15,600',
                                       style: const TextStyle(
                                         color: _deep,
@@ -434,8 +437,8 @@ class _WorkerIncomingBookingScreenState
                             _item(
                               Icons.person_outline,
                               'Customer',
-                              (widget.order.customer == 'New Customer Request' || widget.order.customer.isEmpty)
-                                  ? 'Omkar Bhange (Verified Customer)'
+                              widget.order.customer.isEmpty
+                                  ? 'Customer details unavailable'
                                   : widget.order.customer,
                             ),
                             _item(
@@ -446,14 +449,14 @@ class _WorkerIncomingBookingScreenState
                             _item(
                               Icons.near_me_outlined,
                               'Distance & Travel',
-                              '${widget.distanceKm ?? '2.8 km away'} · ${widget.travelEstimate ?? '~12 mins travel'}',
+                              '${widget.distanceKm ?? 'Distance unavailable'} · ${widget.travelEstimate ?? 'Travel estimate unavailable'}',
                             ),
                             _item(
                               Icons.location_on_outlined,
                               'Service Area',
-                              (widget.order.location == 'Latur' || widget.order.location.isEmpty)
-                                  ? 'Near Shivaji Chowk, MIDC, Latur (Within your 10 km radius)'
-                                  : '${widget.order.location} (Within your 10 km radius)',
+                              widget.order.location.isEmpty
+                                  ? 'Address unavailable'
+                                  : widget.order.location,
                             ),
                             _item(
                               Icons.shield_outlined,

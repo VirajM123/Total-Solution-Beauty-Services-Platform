@@ -51,9 +51,12 @@ test('admin booking snapshots server prices, replays safely, rejects key conflic
     assert.equal(db.records().bookings.length, 1)
     assert.equal((await post(base, '/bookings', { ...bookingBody(), method: 'upi' })).status, 409)
     db.records().services[0].pricePaise = 999999
+    db.records().bookings[0].status = 'assigned'
+    await db.collection('booking_assignments').insertOne({_id:oid(),bookingId:db.records().bookings[0]._id,status:'assigned',reason:'assigned-history-regression'})
     const body = { startsAt: '2036-10-22T11:00:00+05:30', reason: 'Customer requested change' }
     assert.equal((await post(base, '/bookings/' + booking._id + '/reschedule', body, 'reschedule-test-key-123')).status, 200)
     assert.equal(db.records().bookings[0].totalPaise, 219900)
+    assert.equal(db.records().booking_assignments[0].status, 'superseded')
     assert.equal((await post(base, '/bookings/' + booking._id + '/reschedule', body, 'reschedule-test-key-123')).status, 200)
     assert.equal(db.records().booking_events.filter(e => e.type === 'rescheduled').length, 1)
   })
@@ -100,6 +103,28 @@ test('compensation requires snapshots; scheduling requires an explicit availabil
   await assert.rejects(compensation.calculate({ jobs: [{}] }))
   const db = memoryDatabase(), worker = { _id: oid() }, booking = { startsAt: new Date('2036-10-21T04:30:00Z'), endsAt: new Date('2036-10-21T05:30:00Z') }
   assert.equal(await createScheduling({ db }).canAssign({ worker, booking }), false)
+  assert.equal(await createScheduling({ db }).canAssign({ worker: { ...worker, isOnline: true }, booking }), true)
+})
+test('online workers can reserve a matching customer booking without a separate availability window', async () => {
+  const areaId = oid(), serviceId = oid(), workerId = oid()
+  const startsAt = new Date(Date.now() + 60 * 60 * 1000)
+  const db = memoryDatabase({
+    service_areas: [{ _id: areaId, isActive: true, isServiceable: true }],
+    workers: [{
+      _id: workerId,
+      status: 'approved',
+      isActive: true,
+      isOnline: true,
+      serviceAreaIds: [areaId],
+      serviceIds: [serviceId],
+    }],
+  })
+  assert.equal(await createScheduling({ db }).reserve({
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + 30 * 60 * 1000),
+    serviceAreaId: areaId,
+    items: [{ serviceId }],
+  }), true)
 })
 test('admin customer creation persists an unverified account, replays, and rejects duplicate identity', async () => {
   const db = memoryDatabase()
@@ -155,4 +180,19 @@ test('package booking stores package price and component snapshots independently
     db.records().service_packages[0].pricePaise = 1
     assert.equal(db.records().bookings[0].packageSnapshot.pricePaise, 200000)
   })
+})
+
+
+test('admin-punched bookings create one persisted admin alert and customer confirmation, including replay', async () => {
+  const data = seed(), roleId = oid()
+  data.roles = [{ _id: roleId, isActive: true, permissions: ['bookings.read'] }]
+  data.users.push({ _id: ids.admin, roleId, userType: 'admin', status: 'active', isActive: true })
+  const db = memoryDatabase(data)
+  await serve(db, async base => {
+    assert.equal((await post(base, '/bookings', bookingBody())).status, 201)
+    assert.equal((await post(base, '/bookings', bookingBody())).status, 201)
+  })
+  const alerts = db.records().notifications
+  assert.equal(alerts.filter(item => item.type === 'booking.created' && String(item.recipientUserId) === String(ids.admin)).length, 1)
+  assert.equal(alerts.filter(item => item.type === 'booking.confirmed' && String(item.recipientUserId) === String(ids.user)).length, 1)
 })

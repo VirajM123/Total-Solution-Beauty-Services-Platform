@@ -205,12 +205,16 @@ void main() {
     expect(find.text('Pooja Sharma'), findsOneWidget);
     expect(find.textContaining('+919876543210'), findsOneWidget);
     expect(find.textContaining('Worker Compensation: ₹800'), findsOneWidget);
-    expect(find.text('Service Completed 🎉 (Back)'), findsOneWidget);
+    expect(find.text('Generate Payment QR'), findsOneWidget);
 
-    // Tap back button
-    await tester.tap(find.text('Service Completed 🎉 (Back)'));
+    await tester.tap(find.text('Generate Payment QR'));
     await tester.pumpAndSettle();
+    expect(find.text('Customer Payment'), findsOneWidget);
 
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
     expect(find.text('Service History'), findsOneWidget);
   });
 }

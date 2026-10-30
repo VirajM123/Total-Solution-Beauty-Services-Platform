@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../app/slide_page_route.dart';
 import '../../integration/worker_api.dart';
@@ -10,6 +13,8 @@ import 'worker_demo_booking_store.dart';
 import 'worker_booking_state_repository.dart';
 import 'worker_start_service_otp_screen.dart';
 import 'worker_service_in_progress_screen.dart';
+import 'worker_add_extra_service_screen.dart';
+import 'worker_payment_qr_screen.dart';
 import '../widgets/worker_design.dart';
 
 const _pink = WorkerDesign.pink;
@@ -37,37 +42,99 @@ class WorkerBookingDetailsScreen extends StatefulWidget {
       _WorkerBookingDetailsScreenState();
 }
 
-class _WorkerBookingDetailsScreenState
-    extends State<WorkerBookingDetailsScreen> {
+class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
+    with WidgetsBindingObserver {
+  final _clock = ValueNotifier<DateTime>(DateTime.now());
+  bool _appActive = true;
+  bool _refreshing = false;
+  String? _refreshError;
+  DateTime? _lastRefresh;
+  late final WorkerMobileOperationsApi _liveApi =
+      widget.operationsApi is WorkerMobileOperationsApi
+      ? widget.operationsApi as WorkerMobileOperationsApi
+      : WorkerMobileOperationsApi();
   bool _startingService = false;
   bool _storeLoading = true;
   Object? _storeError;
   String? _localStatus;
   bool _updatingProgress = false;
   WorkerDashboardOrder? _liveOrder;
+  Timer? _serverTimeTimer;
 
   bool get _isLiveMode =>
       (widget.operationsApi is WorkerMobileOperationsApi) ||
       widget.order.id.length >= 24;
-
-  WorkerOperationsApi get _api =>
-      widget.operationsApi ?? WorkerMobileOperationsApi();
+  Timer? _serverSyncTimer;
 
   String _progressButtonText(String status) {
     final s = status.toLowerCase().trim();
-    if (s == 'assigned' || s == 'accepted') return 'Start Travel to Customer 🚗';
+    if (s == 'assigned' || s == 'accepted') {
+      return 'Start Travel to Customer 🚗';
+    }
     if (s == 'travelling') return 'I Have Arrived at Location 📍';
-    if (s == 'arrived') return 'Start Service · Enter Customer OTP 🔑';
-    if (s == 'in_progress' || s == 'in progress') return 'Complete Service ✅';
+    if (s == 'arrived') return 'Upload Product Photo & Enter Customer OTP';
+    if (s == 'in_progress' || s == 'in progress') {
+      if (_currentOrder.paymentMethod == 'cash') {
+        if (_currentOrder.paymentStatus == 'paid') {
+          return 'Enter Admin Completion OTP';
+        }
+        if (_currentOrder.serviceFinishedAt != null) {
+          return _currentOrder.cashCollectionReportedAt == null
+              ? 'Report Cash Collection'
+              : 'Awaiting Admin Cash Reconciliation';
+        }
+        return 'Finish & Report Cash Collection';
+      }
+      if (_currentOrder.paymentStatus == 'paid') {
+        return 'Enter Admin Completion OTP';
+      }
+      final extension = _currentOrder.durationExtension;
+      if (extension != null &&
+          <String>{'pending', 'approved'}.contains(extension['status']) &&
+          extension['adminOtpVerifiedAt'] == null) {
+        return 'Enter Admin Continuation OTP';
+      }
+      return 'Finish & Generate Payment QR';
+    }
+    if (s == 'payment pending') {
+      if (_currentOrder.paymentMethod == 'cash' &&
+          _currentOrder.paymentStatus != 'paid') {
+        return _currentOrder.cashCollectionReportedAt == null
+            ? 'Report Cash Collection'
+            : 'Awaiting Admin Cash Reconciliation';
+      }
+      return 'View Payment QR';
+    }
     if (s == 'completed') return 'Service Completed 🎉 (Back)';
     if (s == 'cancelled' || s == 'canceled') return 'Booking Cancelled (Back)';
     return 'Back to Bookings';
   }
 
+  bool get _showPaymentChoices {
+    final order = _currentOrder;
+    final status = order.status.toLowerCase().trim();
+    final extension = order.durationExtension;
+    return _isLiveMode &&
+        (status == 'in_progress' || status == 'in progress') &&
+        order.paymentStatus != 'paid' &&
+        order.serviceFinishedAt == null &&
+        !(extension != null &&
+            <String>{'pending', 'approved'}.contains(extension['status']) &&
+            extension['adminOtpVerifiedAt'] == null);
+  }
+
   bool _canAct(String status) {
     if (_updatingProgress) return false;
     final s = status.toLowerCase().trim();
-    return <String>{'assigned', 'accepted', 'travelling', 'arrived', 'in_progress', 'in progress'}.contains(s);
+    return <String>{
+      'assigned',
+      'accepted',
+      'travelling',
+      'arrived',
+      'in_progress',
+      'in progress',
+      'payment pending',
+    }.contains(s);
   }
 
   Future<void> _handleProgressAction() async {
@@ -75,11 +142,63 @@ class _WorkerBookingDetailsScreenState
       await _startServicePreview();
       return;
     }
-    final api = _api is WorkerMobileOperationsApi
-        ? (_api as WorkerMobileOperationsApi)
-        : WorkerMobileOperationsApi();
+    final api = _liveApi;
     final s = _currentOrder.status.toLowerCase().trim();
+    final extension = _currentOrder.durationExtension;
+    if ((s == 'in_progress' || s == 'in progress') &&
+        extension != null &&
+        <String>{'pending', 'approved'}.contains(extension['status']) &&
+        extension['adminOtpVerifiedAt'] == null) {
+      final otp = await _askForAdminOtp(
+        title: 'Continue the service',
+        message:
+            'Call your administrator and enter the continuation OTP they issue.',
+      );
+      if (!mounted || otp == null) return;
+      setState(() => _updatingProgress = true);
+      try {
+        await api.updateBookingProgress(
+          bookingId: widget.order.id,
+          action: 'continue',
+          otp: otp,
+        );
+        final updated = await api.fetchBookingDetails(widget.order.id);
+        if (mounted) {
+          setState(() => _liveOrder = updated ?? _liveOrder);
+          _startServerTimeRefresh();
+          _notice('Administrator OTP verified. The service can continue.');
+        }
+      } catch (error) {
+        if (mounted) _notice('Continuation OTP verification failed: $error');
+      } finally {
+        if (mounted) setState(() => _updatingProgress = false);
+      }
+      return;
+    }
 
+    if (s == 'payment pending' && _currentOrder.paymentMethod == 'cash') {
+      if (_currentOrder.paymentStatus == 'paid') {
+        await _completePaidCashService();
+      } else if (_currentOrder.cashCollectionReportedAt == null) {
+        await _completeCashService();
+      } else {
+        _notice('Cash report sent. Waiting for administrator reconciliation.');
+      }
+      return;
+    }
+    if (s == 'payment pending') {
+      await _openPaymentQr();
+      return;
+    }
+    if ((s == 'in_progress' || s == 'in progress') &&
+        _currentOrder.paymentStatus == 'paid') {
+      if (_currentOrder.paymentMethod == 'cash') {
+        await _completePaidCashService();
+      } else {
+        await _openPaymentQr();
+      }
+      return;
+    }
     if (s == 'assigned' || s == 'accepted') {
       setState(() => _updatingProgress = true);
       try {
@@ -105,7 +224,9 @@ class _WorkerBookingDetailsScreenState
         );
         if (mounted) {
           setState(() => _localStatus = 'Arrived');
-          _notice('📍 Status: Arrived at doorstep. Please request customer OTP.');
+          _notice(
+            '📍 Status: Arrived at doorstep. Please request customer OTP.',
+          );
         }
       } catch (e) {
         if (mounted) _notice('Failed to confirm arrival: $e');
@@ -113,25 +234,33 @@ class _WorkerBookingDetailsScreenState
         if (mounted) setState(() => _updatingProgress = false);
       }
     } else if (s == 'arrived') {
-      final code = await Navigator.of(context).push<String?>(
-        SlidePageRoute<String?>(
-          page: WorkerStartServiceOtpScreen(
-            order: _currentOrder,
-            demoMode: false,
-          ),
-        ),
-      );
-      if (!mounted || code == null || code.isEmpty) return;
+      final startInput = await Navigator.of(context)
+          .push<WorkerStartServiceInput?>(
+            SlidePageRoute<WorkerStartServiceInput?>(
+              page: WorkerStartServiceOtpScreen(
+                order: _currentOrder,
+                demoMode: false,
+                operationsApi: api,
+              ),
+            ),
+          );
+      if (!mounted || startInput == null || startInput.otp.isEmpty) return;
 
       setState(() => _updatingProgress = true);
       try {
         await api.updateBookingProgress(
           bookingId: widget.order.id,
           action: 'start',
-          otp: code,
+          otp: startInput.otp,
+          evidenceIds: startInput.evidenceIds,
         );
+        final updated = await api.fetchBookingDetails(widget.order.id);
         if (mounted) {
-          setState(() => _localStatus = 'In Progress');
+          setState(() {
+            _localStatus = 'In Progress';
+            _liveOrder = updated ?? _liveOrder;
+          });
+          _startServerTimeRefresh();
           _notice('🎉 Customer OTP verified! Service is now In Progress.');
         }
       } catch (e) {
@@ -140,27 +269,176 @@ class _WorkerBookingDetailsScreenState
         if (mounted) setState(() => _updatingProgress = false);
       }
     } else if (s == 'in_progress' || s == 'in progress') {
-      setState(() => _updatingProgress = true);
-      try {
+      if (_currentOrder.paymentMethod == 'cash') {
+        await _completeCashService();
+      } else {
+        await _openPaymentQr();
+      }
+    }
+  }
+
+  Future<String?> _askForAdminOtp({
+    required String title,
+    required String message,
+  }) async {
+    var code = '';
+    final otp = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(message),
+            const SizedBox(height: 14),
+            TextField(
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (value) => code = value,
+              decoration: const InputDecoration(
+                labelText: '6-digit administrator OTP',
+                counterText: '',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (RegExp(r'^\d{6}$').hasMatch(code.trim())) {
+                Navigator.pop(context, code.trim());
+              }
+            },
+            child: const Text('Verify'),
+          ),
+        ],
+      ),
+    );
+    return otp;
+  }
+
+  Future<void> _completeCashService() async {
+    final api = _liveApi;
+    var referenceValue = '';
+    final reference = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Report cash collection'),
+        content: TextField(
+          autofocus: true,
+          onChanged: (value) => referenceValue = value,
+          decoration: const InputDecoration(
+            labelText: 'Cash receipt or collection reference',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = referenceValue.trim();
+              if (value.isNotEmpty) Navigator.pop(context, value);
+            },
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || reference == null) return;
+    setState(() => _updatingProgress = true);
+    try {
+      var booking = _currentOrder;
+      if (booking.serviceFinishedAt == null) {
         await api.updateBookingProgress(
           bookingId: widget.order.id,
-          action: 'complete',
+          action: 'finish',
         );
-        if (mounted) {
-          setState(() => _localStatus = 'Completed');
-          _notice('✅ Service completed successfully! Great job.');
-        }
-      } catch (e) {
-        if (mounted) _notice('Failed to complete service: $e');
-      } finally {
-        if (mounted) setState(() => _updatingProgress = false);
+        booking = await api.fetchBookingDetails(widget.order.id) ?? booking;
+        if (mounted) setState(() => _liveOrder = booking);
       }
+      if (booking.cashCollectionReportedAt != null) {
+        if (mounted) {
+          _notice(
+            'Cash report sent. Waiting for administrator reconciliation.',
+          );
+        }
+        return;
+      }
+      final amountPaise =
+          booking.customerPayablePaise ?? booking.customerPayable * 100;
+      await api.reportCashCollection(
+        bookingId: widget.order.id,
+        amountPaise: amountPaise,
+        reference: reference,
+        idempotencyKey:
+            'cash_${widget.order.id}_${DateTime.now().microsecondsSinceEpoch}',
+      );
+      final updated = await api.fetchBookingDetails(widget.order.id);
+      if (mounted) {
+        setState(() {
+          _liveOrder = updated ?? booking;
+          _localStatus = null;
+        });
+        _notice(
+          'Cash collection reported. Waiting for administrator reconciliation.',
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        final updated = await api.fetchBookingDetails(widget.order.id);
+        if (mounted && updated != null) setState(() => _liveOrder = updated);
+        if (mounted) _notice('Failed to report cash collection: $error');
+      }
+    } finally {
+      if (mounted) setState(() => _updatingProgress = false);
+    }
+  }
+
+  Future<void> _completePaidCashService() async {
+    final otp = await _askForAdminOtp(
+      title: 'Complete the service',
+      message:
+          'Payment is reconciled. Call your administrator and enter the service-completion OTP.',
+    );
+    if (!mounted || otp == null) return;
+    final api = _liveApi;
+    setState(() => _updatingProgress = true);
+    try {
+      await api.updateBookingProgress(
+        bookingId: widget.order.id,
+        action: 'complete',
+        otp: otp,
+      );
+      final updated = await api.fetchBookingDetails(widget.order.id);
+      if (mounted) {
+        setState(() {
+          _liveOrder = updated ?? _liveOrder;
+          _localStatus = null;
+        });
+        _notice('Administrator OTP verified. Service completed.');
+      }
+    } catch (error) {
+      if (mounted) {
+        _notice('Service-completion OTP verification failed: $error');
+      }
+    } finally {
+      if (mounted) setState(() => _updatingProgress = false);
     }
   }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (widget.demoMode && widget.order.id.length < 24) {
       WorkerDemoBookingStore.repository.addListener(_onStoreUpdated);
       _loadStore();
@@ -168,31 +446,27 @@ class _WorkerBookingDetailsScreenState
       _storeLoading = false;
     }
     if (_isLiveMode && widget.order.id.length >= 24) {
-      final api = _api is WorkerMobileOperationsApi
-          ? (_api as WorkerMobileOperationsApi)
-          : WorkerMobileOperationsApi();
-      api.fetchBookingDetails(widget.order.id).then((updated) {
-        if (mounted && updated != null) {
-          setState(() => _liveOrder = updated);
-        }
-      });
+      unawaited(_refreshLiveBooking());
+      _startServerTimeRefresh();
     }
   }
 
   Future<void> _loadStore() async {
     try {
       await WorkerDemoBookingStore.initialize();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _storeLoading = false;
           _storeError = null;
         });
+      }
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _storeLoading = false;
           _storeError = error;
         });
+      }
     }
   }
 
@@ -201,7 +475,55 @@ class _WorkerBookingDetailsScreenState
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appActive = state == AppLifecycleState.resumed;
+    if (_appActive && mounted && _isLiveMode) unawaited(_refreshLiveBooking());
+  }
+
+  Future<void> _refreshLiveBooking() async {
+    if (_refreshing || !mounted || !_appActive) return;
+    _refreshing = true;
+    try {
+      final refreshed = await _liveApi.fetchBookingDetails(widget.order.id);
+      if (refreshed == null) throw StateError('Booking refresh unavailable');
+      if (mounted)
+        setState(() {
+          _liveOrder = refreshed;
+          _localStatus = null;
+          _refreshError = null;
+          _lastRefresh = DateTime.now();
+        });
+    } catch (_) {
+      if (mounted)
+        setState(
+          () => _refreshError =
+              'Booking updates are unavailable. Showing the last received status. Reconnect and retry.',
+        );
+    } finally {
+      _refreshing = false;
+    }
+  }
+
+  void _startServerTimeRefresh() {
+    _serverSyncTimer?.cancel();
+    _serverSyncTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (_appActive && (ModalRoute.of(context)?.isCurrent ?? true))
+        unawaited(_refreshLiveBooking());
+    });
+    _serverTimeTimer?.cancel();
+    _serverTimeTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_appActive && (ModalRoute.of(context)?.isCurrent ?? true))
+        _clock.value = DateTime.now();
+    });
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _clock.dispose();
+    if (widget.operationsApi is! WorkerMobileOperationsApi) _liveApi.close();
+    _serverSyncTimer?.cancel();
+    _serverTimeTimer?.cancel();
     if (widget.demoMode && widget.order.id.length < 24) {
       WorkerDemoBookingStore.repository.removeListener(_onStoreUpdated);
     }
@@ -209,17 +531,21 @@ class _WorkerBookingDetailsScreenState
   }
 
   WorkerBookingSession? get _savedSession =>
-      widget.demoMode && widget.order.id.length < 24 && !_storeLoading && _storeError == null
+      widget.demoMode &&
+          widget.order.id.length < 24 &&
+          !_storeLoading &&
+          _storeError == null
       ? WorkerDemoBookingStore.session(widget.order.id)
       : null;
 
   WorkerDashboardOrder get _currentOrder {
-    var order = _liveOrder ??
+    var order =
+        _liveOrder ??
         ((!widget.demoMode || widget.order.id.length >= 24)
             ? widget.order
             : (!_storeLoading && _storeError == null
-                ? WorkerDemoBookingStore.resolve(widget.order)
-                : widget.order));
+                  ? WorkerDemoBookingStore.resolve(widget.order)
+                  : widget.order));
     if (_localStatus != null) {
       order = order.copyWith(status: _localStatus);
     }
@@ -248,6 +574,35 @@ class _WorkerBookingDetailsScreenState
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _openLiveExtraServices() async {
+    final api = _liveApi;
+    await Navigator.of(context).push<void>(
+      SlidePageRoute<void>(
+        page: WorkerAddExtraServiceScreen(
+          order: _currentOrder,
+          demoMode: false,
+          operationsApi: api,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openPaymentQr() async {
+    final api = _liveApi;
+    await Navigator.of(context).push<void>(
+      SlidePageRoute<void>(
+        page: WorkerPaymentQrScreen(order: _currentOrder, operationsApi: api),
+      ),
+    );
+    final updated = await api.fetchBookingDetails(widget.order.id);
+    if (mounted && updated != null) {
+      setState(() {
+        _liveOrder = updated;
+        _localStatus = null;
+      });
+    }
   }
 
   Future<void> _openProgressPreview() async {
@@ -331,6 +686,63 @@ class _WorkerBookingDetailsScreenState
         '${local.day.toString().padLeft(2, '0')}/'
         '${local.month.toString().padLeft(2, '0')}/${local.year}';
     return '$date · ${TimeOfDay.fromDateTime(local).format(context)}';
+  }
+
+  String _remainingServiceTime(DateTime? end) {
+    if (end == null) return 'Waiting for the server start time';
+    final seconds = end.difference(DateTime.now()).inSeconds;
+    if (seconds <= 0) return 'Booked service time has ended';
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final remainingSeconds = seconds % 60;
+    return '${hours.toString().padLeft(2, '0')}:'
+        '${minutes.toString().padLeft(2, '0')}:'
+        '${remainingSeconds.toString().padLeft(2, '0')} remaining';
+  }
+
+  Widget _serviceTimingCard() {
+    final order = _currentOrder;
+    final extension = order.durationExtension;
+    final extensionStatus = extension?['status'];
+    final extensionMessage = switch (extensionStatus) {
+      'pending' =>
+        'The customer has 5 minutes to decide. Do not continue extension work until approved. No duration charge is added.',
+      'approved' =>
+        '${extension?['minutes'] ?? 15} additional minutes approved. No duration charge was added.',
+      'declined' || 'expired' =>
+        'No extension was approved. Finish the service; no extra-time charge was added.',
+      _ => null,
+    };
+    return _card(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Booked service time',
+            style: TextStyle(
+              color: _deep,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 7),
+          ValueListenableBuilder<DateTime>(
+            valueListenable: _clock,
+            builder: (context, _, child) =>
+                Text(_remainingServiceTime(order.serviceEndsAt)),
+          ),
+          if (order.serviceEndsAt != null)
+            Text(
+              'Server end: ${_formatSavedTime(context, order.serviceEndsAt)}',
+              style: const TextStyle(color: _muted, fontSize: 12),
+            ),
+          if (extensionMessage != null) ...[
+            const SizedBox(height: 7),
+            Text(extensionMessage, style: const TextStyle(color: _muted)),
+          ],
+        ],
+      ),
+    );
   }
 
   Widget _billRow(String label, int amount, {bool total = false}) => Padding(
@@ -598,7 +1010,9 @@ class _WorkerBookingDetailsScreenState
                                         const SizedBox(height: 4),
                                         Text(
                                           order.customerPhone != null &&
-                                                  order.customerPhone!.isNotEmpty
+                                                  order
+                                                      .customerPhone!
+                                                      .isNotEmpty
                                               ? '${order.customerPhone} · Booking ${order.id}'
                                               : 'Booking ${order.id}',
                                           style: const TextStyle(
@@ -677,8 +1091,9 @@ class _WorkerBookingDetailsScreenState
                                         ),
                                       ),
                                       Text(
-                                        formatCustomerRupees(
-                                          order.customerPayable,
+                                        formatCustomerPaise(
+                                          order.customerPayablePaise ??
+                                              order.customerPayable * 100,
                                         ),
                                         style: const TextStyle(
                                           color: _deep,
@@ -698,7 +1113,7 @@ class _WorkerBookingDetailsScreenState
                                   _info(Icons.place_outlined, order.location),
                                   _info(
                                     Icons.payments_outlined,
-                                    'Customer payable: ${formatCustomerRupees(order.customerPayable)}',
+                                    'Customer payable: ${formatCustomerPaise(order.customerPayablePaise ?? order.customerPayable * 100)}',
                                   ),
                                 ],
                               ),
@@ -734,7 +1149,11 @@ class _WorkerBookingDetailsScreenState
                                     const SizedBox(height: 6),
                                     Row(
                                       children: [
-                                        const Icon(Icons.account_balance_wallet_outlined, size: 18, color: Color(0xFF14865E)),
+                                        const Icon(
+                                          Icons.account_balance_wallet_outlined,
+                                          size: 18,
+                                          color: Color(0xFF14865E),
+                                        ),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
@@ -753,7 +1172,11 @@ class _WorkerBookingDetailsScreenState
                                     const SizedBox(height: 6),
                                     Row(
                                       children: [
-                                        const Icon(Icons.receipt_outlined, size: 18, color: _muted),
+                                        const Icon(
+                                          Icons.receipt_outlined,
+                                          size: 18,
+                                          color: _muted,
+                                        ),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
@@ -788,6 +1211,27 @@ class _WorkerBookingDetailsScreenState
                                 ],
                               ),
                             ),
+                            if (_isLiveMode &&
+                                order.status.toLowerCase() ==
+                                    'in progress') ...[
+                              const SizedBox(height: 14),
+                              if (_refreshError != null) ...[
+                                Text(
+                                  _refreshError!,
+                                  style: const TextStyle(color: Colors.red),
+                                ),
+                                if (_lastRefresh != null)
+                                  Text(
+                                    'Last updated: ' +
+                                        _lastRefresh!.toLocal().toString(),
+                                  ),
+                                TextButton(
+                                  onPressed: _refreshLiveBooking,
+                                  child: const Text('Retry booking update'),
+                                ),
+                              ],
+                              _serviceTimingCard(),
+                            ],
                             if (session != null) ...[
                               const SizedBox(height: 14),
                               _savedServiceSummary(context, session),
@@ -827,51 +1271,129 @@ class _WorkerBookingDetailsScreenState
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(17, 10, 17, 15),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: FilledButton(
-                            key: const Key('start-service-entry'),
-                            onPressed: _isLiveMode
-                                ? (_canAct(order.status)
-                                    ? _handleProgressAction
-                                    : () => Navigator.of(context).maybePop())
-                                : (session?.serviceStage ==
-                                        WorkerServiceStage.finished
-                                    ? () => Navigator.of(context).maybePop()
-                                    : _startingService
-                                    ? null
-                                    : canResume
-                                    ? _openProgressPreview
-                                    : canStart
-                                    ? _startServicePreview
-                                    : null),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: _pink,
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor: const Color(0xFFF5CBD9),
-                              disabledForegroundColor: _deep,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (_isLiveMode &&
+                                order.status.toLowerCase() == 'in progress')
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 9),
+                                child: OutlinedButton.icon(
+                                  onPressed: _openLiveExtraServices,
+                                  icon: const Icon(Icons.add_circle_outline),
+                                  label: const Text('Request Extra Service'),
+                                ),
                               ),
-                            ),
-                            child: Text(
-                              _updatingProgress
-                                  ? 'Updating status…'
-                                  : _isLiveMode
-                                  ? _progressButtonText(order.status)
-                                  : (session?.serviceStage ==
-                                          WorkerServiceStage.finished
-                                      ? 'Back to My Bookings'
-                                      : _startingService
-                                      ? 'Saving Demo Service…'
-                                      : canResume
-                                      ? 'Resume Demo Service'
-                                      : canStart
-                                      ? 'Start Service · Enter Customer OTP'
-                                      : 'Start Service Not Available'),
-                            ),
-                          ),
+                            if (_showPaymentChoices)
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: FilledButton.icon(
+                                      key: Key(
+                                        order.paymentMethod == 'cash'
+                                            ? 'generate-payment-qr'
+                                            : 'start-service-entry',
+                                      ),
+                                      onPressed: _updatingProgress
+                                          ? null
+                                          : _openPaymentQr,
+                                      icon: const Icon(Icons.qr_code),
+                                      label: const Text('Generate QR'),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: _pink,
+                                        foregroundColor: Colors.white,
+                                        minimumSize: const Size(0, 50),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      key: Key(
+                                        order.paymentMethod == 'cash'
+                                            ? 'start-service-entry'
+                                            : 'cash-collection',
+                                      ),
+                                      onPressed: _updatingProgress
+                                          ? null
+                                          : _completeCashService,
+                                      icon: const Icon(Icons.payments_outlined),
+                                      label: const Text('Cash Collection'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: _pink,
+                                        minimumSize: const Size(0, 50),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            else
+                              SizedBox(
+                                height: 50,
+                                child: FilledButton(
+                                  key: const Key('start-service-entry'),
+                                  onPressed: _isLiveMode
+                                      ? order.status.toLowerCase() ==
+                                                'completed'
+                                            ? order.paymentStatus == 'paid'
+                                                  ? () => Navigator.of(
+                                                      context,
+                                                    ).maybePop()
+                                                  : _openPaymentQr
+                                            : _canAct(order.status)
+                                            ? _handleProgressAction
+                                            : () => Navigator.of(
+                                                context,
+                                              ).maybePop()
+                                      : (session?.serviceStage ==
+                                                WorkerServiceStage.finished
+                                            ? () => Navigator.of(
+                                                context,
+                                              ).maybePop()
+                                            : _startingService
+                                            ? null
+                                            : canResume
+                                            ? _openProgressPreview
+                                            : canStart
+                                            ? _startServicePreview
+                                            : null),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: _pink,
+                                    foregroundColor: Colors.white,
+                                    disabledBackgroundColor: const Color(
+                                      0xFFF5CBD9,
+                                    ),
+                                    disabledForegroundColor: _deep,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _updatingProgress
+                                        ? 'Updating status…'
+                                        : _isLiveMode
+                                        ? order.status.toLowerCase() ==
+                                                  'completed'
+                                              ? order.paymentStatus == 'paid'
+                                                    ? 'Service Completed - Payment Received'
+                                                    : 'Generate Payment QR'
+                                              : _progressButtonText(
+                                                  order.status,
+                                                )
+                                        : (session?.serviceStage ==
+                                                  WorkerServiceStage.finished
+                                              ? 'Back to My Bookings'
+                                              : _startingService
+                                              ? 'Saving Demo Service…'
+                                              : canResume
+                                              ? 'Resume Demo Service'
+                                              : canStart
+                                              ? 'Start Service · Enter Customer OTP'
+                                              : 'Start Service Not Available'),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ],

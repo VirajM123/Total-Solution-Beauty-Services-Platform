@@ -129,6 +129,12 @@ function createResourcesRouter({ db,auth,storage }) {
 }
 function createPublicResourcesRouter({db,storage}){
   const router=express.Router()
+  router.get('/service-areas',handler(async(req,res)=>{
+    const {q}=require('./core').listFilter(req.query,['name'])
+    const where={status:'active',isActive:true,isServiceable:true}
+    const records=await db.collection('service_areas').find(where,{projection:{_id:1,name:1,city:1,state:1,postalCodes:1}}).sort({_id:1}).skip((q.page-1)*q.limit).limit(q.limit).toArray()
+    reply(req,res,{items:records,pagination:{page:q.page,limit:q.limit,hasMore:records.length===q.limit}})
+  }))
   for(const [resource,definition] of Object.entries(definitions).filter(([,d])=>d.public)){
     router.get('/'+resource,handler(async(req,res)=>{
       const {q,filter}=require('./core').listFilter(req.query,['name'])
@@ -140,7 +146,13 @@ function createPublicResourcesRouter({db,storage}){
         try {
           await validateRelationships(db,resource,record,undefined,storage)
           const fields=['_id',...Object.keys(definition.fields)]
-          items.push(Object.fromEntries(fields.filter(k=>k in record).map(k=>[k,record[k]])))
+          const item=Object.fromEntries(fields.filter(k=>k in record).map(k=>[k,record[k]]))
+          const mediaIds=[record.thumbnailMediaId,...(record.imageMediaIds||[])].filter(Boolean)
+          const assets=mediaIds.length?await db.collection('media_assets').find({_id:{$in:mediaIds},visibility:'public',isActive:true,uploadStatus:'ready'}).toArray():[]
+          const safe=assets.filter(require('../modules/services/catalog.routes').isPersistentPublicImage)
+          item.thumbnail=safe.find(asset=>String(asset._id)===String(record.thumbnailMediaId))?.publicUrl||null
+          item.images=safe.map(asset=>({id:asset._id,url:asset.publicUrl,mimeType:asset.mimeType,altText:asset.altText||record.name}))
+          items.push(item)
         }catch(error){if(!['INVALID_COMPONENT','INVALID_TARGET','INVALID_MEDIA','STORAGE_NOT_CONFIGURED','MEDIA_REQUIRED','INVALID_REFERENCE'].includes(error.code))throw error}
       }
       // Cursor scan has a bounded page; filtered stale records are never exposed.

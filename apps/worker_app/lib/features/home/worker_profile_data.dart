@@ -9,31 +9,6 @@ import 'package:path_provider/path_provider.dart';
 import '../../integration/worker_api.dart';
 import '../../integration/worker_mobile_operations_api.dart';
 
-const workerServiceOptions = <String, List<String>>{
-  'Hair': [
-    'Haircut',
-    'Hair Styling',
-    'Hair Spa',
-    'Hair Colouring',
-    'Bridal Hairstyle',
-  ],
-  'Makeup': [
-    'Party Makeup',
-    'Bridal Makeup',
-    'Engagement Makeup',
-    'Natural Makeup',
-  ],
-  'Skin & Facial': ['Classic Facial', 'Clean-up', 'Detan', 'Skin Care'],
-  'Waxing & Grooming': [
-    'Full Arms Waxing',
-    'Full Legs Waxing',
-    'Threading',
-    'Eyebrow Shaping',
-  ],
-  'Nails': ['Manicure', 'Pedicure', 'Nail Art', 'Nail Extensions'],
-  'Mehendi': ['Bridal Mehendi', 'Arabic Mehendi', 'Festival Mehendi'],
-};
-
 @immutable
 class WorkerProfile {
   const WorkerProfile({
@@ -57,7 +32,7 @@ class WorkerProfile {
   final String mobile;
   final String fullName;
   final String email;
-  final DateTime dateOfBirth;
+  final DateTime? dateOfBirth;
   final String cityOrArea;
   final String primaryCategory;
   final List<String> services;
@@ -108,7 +83,7 @@ class WorkerProfile {
     'mobile': mobile,
     'fullName': fullName,
     'email': email,
-    'dateOfBirth': dateOfBirth.toIso8601String(),
+    'dateOfBirth': dateOfBirth?.toIso8601String(),
     'cityOrArea': cityOrArea,
     'primaryCategory': primaryCategory,
     'services': services,
@@ -139,12 +114,11 @@ class WorkerProfile {
       return value;
     }
 
-    final date = DateTime.tryParse(readString('dateOfBirth'));
+    final date = DateTime.tryParse('${json['dateOfBirth'] ?? ''}');
     final years = json['yearsOfExperience'];
     final radius = json['travelRadiusKm'];
     final notifications = json['notificationsEnabled'];
-    if (date == null ||
-        years is! int ||
+    if (years is! int ||
         radius is! int ||
         notifications is! bool ||
         json['version'] != 1) {
@@ -192,10 +166,8 @@ class SecureWorkerProfileStorage implements WorkerProfileStorage {
 }
 
 class WorkerProfileRepository extends ChangeNotifier {
-  WorkerProfileRepository(
-    this._storage, {
-    WorkerOperationsApi? operationsApi,
-  }) : _operationsApi = operationsApi;
+  WorkerProfileRepository(this._storage, {WorkerOperationsApi? operationsApi})
+    : _operationsApi = operationsApi;
 
   final WorkerProfileStorage _storage;
   final Map<String, WorkerProfile?> _cache = {};
@@ -217,9 +189,31 @@ class WorkerProfileRepository extends ChangeNotifier {
 
   WorkerProfile? profileFor(String mobile) => _cache[_digits(mobile)];
 
+  Future<Map<String, List<String>>> serviceOptions() async {
+    if (_operationsApi is! WorkerMobileOperationsApi) return const {};
+    final records = await (_operationsApi as WorkerMobileOperationsApi)
+        .fetchCatalogServices();
+    final options = <String, List<String>>{};
+    for (final service in records) {
+      final category = service['category'];
+      if (category is Map &&
+          category['name'] is String &&
+          service['name'] is String) {
+        options
+            .putIfAbsent(category['name'] as String, () => [])
+            .add(service['name'] as String);
+      }
+    }
+    return options;
+  }
+
   Future<WorkerProfile?> load(String mobile) async {
     final normalized = _digits(mobile);
     if (normalized.isEmpty) return null;
+
+    if (_operationsApi is WorkerMobileOperationsApi) {
+      return _revalidateWithServer(normalized, mobile, null);
+    }
 
     final raw = await _storage.read(_storageKey(normalized));
     WorkerProfile? local;
@@ -261,68 +255,71 @@ class WorkerProfileRepository extends ChangeNotifier {
       final profile = data['profile'] as Map<String, dynamic>? ?? {};
 
       final rawServices = profile['services'];
+      final serviceIds = (profile['serviceIds'] as List? ?? [])
+          .map((value) => '$value')
+          .toSet();
+      final catalog = serviceIds.isEmpty
+          ? <Map<String, dynamic>>[]
+          : await (_operationsApi as WorkerMobileOperationsApi)
+                .fetchCatalogServices();
+      final assignedServices = catalog
+          .where(
+            (service) =>
+                serviceIds.contains('${service['id'] ?? service['_id']}'),
+          )
+          .toList();
       final List<String> servicesList;
-      if (rawServices is List && rawServices.isNotEmpty) {
+      if (serviceIds.isNotEmpty) {
+        servicesList = assignedServices
+            .map((service) => '${service['name']}')
+            .toList();
+      } else if (rawServices is List) {
         servicesList = rawServices.cast<String>();
-      } else if (local != null && local.services.isNotEmpty) {
-        servicesList = local.services;
       } else {
-        servicesList = const ['Hair Styling'];
+        servicesList = const [];
       }
 
       final rawLangs = profile['languages'];
       final List<String> languagesList;
-      if (rawLangs is List && rawLangs.isNotEmpty) {
+      if (rawLangs is List) {
         languagesList = rawLangs.cast<String>();
-      } else if (local != null && local.languages.isNotEmpty) {
-        languagesList = local.languages;
       } else {
-        languagesList = const ['English', 'Hindi'];
+        languagesList = const [];
       }
 
       final dobStr = profile['dateOfBirth'] as String?;
       final parsedDob = dobStr != null ? DateTime.tryParse(dobStr) : null;
-      final dob = parsedDob ?? local?.dateOfBirth ?? DateTime(1995, 1, 1);
+      final dob = parsedDob;
 
       final serverProfile = WorkerProfile(
-        mobile: (user['mobileNumber'] as String?) ??
+        mobile:
+            (user['mobileNumber'] as String?) ??
             (profile['mobileNumber'] as String?) ??
             mobile,
-        fullName: (user['fullName'] as String?) ??
+        fullName:
+            (user['fullName'] as String?) ??
             (profile['fullName'] as String?) ??
-            local?.fullName ??
             'Worker',
-        email: (user['email'] as String?) ??
-            (profile['email'] as String?) ??
-            local?.email ??
-            '',
+        email:
+            (user['email'] as String?) ?? (profile['email'] as String?) ?? '',
         dateOfBirth: dob,
-        cityOrArea: (profile['cityOrArea'] as String?) ??
-            local?.cityOrArea ??
-            'Latur Central',
-        primaryCategory: (profile['primaryCategory'] as String?) ??
-            local?.primaryCategory ??
-            'Hair',
+        cityOrArea: (profile['cityOrArea'] as String?) ?? '',
+        primaryCategory:
+            (profile['primaryCategory'] as String?) ??
+            (assignedServices.isNotEmpty &&
+                    assignedServices.first['category'] is Map
+                ? '${assignedServices.first['category']['name'] ?? ''}'
+                : ''),
         services: servicesList,
-        yearsOfExperience: (profile['experienceYears'] as num?)?.toInt() ??
-            local?.yearsOfExperience ??
-            2,
-        workMode: (profile['workMode'] as String?) ??
-            local?.workMode ??
-            'Salon-based',
-        travelRadiusKm: (profile['travelRadiusKm'] as num?)?.toInt() ??
-            local?.travelRadiusKm ??
-            10,
+        yearsOfExperience: (profile['experienceYears'] as num?)?.toInt() ?? 0,
+        workMode: (profile['workMode'] as String?) ?? '',
+        travelRadiusKm: (profile['travelRadiusKm'] as num?)?.toInt() ?? 0,
         languages: languagesList,
-        about: (profile['about'] as String?) ??
-            local?.about ??
-            'Professional salon artist with Hii Beauty',
-        certificateDetails: (profile['certificateDetails'] as String?) ??
-            local?.certificateDetails ??
-            'Verified Specialist',
-        profilePhotoPath: local?.profilePhotoPath ??
-            (profile['profilePhotoPath'] as String?),
-        notificationsEnabled: (profile['notificationsEnabled'] as bool?) ??
+        about: (profile['about'] as String?) ?? '',
+        certificateDetails: (profile['certificateDetails'] as String?) ?? '',
+        profilePhotoPath: profile['profilePhotoPath'] as String?,
+        notificationsEnabled:
+            (profile['notificationsEnabled'] as bool?) ??
             local?.notificationsEnabled ??
             true,
       );
@@ -335,7 +332,9 @@ class WorkerProfileRepository extends ChangeNotifier {
       notifyListeners();
       return serverProfile;
     } catch (_) {
-      return null;
+      _cache.remove(normalized);
+      notifyListeners();
+      rethrow;
     }
   }
 
@@ -368,13 +367,15 @@ class WorkerProfileRepository extends ChangeNotifier {
         'languages': saved.languages,
         'workMode': saved.workMode,
         'travelRadiusKm': saved.travelRadiusKm,
-        'dateOfBirth': saved.dateOfBirth.toIso8601String(),
+        if (saved.dateOfBirth != null)
+          'dateOfBirth': saved.dateOfBirth!.toIso8601String(),
         'certificateDetails': saved.certificateDetails,
         if (saved.profilePhotoPath != null)
           'profilePhotoPath': saved.profilePhotoPath,
       };
-      await (_operationsApi as WorkerMobileOperationsApi)
-          .updateWorkerProfile(body);
+      await (_operationsApi as WorkerMobileOperationsApi).updateWorkerProfile(
+        body,
+      );
     } catch (_) {}
   }
 

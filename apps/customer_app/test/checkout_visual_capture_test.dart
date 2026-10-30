@@ -78,13 +78,11 @@ void main() {
     await tester.pumpAndSettle();
     await capture('booking_summary_flutter');
 
-    await tester.tap(find.byKey(const ValueKey('continue-to-payment-method')));
-    await tester.pumpAndSettle();
-    await capture('payment_method_flutter');
-
     await tester.tap(
-      find.byKey(const ValueKey('payment-method-cashOnService')),
+      find.byKey(const ValueKey('continue-to-booking-confirmation')),
     );
+    await tester.pumpAndSettle();
+    await capture('booking_confirmation_review_flutter');
     await tester.tap(find.byKey(const ValueKey('confirm-booking')));
     await tester.pumpAndSettle();
     await capture('booking_confirmation_flutter');

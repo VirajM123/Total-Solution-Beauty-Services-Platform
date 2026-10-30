@@ -42,7 +42,15 @@ function createApp(options = {}) {
   }))
   app.use(helmet())
   app.use(cors)
-  app.use(express.json({ limit: env.JSON_BODY_LIMIT, strict: true }))
+  app.use(express.json({
+    limit: env.JSON_BODY_LIMIT,
+    strict: true,
+    verify(req, res, buffer) {
+      if (req.originalUrl.includes('/payments/razorpay/webhook')) {
+        req.rawBody = Buffer.from(buffer)
+      }
+    },
+  }))
   app.use(express.urlencoded({ extended: false, limit: env.JSON_BODY_LIMIT }))
 
   app.get('/health/live', (req, res) => {
@@ -66,6 +74,7 @@ function createApp(options = {}) {
     if (!databaseReady()) return unavailable(req, res, next)
     next()
   })
+  if (options.storageAdapter?.router) app.use('/api', options.storageAdapter.router())
   if (authConfigured) {
     const { createAdminAuthRouter } = require('./modules/auth/adminAuth.routes')
     app.use('/api/admin/auth', createAdminAuthRouter({ models, sessionSecret }))
@@ -78,8 +87,10 @@ function createApp(options = {}) {
       const { createAuthentication } = require('./middleware/authenticate')
       const auth = createAuthentication({ ...models, secret: sessionSecret })
       const { createPlatformRouter } = require('./platform')
+      const { createRazorpay } = require('./platform/razorpay')
       app.use('/api', createPlatformRouter({ db: require('./platform/database').moneyDatabase(db), models, auth, storageAdapter: options.storageAdapter,
-        sms: options.sms, scheduling: options.scheduling, compensation: options.compensation, serviceOtp: options.serviceOtp }))
+        sms: options.sms, scheduling: options.scheduling, compensation: options.compensation, serviceOtp: options.serviceOtp,
+        razorpay: options.razorpay || createRazorpay(), legacyWorkerOffersEnabled: options.legacyWorkerOffersEnabled }))
     }
   }
   if (apiConfigured && authConfigured) {

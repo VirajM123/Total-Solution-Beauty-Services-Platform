@@ -1,3 +1,5 @@
+import '../../integration/mobile_push.dart';
+import 'dart:convert';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -5,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/constants/pinkora_brand.dart';
 import '../booking/checkout_models.dart';
+import '../catalog/catalog_repository.dart';
 import 'all_services_screen.dart';
 import 'promotional_banner_carousel.dart';
 import '../../integration/customer_mobile_operations_api.dart';
@@ -41,7 +44,7 @@ class _Service {
   final String description;
   final List<String> benefits;
   final String? backendId;
-  String get serviceAreaId => 'be21549eeeaf01c30ca4ec6c';
+  String get serviceAreaId => '';
   String get id => '${category.toLowerCase()}::${name.toLowerCase()}';
 }
 
@@ -52,7 +55,7 @@ class _SavedAddress {
     required this.street,
     required this.city,
     required this.postalCode,
-    this.serviceAreaId = 'be21549eeeaf01c30ca4ec6c',
+    this.serviceAreaId = '',
   });
 
   final String id;
@@ -201,26 +204,6 @@ DateTime _mondayOf(DateTime date) {
   return day.subtract(Duration(days: day.weekday - DateTime.monday));
 }
 
-const _services = [
-  _Service('Gold Facial', 'Facial', 1200, 60, AppAssets.goldFacial),
-  _Service('Hair Spa', 'Hair Spa', 899, 60, AppAssets.hairSpa),
-  _Service('Bridal Makeup', 'Makeup', 2500, 120, AppAssets.bridalMakeup),
-  _Service('Manicure', 'Manicure', 500, 45, AppAssets.manicure),
-  _Service('Waxing', 'Waxing', 699, 45, AppAssets.goldFacial),
-  _Service(
-    'BLUE HAIR COLOUR',
-    'Hair Spa',
-    15600,
-    80,
-    AppAssets.hairSpa,
-    backendId: '6ad8aa8bc3a0c4be6df1f774',
-    description: 'Professional blue hair coloring and restorative hair spa.',
-    benefits: ['Vibrant color', 'Deep conditioning', 'Expert stylist'],
-  ),
-];
-
-String _serviceImage(String name) => 'assets/images/services/$name.jpg';
-
 String _formatShortDate(DateTime date) {
   const months = [
     'Jan',
@@ -244,602 +227,68 @@ String _formatWeekday(DateTime date) {
   return weekdays[date.weekday - 1];
 }
 
-const _categoryHeroImages = <String, String>{
-  'Body Polish': AppAssets.bodyPolishMain,
-  'Clean Up': AppAssets.cleanUpMain,
-  'Hair Color': AppAssets.hairColorMain,
-  'Hair Mehendi': AppAssets.hairMehendiMain,
-  'Hair Cut': AppAssets.hairCutMain,
-};
-
-final _serviceDetails = <_Service>[
-  _Service(
-    'Gold Facial',
-    'Facial',
-    1200,
-    60,
-    _serviceImage('gold_facial'),
-    originalPrice: 1500,
-    discount: '20% OFF',
-    description:
-        'Deep cleansing facial with gold extracts for glowing, youthful skin. Includes cleansing, exfoliation, massage, mask and moisturization.',
-    benefits: const [
-      'Instant glow & brightness',
-      'Improves skin texture',
-      'Deep cleansing & hydration',
-      'Suitable for all skin types',
-    ],
-  ),
-  _Service(
-    'Gold Prime Facial',
-    'Facial',
-    1800,
-    75,
-    _serviceImage('gold_prime_facial'),
-    originalPrice: 2400,
-    discount: '25% OFF',
-    description:
-        'An advanced facial with pure gold extracts and premium botanicals for a refreshed, radiant complexion.',
-    benefits: const [
-      'Enhanced glow & anti-aging care',
-      'Improves skin elasticity',
-      'Deep nourishment & hydration',
-      'Reduces dullness and fine lines',
-    ],
-  ),
-  _Service(
-    'Normal Facial',
-    'Facial',
-    699,
-    45,
-    _serviceImage('normal_facial'),
-    originalPrice: 900,
-    discount: '22% OFF',
-    description:
-        'A refreshing facial for clean, healthy and radiant skin with cleansing, exfoliation, massage, mask and moisturization.',
-    benefits: const [
-      'Cleanses and removes impurities',
-      'Refreshes and revitalizes skin',
-      'Improves skin tone and texture',
-      'Suitable for all skin types',
-    ],
-  ),
-  _Service(
-    'Full Body Polish',
-    'Body Polish',
-    2499,
-    120,
-    AppAssets.bodyPolishFullBody,
-    description:
-        'A full-body exfoliation and nourishment treatment for smoother, softer-looking skin.',
-  ),
-  _Service(
-    'Back Polish',
-    'Body Polish',
-    999,
-    45,
-    AppAssets.bodyPolishBack,
-    description:
-        'A refreshing polish treatment to exfoliate and moisturize the back.',
-  ),
-  _Service(
-    'Arms Polish',
-    'Body Polish',
-    799,
-    40,
-    AppAssets.bodyPolishArms,
-    description:
-        'Gentle exfoliation and hydration to leave arms feeling soft and smooth.',
-  ),
-  _Service(
-    'Legs Polish',
-    'Body Polish',
-    1199,
-    60,
-    AppAssets.bodyPolishLegs,
-    description:
-        'A nourishing polish treatment for smoother, refreshed-looking legs.',
-  ),
-  _Service(
-    'Fruit Clean Up',
-    'Clean Up',
-    499,
-    30,
-    AppAssets.cleanUpFruit,
-    description:
-        'A quick fruit-based cleanse and exfoliation to refresh dull-looking skin.',
-  ),
-  _Service(
-    'Herbal Clean Up',
-    'Clean Up',
-    599,
-    35,
-    AppAssets.cleanUpHerbal,
-    description:
-        'A gentle herbal cleanse with exfoliation and hydration for a fresh feel.',
-  ),
-  _Service(
-    'De-Tan Clean Up',
-    'Clean Up',
-    699,
-    40,
-    AppAssets.cleanUpDetan,
-    description:
-        'A cleansing treatment focused on removing surface tan and restoring freshness.',
-  ),
-  _Service(
-    'Anti-Acne Clean Up',
-    'Clean Up',
-    799,
-    45,
-    AppAssets.cleanUpAntiAcne,
-    description:
-        'A gentle, clarifying clean up for skin that needs extra attention.',
-  ),
-  _Service(
-    'Global Hair Color',
-    'Hair Color',
-    1999,
-    120,
-    AppAssets.hairColorGlobal,
-    description:
-        'All-over professional hair color, selected to complement your style.',
-  ),
-  _Service(
-    'Root Touch-Up',
-    'Hair Color',
-    899,
-    60,
-    AppAssets.hairColorRootTouchUp,
-    description:
-        'A focused color application to refresh visible roots and even out your look.',
-  ),
-  _Service(
-    'Hair Highlights',
-    'Hair Color',
-    2499,
-    150,
-    AppAssets.hairColorHighlights,
-    description:
-        'Dimension-adding highlights applied by a beauty professional at home.',
-  ),
-  _Service(
-    'Balayage',
-    'Hair Color',
-    3999,
-    180,
-    AppAssets.hairColorBalayage,
-    description:
-        'A blended, hand-painted color look customized to your hair and style.',
-  ),
-  _Service(
-    'Global Color with Highlights',
-    'Hair Color',
-    4499,
-    180,
-    AppAssets.hairColorHighlights,
-    description:
-        'A complete color refresh combining all-over color with dimensional highlights.',
-  ),
-  _Service(
-    'Full Hair Mehendi',
-    'Hair Mehendi',
-    799,
-    90,
-    AppAssets.hairMehendiFull,
-    description:
-        'Traditional mehendi applied throughout the hair for natural-looking color.',
-  ),
-  _Service(
-    'Root Touch-Up with Mehendi',
-    'Hair Mehendi',
-    499,
-    60,
-    AppAssets.hairMehendiRootTouchUp,
-    description:
-        'A targeted mehendi application to refresh color at the roots.',
-  ),
-  _Service(
-    'Hair Mehendi Application',
-    'Hair Mehendi',
-    699,
-    75,
-    AppAssets.hairMehendiApplication,
-    description:
-        'Professional application of your preferred mehendi for even coverage.',
-  ),
-  _Service(
-    'Women’s Haircut',
-    'Hair Cut',
-    499,
-    45,
-    AppAssets.hairCutStep,
-    description:
-        'A personalized haircut shaped around your preferred style and hair length.',
-  ),
-  _Service(
-    'Hair Trim',
-    'Hair Cut',
-    299,
-    30,
-    AppAssets.hairCutTrim,
-    description:
-        'A neat trim to refresh your ends and maintain your current cut.',
-  ),
-  _Service(
-    'Layer Cut',
-    'Hair Cut',
-    799,
-    60,
-    AppAssets.hairCutLayer,
-    description:
-        'A layered haircut designed to add shape and movement to your hair.',
-  ),
-  _Service(
-    'Fringe Trim',
-    'Hair Cut',
-    199,
-    20,
-    AppAssets.hairCutBob,
-    description: 'A quick fringe refresh tailored to your preferred length.',
-  ),
-  _Service(
-    'Kids Haircut',
-    'Hair Cut',
-    299,
-    30,
-    AppAssets.hairCutTrim,
-    description: 'A comfortable haircut appointment for children at home.',
-  ),
-  _Service(
-    'Hair Spa',
-    'Hair Spa',
-    899,
-    60,
-    _serviceImage('hair_care_spa'),
-    originalPrice: 1200,
-    discount: '25% OFF',
-    description:
-        'A nourishing hair spa treatment designed to condition your hair and leave it feeling soft and refreshed.',
-    benefits: const [
-      'Nourishes dry hair',
-      'Conditions and softens strands',
-      'Relaxing scalp massage',
-      'At-home professional care',
-    ],
-  ),
-  _Service(
-    'Bridal Makeup',
-    'Makeup',
-    2500,
-    120,
-    _serviceImage('bridal_makeup'),
-    originalPrice: 3500,
-    discount: '29% OFF',
-    description:
-        'A camera-ready bridal makeup look, created with professional products and tailored to your special day.',
-    benefits: const [
-      'Look tailored to your occasion',
-      'Professional makeup products',
-      'Long-lasting finish',
-      'Consultation with your artist',
-    ],
-  ),
-  _Service(
-    'Party Makeup',
-    'Makeup',
-    1800,
-    90,
-    _serviceImage('party_makeup'),
-    originalPrice: 2400,
-    discount: '25% OFF',
-    description:
-        'A polished makeup look for parties and celebrations, finished by a beauty professional at home.',
-    benefits: const [
-      'Makeup suited to your occasion',
-      'Professional products',
-      'Personalized look',
-      'Convenient at-home service',
-    ],
-  ),
-  _Service(
-    'Engagement Makeup',
-    'Makeup',
-    2200,
-    105,
-    _serviceImage('engagement_makeup'),
-    originalPrice: 3000,
-    discount: '27% OFF',
-    description:
-        'A beautifully finished engagement look planned around your style and celebration.',
-    benefits: const [
-      'Look customized for your event',
-      'Professional products',
-      'Long-wearing finish',
-      'At-home beauty service',
-    ],
-  ),
-  _Service(
-    'Waxing',
-    'Waxing',
-    699,
-    45,
-    _serviceImage('waxing'),
-    originalPrice: 900,
-    discount: '22% OFF',
-    description:
-        'Professional waxing with a careful, hygienic approach for smooth, comfortable skin.',
-    benefits: const [
-      'Professional hygienic care',
-      'Smooth-looking skin',
-      'Comfort-focused technique',
-      'Convenient at-home service',
-    ],
-  ),
-  _Service(
-    'Half Leg Waxing',
-    'Waxing',
-    499,
-    30,
-    _serviceImage('half_leg_waxing'),
-    originalPrice: 650,
-    discount: '23% OFF',
-  ),
-  _Service(
-    'Full Leg Waxing',
-    'Waxing',
-    899,
-    45,
-    _serviceImage('full_leg_waxing'),
-    originalPrice: 1200,
-    discount: '25% OFF',
-  ),
-  _Service(
-    'Full Body Waxing',
-    'Waxing',
-    1800,
-    90,
-    _serviceImage('full_body_waxing'),
-    originalPrice: 2400,
-    discount: '25% OFF',
-  ),
-  _Service(
-    'Manicure',
-    'Manicure',
-    500,
-    45,
-    _serviceImage('manicure'),
-    originalPrice: 700,
-    discount: '29% OFF',
-  ),
-  _Service(
-    'Pedicure',
-    'Manicure',
-    550,
-    45,
-    _serviceImage('pedicure'),
-    originalPrice: 750,
-    discount: '27% OFF',
-  ),
-  _Service(
-    'Manicure & Pedicure',
-    'Manicure',
-    950,
-    75,
-    _serviceImage('manicure_pedicure'),
-    originalPrice: 1300,
-    discount: '27% OFF',
-  ),
-  _Service(
-    'Gel Polish',
-    'Manicure',
-    650,
-    45,
-    _serviceImage('gel_polish'),
-    originalPrice: 850,
-    discount: '24% OFF',
-  ),
-  _Service(
-    'Threading',
-    'Threading',
-    199,
-    20,
-    _serviceImage('threading'),
-    originalPrice: 250,
-    discount: '20% OFF',
-  ),
-  _Service(
-    'Eyebrow Threading',
-    'Threading',
-    99,
-    15,
-    _serviceImage('eyebrow_threading'),
-    originalPrice: 150,
-    discount: '34% OFF',
-  ),
-  _Service(
-    'Upper Lip Threading',
-    'Threading',
-    79,
-    10,
-    _serviceImage('upper_lip_threading'),
-    originalPrice: 120,
-    discount: '34% OFF',
-  ),
-  _Service(
-    'Full Face Threading',
-    'Threading',
-    299,
-    30,
-    _serviceImage('full_face_threading'),
-    originalPrice: 400,
-    discount: '25% OFF',
-  ),
-  _Service(
-    'Bridal Services',
-    'Bridal Services',
-    4500,
-    150,
-    _serviceImage('bridal_services'),
-    originalPrice: 6000,
-    discount: '25% OFF',
-  ),
-  _Service(
-    'Bridal Package',
-    'Bridal Services',
-    6500,
-    180,
-    _serviceImage('bridal_package'),
-    originalPrice: 8500,
-    discount: '24% OFF',
-  ),
-  _Service(
-    'Engagement Package',
-    'Bridal Services',
-    5500,
-    150,
-    _serviceImage('engagement_package'),
-    originalPrice: 7200,
-    discount: '24% OFF',
-  ),
-  _Service(
-    'Pre-Bridal Care',
-    'Bridal Services',
-    3500,
-    120,
-    _serviceImage('pre_bridal_care'),
-    originalPrice: 4500,
-    discount: '22% OFF',
-  ),
-  _Service(
-    'Beauty Packages',
-    'Beauty Packages',
-    2500,
-    120,
-    _serviceImage('beauty_packages'),
-    originalPrice: 3500,
-    discount: '29% OFF',
-  ),
-  _Service(
-    'Glow Package',
-    'Beauty Packages',
-    1800,
-    90,
-    _serviceImage('glow_package'),
-    originalPrice: 2400,
-    discount: '25% OFF',
-  ),
-  _Service(
-    'Relaxation Package',
-    'Beauty Packages',
-    2200,
-    120,
-    _serviceImage('relaxation_package'),
-    originalPrice: 3000,
-    discount: '27% OFF',
-  ),
-  _Service(
-    'Complete Beauty Package',
-    'Beauty Packages',
-    3200,
-    150,
-    _serviceImage('complete_beauty_package'),
-    originalPrice: 4200,
-    discount: '24% OFF',
-  ),
-];
-
-const _developmentBanners = [
-  PromotionalBanner(
-    id: 'home-facial',
-    title: 'Glow Beautiful\nat Home',
-    subtitle: 'Professional beauty services\nby verified experts.',
-    imageAsset: AppAssets.homeHero,
-    callToAction: 'Book Now',
-    action: PromotionalBannerAction.service,
-    targetId: 'Gold Facial',
-  ),
-  PromotionalBanner(
-    id: 'facial-care',
-    title: 'A little time for you',
-    subtitle: 'Explore care that fits your day.',
-    imageAsset: AppAssets.goldFacial,
-    callToAction: 'Browse Facial',
-    action: PromotionalBannerAction.category,
-    targetId: 'Facial',
-  ),
-  PromotionalBanner(
-    id: 'makeup-services',
-    title: 'Care for every occasion',
-    subtitle: 'Discover thoughtful beauty services.',
-    imageAsset: AppAssets.bridalMakeup,
-    callToAction: 'Explore makeup',
-    action: PromotionalBannerAction.service,
-    targetId: 'Bridal Makeup',
-  ),
-];
-
-const _categories = <(String, IconData, String?)>[
-  ('Facial', Icons.face_retouching_natural_outlined, AppAssets.categoryFacial),
-  ('Hair Spa', Icons.face_3_outlined, AppAssets.categoryHairSpa),
-  ('Makeup', Icons.brush_outlined, AppAssets.categoryMakeup),
-  ('Waxing', Icons.auto_fix_high_outlined, AppAssets.categoryWaxing),
-  ('Manicure', Icons.back_hand_outlined, AppAssets.categoryManicure),
-  ('All Services', Icons.grid_view_rounded, null),
-];
-
-/// Local preview; booking selections are interactive and held in memory.
+/// Customer catalog and account screens backed by the mobile API.
 class DevelopmentHomeScreen extends StatefulWidget {
-  const DevelopmentHomeScreen({super.key});
+  const DevelopmentHomeScreen({
+    super.key,
+    this.operationsApi,
+    this.ownsOperationsApi = false,
+  });
+
+  final CustomerMobileOperationsApi? operationsApi;
+  final bool ownsOperationsApi;
 
   @override
   State<DevelopmentHomeScreen> createState() => _DevelopmentHomeScreenState();
 }
 
-class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
-  final _operationsApi = CustomerMobileOperationsApi();
+class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
+    with WidgetsBindingObserver {
+  bool _appActive = true;
+  bool _savingPreferences = false;
+  bool _catalogSyncing = false;
+  late final _operationsApi =
+      widget.operationsApi ?? CustomerMobileOperationsApi();
   String? _liveBookingId;
+  Map<String, dynamic>? _serverBooking;
   String? _liveBookingStatus;
+  bool _awaitingBookingPayment = false;
+  int? _finalBillPaise;
   String? _liveWorkerName;
+  int? _liveBookingTotal;
+  List<Map<String, dynamic>> _pendingExtraServices = const [];
+  bool _respondingToExtraService = false;
+  Map<String, dynamic>? _durationExtension;
+  DateTime? _serviceEndsAt;
+  bool _respondingToDurationExtension = false;
   Timer? _bookingSyncTimer;
   final _search = TextEditingController();
-  final _serviceOtpController = TextEditingController();
   final _reviewController = TextEditingController();
   String _serviceOtp = '';
-  String? _serviceOtpError;
+  final Map<String, String> _catalogServiceIds = {};
+  List<_Service> _services = [];
+  List<(String, IconData, String?)> _categories = [
+    ('All Services', Icons.grid_view, null),
+  ];
+  List<PromotionalBanner> _banners = [];
+  Map<String, String> _categoryImages = {};
+  List<Map<String, dynamic>> _offersData = [],
+      _packagesData = [],
+      _bookingsData = [];
+  Map<String, dynamic> _account = {};
+  bool _catalogLoading = true;
+  String? _catalogError;
+  Timer? _catalogRefreshTimer;
+  List<_Service> get _serviceDetails => _services;
   int _serviceElapsedSeconds = 0;
   final _plan = <_Service>[];
   final _cartQuantities = <String, int>{};
-  final _savedAddresses = <_SavedAddress>[
-    const _SavedAddress(
-      id: '6ae05a3b9075320591000001',
-      label: 'Home',
-      street: 'Near Shivaji Chowk, MIDC',
-      city: 'Latur, Maharashtra',
-      postalCode: '413512',
-      serviceAreaId: 'be21549eeeaf01c30ca4ec6c',
-    ),
-    const _SavedAddress(
-      id: 'work',
-      label: 'Work',
-      street: 'MIDC',
-      city: 'Latur, Maharashtra',
-      postalCode: '413531',
-      serviceAreaId: 'be21549eeeaf01c30ca4ec6c',
-    ),
-    const _SavedAddress(
-      id: 'parents',
-      label: 'Parents House',
-      street: 'Ring Road',
-      city: 'Latur, Maharashtra',
-      postalCode: '413512',
-      serviceAreaId: 'be21549eeeaf01c30ca4ec6c',
-    ),
-  ];
+  final _savedAddresses = <_SavedAddress>[];
+
   int _tab = 0;
   int _checkoutStep = 0;
   String _category = 'All Services';
-  String _location = 'Latur, Maharashtra';
+  String _location = 'Select an address';
   DateTime _bookingDate = DateTime.now().add(const Duration(days: 1));
   DateTime _calendarWeekStart = _mondayOf(
     DateTime.now().add(const Duration(days: 1)),
@@ -847,116 +296,342 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   String _bookingTime = '10:00 AM';
   String _selectedPeriod = 'Morning';
   String _bookingPreference = 'Book Instantly';
-  String _selectedAddressId = '6ae05a3b9075320591000001';
-  int _tipAmount = 0;
-  CheckoutPaymentMethod _paymentMethod = CheckoutPaymentMethod.upi;
+  String _selectedAddressId = '';
+
   CheckoutPreview? _checkoutPreview;
   Timer? _confirmationTimer;
   Timer? _serviceClockTimer;
+  String? _pendingBookingIdempotencyKey;
+  String? _pendingBookingFingerprint;
   bool _submittingPreview = false;
   bool _serviceStarted = false;
   bool _serviceCompleted = false;
-  bool _bookingDetailsExpanded = false;
-  bool _reviewSubmitted = false;
+
   int _reviewRating = 0;
-  String _customerName = 'Omkar Bhange';
-  bool _notificationsEnabled = true;
-  bool _profilePromotionsEnabled = true;
+  String _customerName = '';
+
   bool _underThousand = false;
   bool _offerApplied = false;
-  bool _favoriteProfessional = false;
-  String _bookingHistoryFilter = 'All';
   String _offersTab = 'Offers';
   String _offersCategory = 'All';
   String _offerSearchQuery = '';
   bool _offerSearchVisible = false;
+  bool _notificationsEnabled = true;
+  bool _profilePromotionsEnabled = true;
+  final bool _favoriteProfessional = false;
+
   bool _showServiceCategories = false;
   String? _selectedServiceCategory;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    MobilePush.pendingOpen.addListener(_handlePushOpen);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _handlePushOpen());
+    _loadNotificationPreferences();
     _syncCustomerBackendData();
+    _syncBookingCatalog();
+    _loadAccount();
+    _catalogRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (_appActive && (ModalRoute.of(context)?.isCurrent ?? true))
+        _syncBookingCatalog();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appActive = state == AppLifecycleState.resumed;
+    if (_appActive && mounted) {
+      _syncCustomerBackendData();
+      _syncBookingCatalog();
+    }
+  }
+
+  Future<void> _handlePushOpen() async {
+    final target = MobilePush.pendingOpen.value;
+    if (!mounted || target == null) return;
+    MobilePush.pendingOpen.value = null;
+    final type = target['type']!;
+    if (type.startsWith('offer.') ||
+        type.startsWith('banner.') ||
+        type.startsWith('package.')) {
+      setState(() => _tab = 2);
+      await _syncBookingCatalog();
+      return;
+    }
+    if (!type.startsWith('booking.') && !type.startsWith('assignment.')) return;
+    try {
+      // The scoped server read authorizes access before any booking is opened.
+      final booking = await _operationsApi.getBooking(target['entityId']!);
+      if (!mounted) return;
+      setState(() {
+        _liveBookingId = target['entityId'];
+        _serverBooking = booking;
+        _checkoutPreview = _previewFromBooking(booking);
+        _checkoutStep = 6;
+        _tab = 1;
+      });
+      _startLiveBookingSync(target['entityId']!);
+    } catch (_) {
+      if (mounted)
+        _message(
+          'This booking is unavailable. Refresh your bookings or sign in again.',
+        );
+    }
+  }
+
+  Future<void> _loadNotificationPreferences() async {
+    try {
+      final saved = await _operationsApi.getNotificationPreferences();
+      if (mounted)
+        setState(() {
+          _notificationsEnabled = saved['notificationsEnabled'] != false;
+          _profilePromotionsEnabled =
+              saved['marketingNotificationsEnabled'] != false;
+        });
+    } catch (_) {
+      if (mounted)
+        _message('Unable to load notification settings. Please retry.');
+    }
+  }
+
+  Future<void> _saveNotificationPreferences(
+    bool notifications,
+    bool marketing,
+    StateSetter refreshDialog,
+  ) async {
+    if (_savingPreferences) return;
+    _savingPreferences = true;
+    refreshDialog(() {});
+    try {
+      await _operationsApi.updateNotificationPreferences(
+        notificationsEnabled: notifications,
+        marketingNotificationsEnabled: marketing,
+      );
+      if (mounted)
+        setState(() {
+          _notificationsEnabled = notifications;
+          _profilePromotionsEnabled = marketing;
+        });
+    } catch (_) {
+      if (mounted)
+        _message('Notification settings were not saved. Please retry.');
+    } finally {
+      _savingPreferences = false;
+      if (mounted) refreshDialog(() {});
+    }
+  }
+
+  Future<void> _loadAccount() async {
+    try {
+      final result = await _operationsApi.getProfile();
+      if (!mounted) return;
+      setState(() {
+        _account = Map<String, dynamic>.from(result['user'] as Map? ?? {});
+        _customerName = '${_account['fullName'] ?? ''}';
+      });
+    } catch (error) {
+      if (mounted) _message('Unable to load your profile. Please retry.');
+    }
   }
 
   Future<void> _syncCustomerBackendData() async {
     try {
       final addrs = await _operationsApi.getAddresses();
-      if (mounted && addrs.isNotEmpty) {
+      if (mounted) {
         setState(() {
+          _savedAddresses.clear();
           for (final a in addrs) {
-            final aid = '${a['_id'] ?? a['id']}';
-            if (!_savedAddresses.any((s) => s.id == aid)) {
-              _savedAddresses.insert(
-                0,
-                _SavedAddress(
-                  id: aid,
-                  label: '${a['label'] ?? 'Saved'}',
-                  street: '${a['line1'] ?? ''}',
-                  city: '${a['city'] ?? 'Latur'}',
-                  postalCode: '${a['postalCode'] ?? '413512'}',
-                  serviceAreaId: '${a['serviceAreaId'] ?? 'be21549eeeaf01c30ca4ec6c'}',
-                ),
-              );
-            }
+            _savedAddresses.add(
+              _SavedAddress(
+                id: '${a['_id'] ?? a['id'] ?? ''}',
+                label: '${a['label'] ?? ''}',
+                street: '${a['line1'] ?? ''}',
+                city: '${a['city'] ?? ''}',
+                postalCode: '${a['postalCode'] ?? ''}',
+                serviceAreaId: '${a['serviceAreaId'] ?? ''}',
+              ),
+            );
           }
+          if (!_savedAddresses.any((a) => a.id == _selectedAddressId)) {
+            _selectedAddressId = _savedAddresses.isEmpty
+                ? ''
+                : _savedAddresses.first.id;
+          }
+          _location = _savedAddresses.isEmpty
+              ? 'Select an address'
+              : _selectedAddress.city;
         });
       }
 
       final bookings = await _operationsApi.getBookings();
+      if (mounted) setState(() => _bookingsData = bookings);
       if (mounted && bookings.isNotEmpty) {
         final active = bookings.firstWhere(
-          (b) => !['completed', 'cancelled'].contains('${b['status']}'.toLowerCase()),
+          (b) => ![
+            'completed',
+            'cancelled',
+          ].contains('${b['status']}'.toLowerCase()),
           orElse: () => <String, dynamic>{},
         );
         if (active.isNotEmpty) {
           final bid = '${active['_id'] ?? active['id']}';
-          final items = active['items'] as List?;
-          final serviceName = items != null && items.isNotEmpty
-              ? '${items.first['name'] ?? 'BLUE HAIR COLOUR'}'
-              : 'BLUE HAIR COLOUR';
-          final totalPaise = active['totalPaise'] is num
-              ? (active['totalPaise'] as num).toInt()
-              : 1560000;
+
+          final totalPaise = int.tryParse('${active['totalPaise']}') ?? 0;
           final totalRupees = totalPaise ~/ 100;
           setState(() {
             _liveBookingId = bid;
-            _liveBookingStatus = '${active['status'] ?? 'assigned'}';
-            _liveWorkerName = 'Rushi Mane';
-            _checkoutPreview = CheckoutPreview(
-              services: [
-                PreviewService(
-                  name: serviceName,
-                  quantity: 1,
-                  unitPrice: totalRupees,
-                ),
-              ],
-              date: _bookingDate,
-              time: _bookingTime,
-              bookingPreference: _bookingPreference,
-              addressLabel: _selectedAddress.label,
-              addressDetails: _selectedAddress.details,
-              subtotal: totalRupees,
-              discount: 0,
-              convenienceFee: 0,
-              tip: 0,
-              total: totalRupees,
-              paymentMethod: CheckoutPaymentMethod.cashOnService,
-            );
+            _liveBookingStatus = '${active['status'] ?? 'confirmed'}';
+            _finalBillPaise = int.tryParse('${active['totalPaise']}');
+            _awaitingBookingPayment =
+                active['serviceFinishedAt'] != null &&
+                active['paymentStatus'] != 'paid';
+            _pendingExtraServices = const [];
+            _durationExtension = active['durationExtension'] is Map
+                ? Map<String, dynamic>.from(active['durationExtension'] as Map)
+                : null;
+            _serviceEndsAt = active['serviceEndsAt'] == null
+                ? null
+                : DateTime.tryParse('${active['serviceEndsAt']}');
+            _liveWorkerName = null;
+            _liveBookingTotal = totalRupees;
+            _serverBooking = active;
+            _checkoutPreview = _previewFromBooking(active);
           });
           _startLiveBookingSync(bid);
         }
       }
-    } catch (_) {}
+    } catch (error) {
+      if (mounted) _message('Unable to load your account data. Please retry.');
+    }
+  }
+
+  Future<void> _syncBookingCatalog() async {
+    if (_catalogSyncing || !mounted) return;
+    _catalogSyncing = true;
+    try {
+      final results = await Future.wait([
+        _operationsApi.getCatalogServices(),
+        _operationsApi.getRecords('/api/catalog/categories'),
+        _operationsApi.getRecords('/api/catalog/offers'),
+        _operationsApi.getRecords('/api/catalog/packages'),
+        _operationsApi.getRecords('/api/catalog/banners'),
+      ]);
+      final catalogServices = results[0],
+          categories = results[1],
+          offers = results[2],
+          packages = results[3],
+          banners = results[4];
+
+      if (mounted) {
+        setState(() {
+          final available = <_Service>[];
+          _catalogServiceIds.clear();
+          for (final service in catalogServices) {
+            final id = '${service['_id'] ?? service['id'] ?? ''}';
+            final name = '${service['name'] ?? ''}'.trim().toLowerCase();
+            if (RegExp(r'^[a-f0-9]{24}$', caseSensitive: false).hasMatch(id) &&
+                name.isNotEmpty) {
+              _catalogServiceIds[name] = id;
+              final categoryData = service['category'];
+              final categoryName = categoryData is Map
+                  ? '${categoryData['name'] ?? ''}'.trim()
+                  : '';
+              final category = categoryName;
+              final pricePaise = num.tryParse('${service['pricePaise']}');
+              final originalPricePaise = num.tryParse(
+                '${service['compareAtPricePaise']}',
+              );
+              final discountPercent =
+                  pricePaise != null &&
+                      originalPricePaise != null &&
+                      originalPricePaise > pricePaise
+                  ? ((originalPricePaise - pricePaise) *
+                            100 /
+                            originalPricePaise)
+                        .round()
+                  : null;
+
+              available.add(
+                _Service(
+                  '${service['name']}'.trim(),
+                  category,
+                  ((pricePaise ?? 0) / 100).round(),
+                  int.tryParse('${service['durationMinutes']}') ?? 60,
+                  '${service['thumbnail'] ?? ((service['images'] as List? ?? []).isEmpty ? '' : service['images'][0]['url'] ?? '')}',
+                  backendId: id,
+                  originalPrice: originalPricePaise == null
+                      ? null
+                      : (originalPricePaise / 100).round(),
+                  discount: discountPercent == null
+                      ? null
+                      : '$discountPercent% OFF',
+                  description: '${service['description'] ?? ''}',
+                  benefits: (service['benefits'] as List? ?? const [])
+                      .cast<String>(),
+                ),
+              );
+            }
+          }
+          _services = available;
+          _categories = [
+            ('All Services', Icons.grid_view, null),
+            for (final category in categories)
+              (
+                '${category['name']}',
+                Icons.spa_outlined,
+                '${category['image'] is Map ? category['image']['url'] ?? '' : category['thumbnail'] ?? ''}',
+              ),
+          ];
+          _categoryImages = {
+            for (final category in categories)
+              '${category['name']}':
+                  '${category['image'] is Map ? category['image']['url'] ?? '' : category['thumbnail'] ?? ''}',
+          };
+          _offersData = offers;
+          _packagesData = packages;
+          _banners = [
+            for (final banner in banners)
+              if ((banner['audiences'] as List? ?? []).contains('customer'))
+                PromotionalBanner(
+                  id: '${banner['_id'] ?? banner['id']}',
+                  title: '${banner['name'] ?? ''}',
+                  subtitle: '${banner['subtitle'] ?? ''}',
+                  imageAsset: '${banner['thumbnail'] ?? ''}',
+                  action: banner['targetType'] == 'service'
+                      ? PromotionalBannerAction.service
+                      : PromotionalBannerAction.offer,
+                  targetId: '${banner['targetId'] ?? ''}',
+                ),
+          ];
+          _catalogLoading = false;
+          _catalogError = null;
+        });
+      }
+    } catch (e) {
+      debugPrint('[CustomerApp] Catalog refresh failed: $e');
+      if (mounted)
+        setState(() {
+          _catalogLoading = false;
+          _catalogError = 'Unable to load services. Please retry.';
+        });
+    } finally {
+      _catalogSyncing = false;
+    }
   }
 
   @override
   void dispose() {
+    MobilePush.pendingOpen.removeListener(_handlePushOpen);
+    WidgetsBinding.instance.removeObserver(this);
+    if (widget.operationsApi == null || widget.ownsOperationsApi)
+      _operationsApi.close();
+    _catalogRefreshTimer?.cancel();
     _bookingSyncTimer?.cancel();
     _confirmationTimer?.cancel();
     _serviceClockTimer?.cancel();
     _search.dispose();
-    _serviceOtpController.dispose();
     _reviewController.dispose();
     super.dispose();
   }
@@ -970,37 +645,85 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
             service.category.toLowerCase().contains(query));
   }).toList();
 
+  List<(String, IconData, String?)> get _homeCategories {
+    final catalogCategories = _categories.skip(1).toList();
+    const preferred = ['facial', 'hair spa', 'makeup', 'waxing', 'manicure'];
+    final selected = <(String, IconData, String?)>[];
+    for (final keyword in preferred) {
+      for (final category in catalogCategories) {
+        if (category.$1.toLowerCase().contains(keyword) &&
+            !selected.contains(category)) {
+          selected.add(category);
+          break;
+        }
+      }
+    }
+    for (final category in catalogCategories) {
+      if (selected.length >= 5) break;
+      if (!selected.contains(category)) selected.add(category);
+    }
+    return [...selected, _categories.first];
+  }
+
+  String _homeCategoryLabel(String name) {
+    final normalized = name.toLowerCase();
+    if (normalized.contains('facial')) return 'Facial';
+    if (normalized.contains('hair spa')) return 'Hair Spa';
+    if (normalized.contains('manicure')) return 'Manicure';
+    return name;
+  }
+
   void _message(String message) {
     ScaffoldMessenger.of(context)
       ..removeCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _showContactPreviewNotice(String action) => showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text('$action Unavailable'),
-      content: Text('$action is unavailable in this development preview.'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('OK'),
+  Future<void> _showNotifications() async {
+    try {
+      final records = await _operationsApi.getRecords(
+        '/api/mobile/customer/notifications',
+      );
+      if (!mounted) return;
+      showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        builder: (_) => SafeArea(
+          child: ListView(
+            children: [
+              const ListTile(title: Text('Notifications')),
+              if (records.isEmpty)
+                const ListTile(title: Text('No notifications yet.')),
+              for (final record in records)
+                ListTile(
+                  title: Text('${record['title'] ?? record['type'] ?? ''}'),
+                  subtitle: Text(
+                    '${record['message'] ?? record['body'] ?? ''}',
+                  ),
+                ),
+            ],
+          ),
         ),
-      ],
-    ),
-  );
+      );
+    } catch (error) {
+      if (mounted) _message('Unable to load notifications. Please retry.');
+    }
+  }
 
   void _setOffer(bool enabled) {
-    setState(() => _offerApplied = enabled);
-    _message(
-      enabled
-          ? 'BEAUTY20 applied to your cart.'
-          : 'BEAUTY20 removed from your cart.',
-    );
+    setState(() => _tab = 2);
   }
 
   void _add(_Service service) {
-    if (_checkoutPreview != null) _startNewBooking(showCategories: false);
+    final matches = _services.where((item) => item.id == service.id);
+    if (matches.isEmpty) {
+      _message('${service.name} is currently unavailable.');
+      return;
+    }
+    service = matches.first;
+    if (_checkoutPreview != null || _liveBookingId != null) {
+      _startNewBooking(showCategories: false);
+    }
     if (_plan.any((item) => item.id == service.id)) {
       _message('${service.name} is already in your cart.');
       return;
@@ -1035,11 +758,11 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     (sum, item) => sum + item.price * (_cartQuantities[item.id] ?? 1),
   );
 
-  int get _cartDiscount => _offerApplied ? (_cartSubtotal * 0.2).round() : 0;
+  int get _cartDiscount => 0;
 
-  int get _cartTotal => _cartSubtotal - _cartDiscount + 50;
+  int get _cartTotal => _cartSubtotal - _cartDiscount;
 
-  int get _checkoutTotal => _cartTotal + _tipAmount;
+  int get _checkoutTotal => _cartTotal;
 
   void _openAddServices() {
     setState(() {
@@ -1050,9 +773,9 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   }
 
   void _startNewBooking({bool showCategories = true, bool openHome = false}) {
+    _bookingSyncTimer?.cancel();
     _confirmationTimer?.cancel();
     _stopServiceTimer();
-    _serviceOtpController.clear();
     _reviewController.clear();
     final tomorrow = DateUtils.dateOnly(
       DateTime.now().add(const Duration(days: 1)),
@@ -1061,28 +784,32 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       _plan.clear();
       _cartQuantities.clear();
       _checkoutPreview = null;
+      _liveBookingId = null;
+      _liveBookingStatus = null;
+      _awaitingBookingPayment = false;
+      _liveWorkerName = null;
       _checkoutStep = 0;
       _tab = openHome ? 0 : 1;
       _showServiceCategories = showCategories;
       _selectedServiceCategory = null;
       _serviceOtp = '';
-      _serviceOtpError = null;
       _serviceElapsedSeconds = 0;
       _serviceStarted = false;
       _serviceCompleted = false;
       _submittingPreview = false;
       _reviewRating = 0;
-      _reviewSubmitted = false;
-      _bookingDetailsExpanded = false;
-      _bookingHistoryFilter = 'All';
+
       _offerApplied = false;
       _bookingDate = tomorrow;
       _calendarWeekStart = _mondayOf(tomorrow);
       _bookingTime = '10:00 AM';
       _selectedPeriod = 'Morning';
       _bookingPreference = 'Book Instantly';
-      _tipAmount = 0;
-      _paymentMethod = CheckoutPaymentMethod.upi;
+
+      _pendingExtraServices = const [];
+      _durationExtension = null;
+      _serviceEndsAt = null;
+      _liveBookingTotal = null;
     });
   }
 
@@ -1092,7 +819,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       _bookingTime.isNotEmpty &&
       _savedAddresses.any((address) => address.id == _selectedAddressId);
 
-  void _openPaymentMethod() {
+  void _openBookingConfirmation() {
     if (!_hasValidCheckoutSelection) {
       _message(
         'Review your service, date, time and address before continuing.',
@@ -1102,66 +829,30 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     setState(() => _checkoutStep = 4);
   }
 
-  void _confirmPreviewBooking() {
+  Future<void> _confirmPreviewBooking() async {
     if (_submittingPreview || _checkoutPreview != null) return;
     if (!_hasValidCheckoutSelection) {
       _message('Your booking details changed. Please review them again.');
       return;
     }
-    _submittingPreview = true;
-    _serviceOtpController.clear();
-    _serviceOtpError = null;
+    setState(() => _submittingPreview = true);
     _serviceStarted = false;
     _serviceCompleted = false;
     _stopServiceTimer();
-    _serviceOtp = (DateTime.now().microsecondsSinceEpoch % 10000)
-        .toString()
-        .padLeft(4, '0');
+    _serviceOtp = '';
     _reviewController.clear();
     _reviewRating = 0;
-    _reviewSubmitted = false;
-    final address = _selectedAddress;
-    final preview = CheckoutPreview(
-      services: List.unmodifiable([
-        for (final service in _plan)
-          PreviewService(
-            name: service.name,
-            quantity: _cartQuantities[service.id] ?? 1,
-            unitPrice: service.price,
-          ),
-      ]),
-      date: _bookingDate,
-      time: _bookingTime,
-      bookingPreference: _bookingPreference,
-      addressLabel: address.label,
-      addressDetails: address.details,
-      subtotal: _cartSubtotal,
-      discount: _cartDiscount,
-      convenienceFee: 50,
-      tip: _tipAmount,
-      total: _checkoutTotal,
-      paymentMethod: _paymentMethod,
-    );
-    setState(() {
-      _checkoutPreview = preview;
-      _checkoutStep = 5;
-      _submittingPreview = false;
-    });
-    _createBackendBooking(address);
-    _confirmationTimer?.cancel();
-    _confirmationTimer = Timer(const Duration(seconds: 2), () {
-      if (!mounted || _checkoutStep != 5) return;
-      setState(() => _checkoutStep = 6);
-      _scheduleProfessionalAssignment();
-    });
-  }
 
-  void _scheduleProfessionalAssignment() {
-    if (_liveBookingId != null) return;
-    _confirmationTimer?.cancel();
-    _confirmationTimer = Timer(const Duration(seconds: 2), () {
-      if (!mounted || _checkoutStep != 6) return;
-      setState(() => _checkoutStep = 7);
+    final address = _selectedAddress;
+
+    final created = await _createBackendBooking(address);
+    if (!mounted) return;
+    setState(() {
+      _submittingPreview = false;
+      if (created) {
+        _checkoutPreview = _previewFromBooking(_serverBooking!);
+        _checkoutStep = 6;
+      }
     });
   }
 
@@ -1182,15 +873,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     _serviceStarted = false;
   }
 
-  void _completeService() {
-    _stopServiceTimer();
-    _serviceCompleted = true;
-    setState(() => _checkoutStep = 11);
-  }
-
   void _returnToProfessionalSearch() {
     setState(() => _checkoutStep = 6);
-    _scheduleProfessionalAssignment();
   }
 
   String get _serviceElapsedTime {
@@ -1201,8 +885,16 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     return '$hours:$minutes:$seconds';
   }
 
-  _SavedAddress get _selectedAddress =>
-      _savedAddresses.firstWhere((address) => address.id == _selectedAddressId);
+  _SavedAddress get _selectedAddress => _savedAddresses.firstWhere(
+    (address) => address.id == _selectedAddressId,
+    orElse: () => const _SavedAddress(
+      id: '',
+      label: 'Select a saved address',
+      street: '',
+      city: '',
+      postalCode: '',
+    ),
+  );
 
   void _selectBookingDate(DateTime date) {
     setState(() {
@@ -1233,13 +925,47 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   Future<void> _addAddress() async {
     final address = await showDialog<_SavedAddress>(
       context: context,
-      builder: (_) => _AddAddressDialog(initialCity: _location),
+      builder: (_) => _AddAddressDialog(
+        initialCity: _savedAddresses.isEmpty ? '' : _selectedAddress.city,
+      ),
     );
-    if (address != null && mounted) {
+    if (address == null || !mounted) return;
+    try {
+      final areas = await _operationsApi.getServiceAreas(address.postalCode);
+      final matches = areas
+          .where(
+            (area) =>
+                '${area['city']}'.toLowerCase() == address.city.toLowerCase(),
+          )
+          .toList();
+      if (matches.isEmpty) {
+        if (mounted)
+          _message('This address is outside the available service areas.');
+        return;
+      }
+      final saved = await _operationsApi.saveAddress(
+        label: address.label,
+        line1: address.street,
+        city: address.city,
+        postalCode: address.postalCode,
+        serviceAreaId: '${matches.first['_id'] ?? matches.first['id']}',
+      );
+      if (!mounted) return;
+      final result = _SavedAddress(
+        id: '${saved['_id'] ?? saved['id']}',
+        label: '${saved['label']}',
+        street: '${saved['line1']}',
+        city: '${saved['city']}',
+        postalCode: '${saved['postalCode']}',
+        serviceAreaId: '${saved['serviceAreaId']}',
+      );
       setState(() {
-        _savedAddresses.add(address);
-        _selectedAddressId = address.id;
+        _savedAddresses.add(result);
+        _selectedAddressId = result.id;
+        _location = result.city;
       });
+    } catch (error) {
+      if (mounted) _message('Unable to save address: $error');
     }
   }
 
@@ -1253,6 +979,12 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   }
 
   void _details(_Service service) {
+    final matches = _services.where((item) => item.id == service.id);
+    if (matches.isEmpty) {
+      _message('${service.name} is currently unavailable.');
+      return;
+    }
+    service = matches.first;
     final categoryServices = _serviceDetails
         .where((item) => item.category == service.category)
         .toList();
@@ -1290,11 +1022,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
-          for (final place in [
-            'Latur, Maharashtra',
-            'Pune, Maharashtra',
-            'Mumbai, Maharashtra',
-          ])
+          for (final place in _savedAddresses.map((a) => a.city).toSet())
             ListTile(
               title: Text(place),
               trailing: _location == place
@@ -1364,56 +1092,6 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     ),
   );
 
-  void _professional() => showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    builder: (sheetContext) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircleAvatar(
-              radius: 46,
-              backgroundImage: AssetImage(AppAssets.professional),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Top rated professional',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-            ),
-            const Text(
-              '★ 4.8 · Beauty specialist',
-              style: TextStyle(color: _muted),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Professional availability will be shown during a real booking.',
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () {
-                  Navigator.pop(sheetContext);
-                  _showAll();
-                },
-                child: const Text('Explore services'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-
-  void _showAll() => setState(() {
-    _category = 'All Services';
-    _underThousand = false;
-    _search.clear();
-    _tab = 0;
-  });
-
   void _openServiceCategories() => setState(() {
     _showServiceCategories = true;
     _selectedServiceCategory = null;
@@ -1440,7 +1118,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     switch (banner.action) {
       case PromotionalBannerAction.service:
         for (final service in _services) {
-          if (service.name == banner.targetId) {
+          if (service.backendId == banner.targetId) {
             _details(service);
             return;
           }
@@ -1460,7 +1138,14 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
         _message('This promotion is no longer available.');
         return;
       case PromotionalBannerAction.offer:
-        _message('This promotion is no longer available.');
+        final available = _offersData.any(
+          (offer) => '${offer['_id'] ?? offer['id']}' == banner.targetId,
+        );
+        if (available) {
+          setState(() => _tab = 2);
+        } else {
+          _message('This promotion is no longer available.');
+        }
         return;
       case PromotionalBannerAction.none:
         return;
@@ -1487,12 +1172,16 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                                 service.category == _selectedServiceCategory,
                           )
                           .toList(),
-                      heroImage: _categoryHeroImages[_selectedServiceCategory],
+                      heroImage: _categoryImages[_selectedServiceCategory],
                       onBack: _backFromServiceCategory,
                       onServiceSelected: _details,
                       onAddToCart: _addToCart,
                     )
                   : AllServicesScreen(
+                      categoryNames: _categories
+                          .skip(1)
+                          .map((category) => category.$1)
+                          .toList(),
                       onBack: _backFromServiceCategory,
                       onCategorySelected: _selectServiceCategory,
                       onServiceSelected: (name) {
@@ -1555,8 +1244,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     final width = MediaQuery.sizeOf(context).width - 32;
     final categoryWidth = (width - 20) / 6;
     final cardWidth = (width - 24) / 4;
-    final offerWidth = (width - 10) / 2;
-    final featured = _visibleServices;
+
+    final featured = _visibleServices.take(4).toList();
     return ListView(
       key: const ValueKey('home-scroll'),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -1586,14 +1275,14 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
             ),
             IconButton(
               tooltip: 'Notifications',
-              onPressed: () => _message('You are all caught up!'),
+              onPressed: _showNotifications,
               icon: const Icon(Icons.notifications_none_outlined),
             ),
             InkWell(
               onTap: () => setState(() => _tab = 3),
               child: const CircleAvatar(
                 radius: 19,
-                backgroundImage: AssetImage(AppAssets.professional),
+                child: Icon(Icons.person_outline),
               ),
             ),
           ],
@@ -1623,10 +1312,11 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
         const SizedBox(height: 7),
         _hero(width),
         const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          spacing: 4,
+          runSpacing: 8,
           children: [
-            for (final entry in _categories)
+            for (final entry in _homeCategories)
               InkWell(
                 key: ValueKey('category-${entry.$1}'),
                 onTap: () => entry.$1 == 'All Services'
@@ -1639,26 +1329,29 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                       Container(
                         width: categoryWidth.clamp(34.0, 41.0),
                         height: categoryWidth.clamp(34.0, 41.0),
+                        clipBehavior: Clip.antiAlias,
                         decoration: BoxDecoration(
                           color: _category == entry.$1
                               ? const Color(0xFFFFD5E0)
                               : const Color(0xFFFFE9ED),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: entry.$3 == null
+                        child: entry.$3 == null || entry.$3!.isEmpty
                             ? Icon(entry.$2, color: _berry, size: 21)
-                            : Image.asset(
+                            : Image.network(
                                 entry.$3!,
-                                width: 25,
-                                height: 25,
-                                fit: BoxFit.contain,
+                                width: 34,
+                                height: 34,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) =>
+                                    Icon(entry.$2, color: _berry, size: 21),
                               ),
                       ),
                       const SizedBox(height: 2),
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          entry.$1,
+                          _homeCategoryLabel(entry.$1),
                           maxLines: 1,
                           style: const TextStyle(fontSize: 9),
                         ),
@@ -1679,7 +1372,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
           )
         else
           SizedBox(
-            height: 103,
+            height: 108,
             child: SingleChildScrollView(
               key: const ValueKey('popular-services-scroll'),
               scrollDirection: Axis.horizontal,
@@ -1696,99 +1389,157 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
               ),
             ),
           ),
-        const SizedBox(height: 10),
-        _discount(),
-        const SizedBox(height: 8),
-        _heading('Offers for You', () => setState(() => _tab = 2)),
-        const SizedBox(height: 4),
-        SizedBox(
-          height: 72,
-          child: Row(
-            children: [
-              _offerCard(
-                'Bridal Packages',
-                'Up to 30% OFF',
-                AppAssets.bridalMakeup,
-                _services[2],
-                offerWidth,
-              ),
-              const SizedBox(width: 10),
-              _offerCard(
-                'Hair Spa & Care',
-                'Flat 25% OFF',
-                AppAssets.goldFacial,
-                _services[1],
-                offerWidth,
-              ),
-            ],
+        if (_catalogLoading) const Center(child: CircularProgressIndicator()),
+        if (_catalogError != null) ...[
+          Text(_catalogError!),
+          TextButton(
+            onPressed: _syncBookingCatalog,
+            child: const Text('Retry'),
           ),
-        ),
-        const SizedBox(height: 8),
-        _heading('Top Rated Professionals', _professional),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            for (var index = 0; index < 4; index++)
-              Expanded(
-                child: InkWell(
-                  onTap: _professional,
-                  child: Column(
-                    children: [
-                      Stack(
-                        children: [
-                          const CircleAvatar(
-                            radius: 21,
-                            backgroundImage: AssetImage(AppAssets.professional),
-                          ),
-                          Positioned(
-                            right: 0,
-                            child: Container(
-                              width: 9,
-                              height: 9,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF24BD56),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ],
+        ],
+        if (_offersData.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _discount(_offersData.first),
+          const SizedBox(height: 8),
+          _heading('Offers for You', () => setState(() => _tab = 2)),
+          const SizedBox(height: 4),
+          SizedBox(
+            height: 72,
+            child: Row(
+              children: [
+                for (
+                  var index = 0;
+                  index < _offersData.length.clamp(0, 2);
+                  index++
+                )
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        right: index == 0 && _offersData.length > 1 ? 10 : 0,
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.star,
-                            size: 10,
-                            color: Color(0xFFFF7B27),
-                          ),
-                          Text(
-                            index == 1 ? '4.9' : '4.8',
-                            style: const TextStyle(fontSize: 9),
-                          ),
-                        ],
-                      ),
-                    ],
+                      child: _offerCard(_offersData[index]),
+                    ),
                   ),
-                ),
-              ),
-            IconButton(
-              tooltip: 'Save professional',
-              onPressed: () => setState(
-                () => _favoriteProfessional = !_favoriteProfessional,
-              ),
-              icon: Icon(
-                _favoriteProfessional ? Icons.favorite : Icons.favorite_border,
-                color: _berry,
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ],
     );
   }
 
+  Widget _discount(Map<String, dynamic> offer) => InkWell(
+    key: const ValueKey('discount-banner'),
+    onTap: () => setState(() => _tab = 2),
+    borderRadius: BorderRadius.circular(17),
+    child: Container(
+      padding: const EdgeInsets.fromLTRB(9, 5, 10, 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFDDE6),
+        borderRadius: BorderRadius.circular(17),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: _berry,
+            child: Text(
+              offer['discountType'] == 'percentage' ? '%' : '₹',
+              style: const TextStyle(color: Colors.white, fontSize: 18),
+            ),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _offerDiscountLabel(offer).toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: _berry,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  '${offer['code'] ?? offer['name'] ?? ''}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 8),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.arrow_forward_ios, size: 13, color: _berry),
+        ],
+      ),
+    ),
+  );
+
+  Widget _offerCard(Map<String, dynamic> offer) => InkWell(
+    key: ValueKey('home-offer-${offer['_id'] ?? offer['id'] ?? offer['name']}'),
+    onTap: () => setState(() => _tab = 2),
+    child: Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _catalogCover(offer['thumbnail']),
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0x55FCE3E9), Color(0x00FCE3E9)],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(7),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${offer['name'] ?? ''}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 10,
+                  ),
+                ),
+                Text(
+                  _offerDiscountLabel(offer).toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Explore',
+                      style: TextStyle(
+                        color: _berry,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(width: 2),
+                    Icon(Icons.arrow_forward, size: 10, color: _berry),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
   Widget _hero(double width) => PromotionalBannerCarousel(
-    banners: _developmentBanners,
+    banners: _banners,
     width: width,
     isActive: _tab == 0,
     onBannerTap: _openBanner,
@@ -1819,7 +1570,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
 
   Widget _serviceCard(_Service service, double width) => Container(
     width: width,
-    height: 103,
+    height: 108,
     clipBehavior: Clip.antiAlias,
     decoration: _softBox(15),
     child: InkWell(
@@ -1827,22 +1578,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.asset(
-            service.image,
-            width: width,
-            height: 43,
-            fit: BoxFit.cover,
-            alignment: service.name == 'Bridal Makeup'
-                ? Alignment.centerRight
-                : Alignment.center,
-            errorBuilder: (_, _, _) => const ColoredBox(
-              color: Color(0xFFFFE9ED),
-              child: SizedBox(
-                height: 43,
-                child: Icon(Icons.spa, color: _berry),
-              ),
-            ),
-          ),
+          _ServicePhoto(service: service, width: width, height: 43),
+
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 3, 4, 1),
             child: Column(
@@ -1917,136 +1654,6 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     ),
   );
 
-  Widget _discount() => InkWell(
-    key: const ValueKey('discount-banner'),
-    onTap: () => _setOffer(!_offerApplied),
-    child: Container(
-      padding: const EdgeInsets.fromLTRB(9, 5, 5, 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFDDE6),
-        borderRadius: BorderRadius.circular(17),
-      ),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            radius: 16,
-            backgroundColor: _berry,
-            child: Text(
-              '%',
-              style: TextStyle(color: Colors.white, fontSize: 21),
-            ),
-          ),
-          const SizedBox(width: 7),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Flat 20% OFF',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: _berry,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  _offerApplied
-                      ? 'BEAUTY20 applied'
-                      : 'Use BEAUTY20 on your first booking',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 8),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(
-            width: 43,
-            height: 32,
-            child: FittedBox(
-              child: Switch.adaptive(
-                key: const ValueKey('promo-switch'),
-                value: _offerApplied,
-                onChanged: _setOffer,
-                activeTrackColor: _berry,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-
-  Widget _offerCard(
-    String title,
-    String subtitle,
-    String image,
-    _Service service,
-    double width,
-  ) => InkWell(
-    onTap: () => _details(service),
-    child: Container(
-      width: width,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            image,
-            fit: BoxFit.cover,
-            alignment: Alignment.centerRight,
-          ),
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFFCE3E9), Color(0x00FCE3E9)],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(7),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 10,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Explore',
-                      style: TextStyle(
-                        color: _berry,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(width: 2),
-                    Icon(Icons.arrow_forward, size: 10, color: _berry),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-
   Widget _bookings() => switch (_checkoutStep) {
     0 => _cartScreen(),
     13 => _bookingHistoryScreen(),
@@ -2085,7 +1692,11 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.stars_rounded, color: Color(0xFFE91E63), size: 22),
+                          const Icon(
+                            Icons.stars_rounded,
+                            color: Color(0xFFE91E63),
+                            size: 22,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -2101,7 +1712,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Assigned Professional: ${_liveWorkerName ?? "Rushi Mane"}',
+                        'Assigned Professional: ${_liveWorkerName ?? "Awaiting admin allocation"}',
                         style: const TextStyle(
                           color: Color(0xFF444444),
                           fontSize: 12,
@@ -2164,10 +1775,9 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
               _cartActionTile(
                 key: const ValueKey('cart-offer'),
                 icon: Icons.local_offer_outlined,
-                title: _offerApplied ? 'BEAUTY20 applied' : 'Apply Coupon',
-                subtitle: _offerApplied
-                    ? '20% discount added to your order'
-                    : 'Get 20% off with BEAUTY20',
+                title: 'Offers & Packages',
+                subtitle: 'View available offers',
+
                 onTap: () => _setOffer(!_offerApplied),
               ),
               const SizedBox(height: 9),
@@ -2486,7 +2096,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
         const SizedBox(height: 8),
         _summaryRow('Subtotal', _cartSubtotal),
         if (_offerApplied) _summaryRow('Discount · BEAUTY20', -_cartDiscount),
-        _summaryRow('Convenience Fee', 50),
+        _summaryRow('Convenience Fee', 0),
         const Divider(height: 14, color: Color(0xFFF4E5E9)),
         Row(
           children: [
@@ -2597,7 +2207,6 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       'Select Date & Time',
       'Select Address',
       'Booking Summary',
-      'Payment Method',
       'Booking Confirmation',
     ];
     final step = _checkoutStep - 1;
@@ -2613,7 +2222,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                 key: const ValueKey('checkout-back'),
                 tooltip: 'Back',
                 onPressed: () => setState(() {
-                  if (_checkoutStep == 5) _checkoutPreview = null;
+                  if (_checkoutStep == 4) _checkoutPreview = null;
                   _checkoutStep--;
                 }),
                 style: IconButton.styleFrom(
@@ -2665,7 +2274,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (redesignedStep || step == 2 || step == 3) ...[
+              if (redesignedStep || step == 2) ...[
                 Image.asset(
                   AppAssets.onboardingBackground,
                   fit: BoxFit.cover,
@@ -2680,8 +2289,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                   if (step == 0) _dateTimeStep(),
                   if (step == 1) _addressStep(),
                   if (step == 2) _bookingSummaryStep(),
-                  if (step == 3) _paymentMethodStep(),
-                  if (step == 4) _bookingConfirmationStep(),
+                  if (step == 3) _bookingConfirmationStep(),
                 ],
               ),
             ],
@@ -2724,20 +2332,20 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
         else if (step == 2)
           _summaryContinueAction()
         else if (step == 3)
-          _confirmBookingAction()
-        else if (step == 4)
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 8, 20, 18),
-            child: Text(
-              'Finding your professional next…',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: _muted,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+          _checkoutPreview == null
+              ? _confirmBookingAction()
+              : const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 8, 20, 18),
+                  child: Text(
+                    'Finding your professional next…',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
       ],
     );
   }
@@ -2815,7 +2423,10 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
               if (_liveBookingId != null) ...[
                 Container(
                   margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF0FDF4),
                     borderRadius: BorderRadius.circular(8),
@@ -2839,9 +2450,13 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                       : 'Development preview · No real booking was created',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: _liveBookingId != null ? const Color(0xFF15803D) : _muted,
+                    color: _liveBookingId != null
+                        ? const Color(0xFF15803D)
+                        : _muted,
                     fontSize: 10,
-                    fontWeight: _liveBookingId != null ? FontWeight.w700 : FontWeight.normal,
+                    fontWeight: _liveBookingId != null
+                        ? FontWeight.w700
+                        : FontWeight.normal,
                   ),
                 ),
               ),
@@ -2919,9 +2534,9 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     required String title,
     required String contentKey,
     required Widget body,
-    required String actionKey,
-    required String actionLabel,
-    required VoidCallback onAction,
+    String? actionKey,
+    String? actionLabel,
+    VoidCallback? onAction,
     required VoidCallback onBack,
   }) => Column(
     children: [
@@ -2971,28 +2586,32 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
           ],
         ),
       ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-        child: SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: FilledButton(
-            key: ValueKey(actionKey),
-            onPressed: onAction,
-            style: FilledButton.styleFrom(
-              backgroundColor: _bookingPink,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
+      if (onAction != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+          child: SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: FilledButton(
+              key: ValueKey(actionKey),
+              onPressed: onAction,
+              style: FilledButton.styleFrom(
+                backgroundColor: _bookingPink,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
               ),
-            ),
-            child: Text(
-              actionLabel,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              child: Text(
+                actionLabel!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
         ),
-      ),
     ],
   );
 
@@ -3002,45 +2621,13 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     body: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
-            children: [
-              Image.asset(
-                AppAssets.professionalRouteMap,
-                width: double.infinity,
-                height: 210,
-                fit: BoxFit.cover,
-                excludeFromSemantics: true,
-              ),
-              Positioned(
-                top: 7,
-                right: 7,
-                child: Container(
-                  width: 132,
-                  height: 46,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x1A000000), blurRadius: 8),
-                    ],
-                  ),
-                  child: const Text(
-                    'En route',
-                    style: TextStyle(
-                      color: _ink,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+        const _InfoCard(
+          Icons.location_on_outlined,
+          'Travel status',
+          'Live map tracking is unavailable. Booking progress is updated from the server.',
         ),
         const SizedBox(height: 14),
+
         _assignedProfessionalCard(),
         const SizedBox(height: 12),
         _assignmentTimelineCard(
@@ -3060,12 +2647,12 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
         ? 'view-completed-service'
         : _serviceStarted
         ? 'return-to-service'
-        : 'verify-service-otp-open',
+        : 'view-service-start-code',
     actionLabel: _serviceCompleted
         ? 'View Completed Service'
         : _serviceStarted
         ? 'Return to Service'
-        : 'Verify OTP to Start Service',
+        : 'View Service Start Code',
     onAction: () => setState(
       () => _checkoutStep = _serviceCompleted
           ? 11
@@ -3077,7 +2664,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   );
 
   Widget _serviceOtpScreen() => _lifecyclePage(
-    title: 'Verify OTP to Start Service',
+    title: 'Your Service Start Code',
     contentKey: 'service-otp-content',
     body: Column(
       children: [
@@ -3096,7 +2683,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
         ),
         const SizedBox(height: 18),
         const Text(
-          'Confirm your professional is at your location',
+          'Your professional will verify this code in their app',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: _ink,
@@ -3106,7 +2693,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Share this one-time code with your assigned professional only when you are ready to begin.',
+          'Share the code with your assigned professional at the appointment. Only the professional can start the service.',
           textAlign: TextAlign.center,
           style: TextStyle(color: _muted, fontSize: 12, height: 1.45),
         ),
@@ -3122,7 +2709,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
           child: Column(
             children: [
               const Text(
-                'DEMO SERVICE OTP',
+                'SERVICE START CODE',
                 style: TextStyle(
                   color: _muted,
                   fontSize: 10,
@@ -3131,58 +2718,123 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                 ),
               ),
               const SizedBox(height: 6),
-              Text(
-                _serviceOtp,
-                key: const ValueKey('demo-service-otp'),
-                style: const TextStyle(
-                  color: _bookingBerry,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 10,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                key: const ValueKey('service-start-otp'),
-                controller: _serviceOtpController,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                maxLength: _serviceOtp.isNotEmpty ? _serviceOtp.length : 6,
-                onChanged: (_) {
-                  if (_serviceOtpError != null) {
-                    setState(() => _serviceOtpError = null);
-                  }
-                },
-                decoration: InputDecoration(
-                  labelText: 'Enter 4-digit OTP',
-                  counterText: '',
-                  errorText: _serviceOtpError,
-                  filled: true,
-                  fillColor: const Color(0xFFFFF9FA),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(13),
-                    borderSide: const BorderSide(color: _bookingLine),
+              if (_serviceOtp.isNotEmpty)
+                Text(
+                  _serviceOtp,
+                  key: const ValueKey('service-start-code'),
+                  style: const TextStyle(
+                    color: _bookingBerry,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 10,
                   ),
+                )
+              else
+                Text(
+                  _liveBookingId == null
+                      ? 'A start code is available only for live bookings.'
+                      : 'The start code will appear here when the professional arrives.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: _muted, fontSize: 12),
                 ),
-              ),
             ],
           ),
         ),
       ],
     ),
-    actionKey: 'verify-service-otp',
-    actionLabel: 'Verify & Start Service',
+    actionKey: _serviceOtp.isEmpty && _liveBookingId != null
+        ? 'request-service-start-code'
+        : 'service-start-code-done',
+    actionLabel: _serviceOtp.isEmpty && _liveBookingId != null
+        ? 'Request Start Code'
+        : 'Back to Tracking',
     onAction: () {
-      if (_serviceOtpController.text.trim() != _serviceOtp) {
-        setState(
-          () => _serviceOtpError = 'Enter the ${_serviceOtp.length == 4 ? 4 : _serviceOtp.length}-digit code shown above.',
-        );
-        return;
+      final bookingId = _liveBookingId;
+      if (_serviceOtp.isEmpty && bookingId != null) {
+        _revealLiveServiceOtp(bookingId);
+      } else {
+        setState(() => _checkoutStep = 8);
       }
-      _serviceOtpError = null;
-      _startServiceTimer();
     },
     onBack: () => setState(() => _checkoutStep = 8),
+  );
+
+  Widget _extraServiceApprovalCard() => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: _bookingLine),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Extra service approval',
+          style: TextStyle(
+            color: _ink,
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 5),
+        const Text(
+          'Your worker has requested these additions. Approve only if you agree to the added price.',
+          style: TextStyle(color: _muted, fontSize: 12, height: 1.4),
+        ),
+        const SizedBox(height: 12),
+        for (final extra in _pendingExtraServices) ...[
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${extra['name'] ?? 'Extra service'}',
+                  style: const TextStyle(
+                    color: _ink,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                '₹${_formatServicePrice((int.tryParse('${extra['amountPaise']}') ?? 0) ~/ 100)}',
+                style: const TextStyle(
+                  color: _bookingBerry,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _respondingToExtraService
+                      ? null
+                      : () => _respondToExtraService(extra, approve: false),
+                  child: const Text('Decline'),
+                ),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _respondingToExtraService
+                      ? null
+                      : () => _respondToExtraService(extra, approve: true),
+                  style: FilledButton.styleFrom(backgroundColor: _bookingPink),
+                  child: const Text('Approve'),
+                ),
+              ),
+            ],
+          ),
+          if (!identical(extra, _pendingExtraServices.last))
+            const Divider(height: 22, color: _bookingLine),
+        ],
+      ],
+    ),
   );
 
   Widget _serviceInProgressScreen() => _lifecyclePage(
@@ -3245,16 +2897,24 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
           ],
         ),
         const SizedBox(height: 14),
+        if (_liveBookingId != null && _pendingExtraServices.isNotEmpty)
+          _extraServiceApprovalCard(),
+        if (_liveBookingId != null && _awaitingBookingPayment)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Service finished - Awaiting payment. Final bill INR ${((_finalBillPaise ?? 0) / 100).toStringAsFixed(2)}. Scan the Razorpay QR shown by your worker to pay the final bill, including approved extras. Completion updates after payment is verified.',
+              ),
+            ),
+          ),
+        if (_liveBookingId != null && _durationExtension != null) ...[
+          const SizedBox(height: 14),
+          _durationExtensionDecisionCard(),
+        ],
         _bookingPreviewDetailCard(),
       ],
     ),
-    actionKey: _serviceCompleted ? 'continue-to-review' : 'complete-service',
-    actionLabel: _serviceCompleted
-        ? 'View Completion'
-        : 'Mark Service Complete',
-    onAction: _serviceCompleted
-        ? () => setState(() => _checkoutStep = 11)
-        : _completeService,
     onBack: () => setState(() => _checkoutStep = 8),
   );
 
@@ -3323,7 +2983,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
         ),
         const SizedBox(height: 10),
         Text(
-          _liveWorkerName ?? 'Priya Shinde',
+          _liveWorkerName ?? 'Awaiting admin allocation',
           style: TextStyle(
             color: _ink,
             fontSize: 16,
@@ -3375,15 +3035,26 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     ),
     actionKey: 'submit-experience-review',
     actionLabel: 'Submit Review',
-    onAction: () {
+    onAction: () async {
       if (_reviewRating == 0) {
         _message('Select a star rating before submitting your review.');
         return;
       }
-      setState(() {
-        _reviewSubmitted = true;
-        _checkoutStep = 13;
-      });
+      final bookingId = _liveBookingId;
+      if (bookingId == null) return;
+      try {
+        await _operationsApi.submitReview(
+          bookingId,
+          _reviewRating,
+          _reviewController.text.trim(),
+        );
+        if (mounted) {
+          _syncCustomerHistory();
+          setState(() => _checkoutStep = 13);
+        }
+      } catch (error) {
+        if (mounted) _message('Unable to submit review: $error');
+      }
     },
     onBack: () => setState(() => _checkoutStep = 11),
   );
@@ -3421,7 +3092,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
           const Divider(color: _bookingLine),
           _paymentDetailRow(
             'Total',
-            '₹${_formatServicePrice(preview.total)}',
+            '₹${_formatServicePrice(_liveBookingTotal ?? preview.total)}',
             emphasize: true,
           ),
           const SizedBox(height: 8),
@@ -3444,10 +3115,12 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Service Bill · Preview'),
+        title: Text(
+          _liveBookingId == null ? 'Service Bill · Preview' : 'Service Bill',
+        ),
         content: Text(
-          'Total: ₹${_formatServicePrice(preview.total)}\n'
-          'Payment: ${preview.paymentMethod == CheckoutPaymentMethod.cashOnService ? 'Pending · Cash on Service' : 'Not charged · Development preview'}',
+          'Total: ₹${_formatServicePrice(_liveBookingTotal ?? preview.total)}\n'
+          'Payment: due after service completion. The worker will present the payment QR.',
         ),
         actions: [
           TextButton(
@@ -3459,412 +3132,51 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     );
   }
 
-  Widget _bookingHistoryScreen() {
-    final preview = _checkoutPreview ?? (_liveBookingId != null ? CheckoutPreview(
-      services: [
-        PreviewService(
-          name: _plan.isNotEmpty ? _plan.first.name : 'BLUE HAIR COLOUR',
-          quantity: 1,
-          unitPrice: 15600,
-        ),
-      ],
-      date: _bookingDate,
-      time: _bookingTime,
-      bookingPreference: _bookingPreference,
-      addressLabel: _selectedAddress.label,
-      addressDetails: _selectedAddress.details,
-      subtotal: 15600,
-      discount: 0,
-      convenienceFee: 0,
-      tip: _tipAmount,
-      total: 15600,
-      paymentMethod: _paymentMethod,
-    ) : null);
-
-    if (preview == null) {
-      return Center(
-        child: OutlinedButton(
-          onPressed: _startNewBooking,
-          child: const Text('Start a new booking'),
-        ),
-      );
-    }
-    final isCompleted = _serviceCompleted;
-    final upcomingCount = isCompleted ? 0 : 1;
-    final completedCount = isCompleted ? 1 : 0;
-    final filterShowsBooking =
-        _bookingHistoryFilter == 'All' ||
-        (_bookingHistoryFilter == 'Upcoming' && !isCompleted) ||
-        (_bookingHistoryFilter == 'Completed' && isCompleted);
-    final filters = <(String, int)>[
-      ('All', 1),
-      ('Upcoming', upcomingCount),
-      ('Completed', completedCount),
-    ];
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.asset(
-          AppAssets.onboardingBackground,
-          fit: BoxFit.cover,
-          excludeFromSemantics: true,
-        ),
-        ColoredBox(color: Colors.white.withValues(alpha: .38)),
-        Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 14, 18, 5),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'My Bookings',
-                          style: TextStyle(
-                            color: Color(0xFF260711),
-                            fontFamily: 'serif',
-                            fontSize: 30,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -.7,
-                            height: 1.15,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'View and manage your beauty service bookings',
-                          style: TextStyle(color: _muted, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Material(
-                    color: Colors.white.withValues(alpha: .82),
-                    shape: const CircleBorder(),
-                    child: IconButton(
-                      tooltip: 'Back to home',
-                      onPressed: () => setState(() => _tab = 0),
-                      color: _bookingPink,
-                      icon: const Icon(Icons.home_outlined, size: 25),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 9, 8),
-              child: Row(
-                children: [
-                  for (final (filter, count) in filters)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 7),
-                        child: _bookingHistoryFilterButton(filter, count),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                key: const ValueKey('booking-history-list'),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
-                children: [
-                  if (filterShowsBooking)
-                    _bookingHistoryCard(preview)
-                  else
-                    _InfoCard(
-                      _bookingHistoryFilter == 'Upcoming'
-                          ? Icons.event_available_outlined
-                          : Icons.check_circle_outline,
-                      'No ${_bookingHistoryFilter.toLowerCase()} bookings',
-                      _bookingHistoryFilter == 'Upcoming'
-                          ? 'Your completed booking is available in Completed.'
-                          : 'Your future beauty service bookings will appear here.',
-                    ),
-                  if (filterShowsBooking && _bookingDetailsExpanded) ...[
-                    const SizedBox(height: 12),
-                    _bookingHistoryDetailsCard(preview),
-                  ],
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
-              child: SizedBox(
-                width: double.infinity,
-                height: 58,
-                child: OutlinedButton.icon(
-                  key: const ValueKey('booking-again'),
-                  onPressed: _startNewBooking,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _bookingPink,
-                    side: const BorderSide(color: _bookingPink, width: 1.8),
-                    shape: const StadiumBorder(),
-                    textStyle: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  icon: const Icon(Icons.autorenew_rounded, size: 24),
-                  label: const Text('Book Again'),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _bookingHistoryFilterButton(String filter, int count) {
-    final selected = _bookingHistoryFilter == filter;
-    return SizedBox(
-      height: 48,
-      child: Material(
-        color: selected ? _bookingPink : Colors.white.withValues(alpha: .82),
-        shape: const StadiumBorder(),
-        child: InkWell(
-          key: ValueKey('booking-history-filter-$filter'),
-          onTap: () => setState(() => _bookingHistoryFilter = filter),
-          customBorder: const StadiumBorder(),
-          child: Center(
-            child: Text(
-              '$filter ($count)',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: selected ? Colors.white : _muted,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _bookingHistoryCard(CheckoutPreview preview) => Container(
-    padding: const EdgeInsets.fromLTRB(14, 14, 14, 7),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: .95),
-      borderRadius: BorderRadius.circular(22),
-      border: Border.all(color: const Color(0xFFF9DDE6)),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x1AEE7A9D),
-          blurRadius: 18,
-          offset: Offset(0, 8),
-        ),
-      ],
-    ),
-    child: Column(
-      children: [
-        Row(
-          children: [
-            ClipOval(
-              child: Image.asset(
-                preview.services.isEmpty ||
-                        _imageForService(preview.services.first.name).isEmpty
-                    ? AppAssets.professional
-                    : _imageForService(preview.services.first.name),
-                width: 82,
-                height: 82,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Image.asset(
-                  AppAssets.professional,
-                  width: 82,
-                  height: 82,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    preview.services.map((service) => service.name).join(' + '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: _ink,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_month_outlined,
-                        color: _bookingPink,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          '${_formatShortDate(preview.date)} · ${preview.time}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: _muted, fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '₹${_formatServicePrice(preview.total)}',
-                    style: const TextStyle(
-                      color: _ink,
-                      fontSize: 21,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE6F8ED),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _serviceCompleted
-                        ? Icons.check_circle
-                        : Icons.schedule_rounded,
-                    color: const Color(0xFF16894D),
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _serviceCompleted ? 'Completed' : 'Upcoming',
-                    style: const TextStyle(
-                      color: Color(0xFF16894D),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        const Divider(height: 1, color: _bookingLine),
-        InkWell(
-          key: const ValueKey('booking-view-details'),
-          onTap: () => setState(
-            () => _bookingDetailsExpanded = !_bookingDetailsExpanded,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          child: SizedBox(
-            height: 68,
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFF0F5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.description_outlined,
-                    color: _bookingPink,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  _bookingDetailsExpanded ? 'Hide Details' : 'View Details',
-                  style: const TextStyle(
-                    color: _bookingPink,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  _bookingDetailsExpanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.arrow_forward_ios_rounded,
-                  color: _bookingPink,
-                  size: 20,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _bookingHistoryDetailsCard(CheckoutPreview preview) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: .95),
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: _bookingLine),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _bookingHistoryScreen() => RefreshIndicator(
+    onRefresh: () async {
+      final records = await _operationsApi.getBookings();
+      if (mounted) setState(() => _bookingsData = records);
+    },
+    child: ListView(
+      key: const ValueKey('booking-history-list'),
+      padding: const EdgeInsets.all(16),
       children: [
         const Text(
-          'Booking details',
-          style: TextStyle(
-            color: _ink,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
+          'My Bookings',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+        ),
+        if (_bookingsData.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Text('No bookings yet.'),
           ),
-        ),
-        const SizedBox(height: 10),
-        _paymentDetailRow('Professional', 'Priya Shinde · Verified'),
-        const SizedBox(height: 7),
-        _paymentDetailRow(
-          'Review',
-          _reviewSubmitted
-              ? '$_reviewRating stars · Submitted'
-              : 'Not submitted',
-        ),
-        const SizedBox(height: 7),
-        _paymentDetailRow(
-          'Payment status',
-          preview.paymentMethod == CheckoutPaymentMethod.cashOnService
-              ? 'Pending · Cash on Service'
-              : 'Not charged · Preview',
-        ),
-        const SizedBox(height: 7),
-        _paymentDetailRow(
-          'Total',
-          '₹${_formatServicePrice(preview.total)}',
-          emphasize: true,
-        ),
-        const SizedBox(height: 10),
-        Text(
-          '${preview.addressLabel} · ${preview.addressDetails}',
-          style: const TextStyle(color: _muted, fontSize: 11),
-        ),
+        for (final booking in _bookingsData)
+          Card(
+            child: ListTile(
+              title: Text(
+                (booking['items'] as List? ?? [])
+                    .map((item) => '${item['name'] ?? 'Service'}')
+                    .join(', '),
+              ),
+              subtitle: Text(
+                '${booking['status'] ?? ''}\n${DateTime.tryParse('${booking['startsAt']}')?.toLocal() ?? 'Schedule unavailable'}',
+              ),
+              trailing: Text(
+                CatalogService.formatPaise(
+                  BigInt.tryParse('${booking['totalPaise']}') ?? BigInt.zero,
+                ),
+              ),
+              onTap: '${booking['_id'] ?? booking['id']}' == _liveBookingId
+                  ? () => setState(() {
+                      _checkoutStep = 6;
+                      _tab = 1;
+                    })
+                  : null,
+            ),
+          ),
       ],
     ),
   );
-
-  String _imageForService(String name) {
-    for (final service in _serviceDetails) {
-      if (service.name == name) return service.image;
-    }
-    return AppAssets.professional;
-  }
 
   Widget _professionalSearchCard() => Container(
     width: double.infinity,
@@ -3936,123 +3248,11 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     ],
   );
 
-  Widget _assignedProfessionalCard() => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: _bookingLine),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x0D8D214D),
-          blurRadius: 14,
-          offset: Offset(0, 5),
-        ),
-      ],
-    ),
-    child: Column(
-      children: [
-        Row(
-          children: [
-            CircleAvatar(
-              radius: 38,
-              backgroundColor: _bookingBlush,
-              backgroundImage: const AssetImage(AppAssets.professional),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _liveWorkerName ?? 'Priya Shinde',
-                    style: TextStyle(
-                      color: _ink,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.star_rounded,
-                        color: Color(0xFFFFB52E),
-                        size: 16,
-                      ),
-                      SizedBox(width: 3),
-                      Expanded(
-                        child: Text(
-                          '4.8 (120 reviews)',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: _muted,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 6),
-                  _AssignmentBadge(
-                    icon: Icons.verified_rounded,
-                    label: 'Verified Professional',
-                  ),
-                  SizedBox(height: 4),
-                  _AssignmentBadge(
-                    icon: Icons.workspace_premium_outlined,
-                    label: '5+ Years Experience',
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: _professionalContactButton(
-                key: const ValueKey('professional-call'),
-                icon: Icons.call_rounded,
-                label: 'Call',
-                onPressed: () => _showContactPreviewNotice('Calling'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _professionalContactButton(
-                key: const ValueKey('professional-chat'),
-                icon: Icons.chat_bubble_rounded,
-                label: 'Message',
-                onPressed: () => _showContactPreviewNotice('Messaging'),
-              ),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-
-  Widget _professionalContactButton({
-    required Key key,
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-  }) => OutlinedButton.icon(
-    key: key,
-    onPressed: onPressed,
-    icon: Icon(icon, size: 16),
-    label: Text(label),
-    style: OutlinedButton.styleFrom(
-      foregroundColor: _bookingPink,
-      backgroundColor: _bookingBlush,
-      side: BorderSide.none,
-      minimumSize: const Size(0, 42),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+  Widget _assignedProfessionalCard() => Card(
+    child: ListTile(
+      leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+      title: Text(_liveWorkerName ?? 'Awaiting admin allocation'),
+      subtitle: Text(_liveBookingStatus ?? 'Booking status unavailable'),
     ),
   );
 
@@ -4832,11 +4032,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
               _bookingTotalLine('Discount', -_cartDiscount),
               const SizedBox(height: 7),
             ],
-            _bookingTotalLine('Convenience Fee', 50),
-            if (_tipAmount > 0) ...[
-              const SizedBox(height: 7),
-              _bookingTotalLine('Tip', _tipAmount),
-            ],
+            _bookingTotalLine('Convenience Fee', 0),
             const Divider(height: 20, color: _bookingLine),
             Row(
               children: [
@@ -4863,6 +4059,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
           ],
         ),
       ),
+      const SizedBox(height: 14),
     ],
   );
 
@@ -4922,26 +4119,55 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
   );
 
   Widget _summaryContinueAction() => _checkoutAction(
-    key: const ValueKey('continue-to-payment-method'),
-    label: 'Proceed to Payment',
-    onPressed: _openPaymentMethod,
+    key: const ValueKey('continue-to-booking-confirmation'),
+    label: 'Review Booking',
+    onPressed: _openBookingConfirmation,
   );
 
   Widget _confirmBookingAction() => _checkoutAction(
     key: const ValueKey('confirm-booking'),
-    label: 'Confirm Booking',
+    label: _submittingPreview ? 'Creating Booking...' : 'Confirm Booking',
     onPressed: _submittingPreview || _checkoutPreview != null
         ? null
         : _confirmPreviewBooking,
   );
 
-
-  void _createBackendBooking(_SavedAddress address) async {
+  Future<bool> _createBackendBooking(_SavedAddress address) async {
     try {
-      final firstService = _plan.isNotEmpty ? _plan.first : null;
-      final sId = firstService?.backendId ?? '6ad8aa8bc3a0c4be6df1f774';
-      final saId = address.serviceAreaId.isNotEmpty ? address.serviceAreaId : 'be21549eeeaf01c30ca4ec6c';
-      final aId = address.id.length >= 24 ? address.id : '6ae05a3b9075320591000001';
+      if (_plan.any(
+        (service) =>
+            !_catalogServiceIds.containsKey(
+              service.name.trim().toLowerCase(),
+            ) &&
+            service.backendId == null,
+      )) {
+        await _syncBookingCatalog();
+      }
+      final items = <Map<String, dynamic>>[];
+      for (final service in _plan) {
+        final serviceId =
+            _catalogServiceIds[service.name.trim().toLowerCase()] ??
+            service.backendId;
+        if (serviceId == null ||
+            !RegExp(
+              r'^[a-f0-9]{24}$',
+              caseSensitive: false,
+            ).hasMatch(serviceId)) {
+          throw StateError(
+            '${service.name} is currently unavailable. Please choose another service or try again later.',
+          );
+        }
+        items.add({
+          'serviceId': serviceId,
+          'quantity': _cartQuantities[service.id] ?? 1,
+        });
+      }
+      final saId = address.serviceAreaId;
+      final aId = address.id;
+      final objectId = RegExp(r'^[a-f0-9]{24}$', caseSensitive: false);
+      if (!objectId.hasMatch(saId) || !objectId.hasMatch(aId)) {
+        throw StateError('Please select a saved, serviceable address.');
+      }
 
       int hour = 18;
       int minute = 0;
@@ -4969,57 +4195,161 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
         minute,
       );
       if (scheduled.isBefore(now.add(const Duration(minutes: 60)))) {
-        scheduled = DateTime(
-          now.year,
-          now.month,
-          now.day + 1,
-          hour,
-          minute,
-        );
+        scheduled = DateTime(now.year, now.month, now.day + 1, hour, minute);
+      }
+
+      final startsAt = scheduled.toUtc();
+      final fingerprint = jsonEncode({
+        'serviceAreaId': saId,
+        'items': items,
+        'addressId': aId,
+        'startsAt': startsAt.toIso8601String(),
+        'method': 'cash',
+      });
+      if (_pendingBookingFingerprint != fingerprint ||
+          _pendingBookingIdempotencyKey == null) {
+        _pendingBookingFingerprint = fingerprint;
+        _pendingBookingIdempotencyKey =
+            'booking_${DateTime.now().microsecondsSinceEpoch}';
       }
 
       final booking = await _operationsApi.createBooking(
         serviceAreaId: saId,
-        serviceId: sId,
+        items: items,
         addressId: aId,
-        startsAt: scheduled.toUtc(),
+        startsAt: startsAt,
         method: 'cash',
+        idempotencyKey: _pendingBookingIdempotencyKey,
       );
-      if (!mounted) return;
-      final bid = '${booking['_id'] ?? booking['id']}';
+      if (!mounted) return false;
+      final bid = '${booking['_id'] ?? booking['id'] ?? ''}';
+      if (bid.isEmpty) {
+        throw StateError('The server did not confirm the booking.');
+      }
       _confirmationTimer?.cancel();
       setState(() {
         _liveBookingId = bid;
+        _serverBooking = booking;
+        _pendingBookingIdempotencyKey = null;
+        _pendingBookingFingerprint = null;
+        _liveBookingTotal =
+            (int.tryParse('${booking['totalPaise']}') ?? 0) ~/ 100;
         _checkoutStep = 6;
       });
+      _liveBookingStatus = '${booking['status'] ?? 'confirmed'}';
+      _liveWorkerName = null;
       _startLiveBookingSync(bid);
+      return true;
     } catch (e) {
-      debugPrint('[CustomerApp] Live backend booking skipped or offline: $e');
+      debugPrint('[CustomerApp] Booking creation failed: $e');
+      if (mounted) {
+        if (e is CustomerMobileApiException) {
+          if (e.code == 'IDEMPOTENCY_CONFLICT') {
+            _pendingBookingIdempotencyKey = null;
+            _pendingBookingFingerprint = null;
+            _message('Your booking details changed. Please confirm again.');
+          } else if (e.code == 'SLOT_UNAVAILABLE') {
+            _message(
+              'This appointment time is no longer available. Choose another time and try again.',
+            );
+          } else {
+            _message(e.message);
+          }
+        } else {
+          _message(
+            e is StateError
+                ? e.message
+                : 'Booking could not be created. Please try again.',
+          );
+        }
+      }
+      return false;
     }
+  }
+
+  CheckoutPreview _previewFromBooking(Map<String, dynamic> booking) {
+    final scheduled = DateTime.parse('${booking['startsAt']}').toLocal();
+    final address = booking['addressSnapshot'] as Map? ?? {};
+    int rupees(dynamic paise) => (int.tryParse('$paise') ?? 0) ~/ 100;
+    return CheckoutPreview(
+      services: [
+        for (final item in (booking['items'] as List? ?? []))
+          PreviewService(
+            name: '${item['name'] ?? 'Service'}',
+            quantity: int.tryParse('${item['quantity']}') ?? 1,
+            unitPrice: rupees(item['pricePaise']),
+          ),
+      ],
+      date: scheduled,
+      time: TimeOfDay.fromDateTime(scheduled).format(context),
+      bookingPreference: _bookingPreference,
+      addressLabel: '${address['label'] ?? ''}',
+      addressDetails: [
+        address['line1'],
+        address['line2'],
+        address['city'],
+        address['postalCode'],
+      ].where((v) => v != null && '$v'.isNotEmpty).join(', '),
+      subtotal: rupees(booking['subtotalPaise']),
+      discount: rupees(booking['discountPaise']),
+      convenienceFee: 0,
+      tip: 0,
+      total: rupees(booking['totalPaise']),
+      paymentMethod: CheckoutPaymentMethod.cashOnService,
+    );
   }
 
   void _startLiveBookingSync(String bookingId) {
     _bookingSyncTimer?.cancel();
-    _bookingSyncTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
-      if (!mounted) return;
+    var syncing = false;
+    Future<void> sync() async {
+      if (!mounted || syncing) return;
+      syncing = true;
       try {
         final data = await _operationsApi.getBooking(bookingId);
         if (!mounted) return;
         final status = '${data['status'] ?? ''}';
         final assignmentStatus = '${data['assignmentStatus'] ?? ''}';
         final worker = data['worker'] is Map ? data['worker'] : null;
-        final workerName = worker != null ? '${worker['fullName'] ?? 'Rushi Mane'}' : 'Rushi Mane';
+        final workerName = worker != null
+            ? '${worker['fullName'] ?? 'Assigned beauty expert'}'
+            : 'Awaiting admin allocation';
+        final pendingExtras =
+            (data['pendingExtraServices'] as List? ?? const [])
+                .whereType<Map<String, dynamic>>()
+                .toList(growable: false);
+        final totalPaise = int.tryParse('${data['totalPaise']}');
 
         setState(() {
           _liveBookingStatus = status;
+          _serverBooking = data;
+          _checkoutPreview = _previewFromBooking(data);
+          _finalBillPaise = totalPaise;
+          _awaitingBookingPayment =
+              data['serviceFinishedAt'] != null &&
+              data['paymentStatus'] != 'paid';
           _liveWorkerName = workerName;
+          _pendingExtraServices = pendingExtras;
+          _durationExtension = data['durationExtension'] is Map
+              ? Map<String, dynamic>.from(data['durationExtension'] as Map)
+              : null;
+          _serviceEndsAt = data['serviceEndsAt'] == null
+              ? null
+              : DateTime.tryParse('${data['serviceEndsAt']}');
+          if (totalPaise != null) _liveBookingTotal = totalPaise ~/ 100;
         });
 
-        if ((assignmentStatus == 'accepted' || status == 'assigned' || status == 'travelling' || status == 'arrived' || status == 'in_progress') && _checkoutStep < 7) {
+        if ((assignmentStatus == 'accepted' ||
+                status == 'assigned' ||
+                status == 'travelling' ||
+                status == 'arrived' ||
+                status == 'in_progress') &&
+            _checkoutStep < 7) {
           _confirmationTimer?.cancel();
           setState(() => _checkoutStep = 7);
         }
-        if ((status == 'travelling' || status == 'arrived') && _checkoutStep < 8) {
+        if ((status == 'travelling' || status == 'arrived') &&
+            _checkoutStep < 8) {
           setState(() => _checkoutStep = 8);
         }
         if (status == 'arrived' && _checkoutStep < 9) {
@@ -5040,7 +4370,14 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
         }
       } catch (e) {
         debugPrint('[CustomerApp] booking sync error: $e');
+      } finally {
+        syncing = false;
       }
+    }
+
+    sync();
+    _bookingSyncTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (_appActive && (ModalRoute.of(context)?.isCurrent ?? true)) sync();
     });
   }
 
@@ -5054,7 +4391,213 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       }
     } catch (e) {
       debugPrint('[CustomerApp] revealServiceOtp error: $e');
+      if (mounted) _message('Could not load the service code. Please retry.');
     }
+  }
+
+  Future<void> _respondToExtraService(
+    Map<String, dynamic> extra, {
+    required bool approve,
+  }) async {
+    final bookingId = _liveBookingId;
+    final extraId = '${extra['_id'] ?? ''}';
+    if (_respondingToExtraService || bookingId == null || extraId.isEmpty) {
+      return;
+    }
+    if (approve) {
+      final amountPaise = int.tryParse('${extra['amountPaise']}') ?? 0;
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Approve extra service?'),
+          content: Text(
+            'Add ${extra['name'] ?? 'this service'} for '
+            '₹${_formatServicePrice(amountPaise ~/ 100)} to your booking?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Not now'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Approve'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || accepted != true) return;
+    }
+    setState(() => _respondingToExtraService = true);
+    try {
+      await _operationsApi.respondToExtraService(
+        bookingId: bookingId,
+        extraServiceId: extraId,
+        approve: approve,
+      );
+      if (!mounted) return;
+      setState(() {
+        _pendingExtraServices = _pendingExtraServices
+            .where((item) => '${item['_id']}' != extraId)
+            .toList(growable: false);
+      });
+      _message(
+        approve
+            ? 'Extra service approved. The updated amount will be used for payment.'
+            : 'Extra service declined.',
+      );
+    } catch (error) {
+      if (mounted) _message('Could not update the extra service: $error');
+    } finally {
+      if (mounted) setState(() => _respondingToExtraService = false);
+    }
+  }
+
+  Future<void> _respondToDurationExtension({required bool approve}) async {
+    final bookingId = _liveBookingId;
+    final extension = _durationExtension;
+    final extensionId = '${extension?['id'] ?? extension?['_id'] ?? ''}';
+    if (_respondingToDurationExtension ||
+        bookingId == null ||
+        extensionId.isEmpty) {
+      return;
+    }
+    if (approve) {
+      final minutes =
+          int.tryParse(
+            '${extension?['minutes'] ?? extension?['durationMinutes']}',
+          ) ??
+          15;
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Approve extra time?'),
+          content: Text(
+            'Approve $minutes additional minutes? The extension adds ₹0. '
+            'Your booking total remains ₹${_formatServicePrice(_liveBookingTotal ?? 0)}.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Not now'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Approve'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || accepted != true) return;
+    }
+    setState(() => _respondingToDurationExtension = true);
+    try {
+      final response = await _operationsApi.respondToDurationExtension(
+        bookingId: bookingId,
+        extensionId: extensionId,
+        approve: approve,
+      );
+      if (!mounted) return;
+      final updatedExtension = response['durationExtension'];
+      setState(() {
+        if (updatedExtension is Map) {
+          _durationExtension = Map<String, dynamic>.from(updatedExtension);
+        } else {
+          _durationExtension = {
+            ...?extension,
+            'status': approve ? 'approved' : 'declined',
+          };
+        }
+        if (response['serviceEndsAt'] != null) {
+          _serviceEndsAt = DateTime.tryParse('${response['serviceEndsAt']}');
+        }
+      });
+      _message(
+        approve
+            ? 'Extra time approved. Your booking total is unchanged.'
+            : 'Extra time declined. Your booking total is unchanged.',
+      );
+    } catch (error) {
+      if (mounted) _message('Could not update the extension decision: $error');
+    } finally {
+      if (mounted) setState(() => _respondingToDurationExtension = false);
+    }
+  }
+
+  Widget _durationExtensionDecisionCard() {
+    final extension = _durationExtension!;
+    final status = '${extension['status'] ?? 'pending'}';
+    final minutes =
+        int.tryParse(
+          '${extension['minutes'] ?? extension['durationMinutes']}',
+        ) ??
+        15;
+    final total = _liveBookingTotal ?? 0;
+    final serviceEnd = _serviceEndsAt;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EE),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFF2D6AE)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Service-time extension',
+            style: TextStyle(
+              color: _ink,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            status == 'pending'
+                ? 'The worker requested $minutes additional minutes. Decide within 5 minutes. The extension adds ₹0; your booking total remains ₹${_formatServicePrice(total)}.'
+                : status == 'approved'
+                ? '$minutes additional minutes approved. The extension adds ₹0; your booking total remains ₹${_formatServicePrice(total)}.'
+                : status == 'expired'
+                ? 'No response was received in time. The extension expired; no extra-time charge was added.'
+                : 'The extension was declined; no extra-time charge was added.',
+            style: const TextStyle(color: _muted, height: 1.4),
+          ),
+          if (serviceEnd != null) ...[
+            const SizedBox(height: 5),
+            Text(
+              'Current service end: ${TimeOfDay.fromDateTime(serviceEnd.toLocal()).format(context)}',
+              style: const TextStyle(color: _muted, fontSize: 12),
+            ),
+          ],
+          if (status == 'pending') ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _respondingToDurationExtension
+                        ? null
+                        : () => _respondToDurationExtension(approve: false),
+                    child: const Text('Decline'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _respondingToDurationExtension
+                        ? null
+                        : () => _respondToDurationExtension(approve: true),
+                    child: const Text('Approve'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Widget _checkoutAction({
@@ -5084,255 +4627,6 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     ),
   );
 
-  Future<void> _enterCustomTip() async {
-    var tipText = _tipAmount > 0 ? '$_tipAmount' : '';
-    final formKey = GlobalKey<FormState>();
-    final amount = await showDialog<int>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Enter tip amount'),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            key: const ValueKey('checkout-custom-tip-input'),
-            initialValue: tipText,
-            onChanged: (value) => tipText = value,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Tip amount',
-              prefixText: '₹ ',
-              helperText: 'Enter a whole rupee amount',
-            ),
-            validator: (value) {
-              final parsed = int.tryParse(value?.trim() ?? '');
-              return parsed == null || parsed < 0
-                  ? 'Enter a valid amount of 0 or more'
-                  : null;
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                Navigator.pop(dialogContext, int.parse(tipText.trim()));
-              }
-            },
-            child: const Text('Apply'),
-          ),
-        ],
-      ),
-    );
-    if (mounted && amount != null) {
-      setState(() => _tipAmount = amount);
-    }
-  }
-
-  Widget _paymentMethodStep() => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text(
-        'Choose Cash or UPI. Pay after service completion.',
-        style: TextStyle(color: _muted, fontSize: 13),
-      ),
-      const SizedBox(height: 14),
-      _paymentMethodCard(
-        method: CheckoutPaymentMethod.upi,
-        icon: Icons.account_balance_wallet_outlined,
-        title: 'UPI (Recommended)',
-        description: 'Google Pay  ·  PhonePe  ·  Paytm',
-      ),
-      const SizedBox(height: 8),
-      _paymentMethodCard(
-        method: CheckoutPaymentMethod.cashOnService,
-        icon: Icons.payments_outlined,
-        title: 'Cash on Service',
-        description: 'Pay after service completion',
-      ),
-      const SizedBox(height: 18),
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _bookingLine),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Add a tip (optional)',
-              style: TextStyle(
-                color: _ink,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'A little extra appreciation for your professional.',
-              style: TextStyle(color: _muted, fontSize: 12),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final amount in const [0, 20, 30, 50])
-                  ChoiceChip(
-                    key: ValueKey('checkout-tip-$amount'),
-                    label: Text(amount == 0 ? 'No tip' : '₹$amount'),
-                    selected: _tipAmount == amount,
-                    selectedColor: _bookingBlush,
-                    onSelected: (selected) =>
-                        setState(() => _tipAmount = selected ? amount : 0),
-                  ),
-                ChoiceChip(
-                  key: const ValueKey('checkout-tip-custom'),
-                  label: const Text('Custom amount'),
-                  selected: !const [0, 20, 30, 50].contains(_tipAmount),
-                  selectedColor: _bookingBlush,
-                  onSelected: (_) => _enterCustomTip(),
-                ),
-              ],
-            ),
-            if (_tipAmount > 0) ...[
-              const SizedBox(height: 10),
-              _bookingTotalLine('Tip', _tipAmount),
-            ],
-          ],
-        ),
-      ),
-      const SizedBox(height: 18),
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
-        decoration: BoxDecoration(
-          color: _bookingBlush,
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: _paymentDetailRow(
-          'Payable Amount',
-          '₹${_formatServicePrice(_checkoutTotal)}',
-          emphasize: true,
-        ),
-      ),
-      const SizedBox(height: 12),
-      Text(
-        _paymentMethod == CheckoutPaymentMethod.cashOnService
-            ? 'You will pay after the service is completed.'
-            : 'UPI is payable after service completion. Online payment is not connected in this development preview. No charge will be made.',
-        style: const TextStyle(color: _muted, fontSize: 11),
-      ),
-    ],
-  );
-
-  Widget _paymentMethodCard({
-    required CheckoutPaymentMethod method,
-    required IconData icon,
-    required String title,
-    required String description,
-  }) {
-    final selected = _paymentMethod == method;
-    return Semantics(
-      selected: selected,
-      child: Material(
-        color: selected ? _bookingBlush : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          key: ValueKey('payment-method-${method.name}'),
-          onTap: () => setState(() => _paymentMethod = method),
-          borderRadius: BorderRadius.circular(18),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 82),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: selected ? _bookingPink : _bookingLine,
-                width: selected ? 1.5 : 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  selected
-                      ? Icons.radio_button_checked_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  color: selected ? _bookingPink : _muted,
-                  size: 23,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(icon, color: _bookingBerry, size: 17),
-                          const SizedBox(width: 5),
-                          Flexible(
-                            child: Text(
-                              title,
-                              style: const TextStyle(
-                                color: _ink,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      if (method == CheckoutPaymentMethod.upi)
-                        Row(
-                          children: [
-                            _paymentBrandIcon(
-                              asset: AppAssets.googlePay,
-                              label: 'Google Pay',
-                            ),
-                            const SizedBox(width: 8),
-                            _paymentBrandIcon(
-                              asset: AppAssets.phonePe,
-                              label: 'PhonePe',
-                            ),
-                            const SizedBox(width: 8),
-                            _paymentBrandIcon(
-                              asset: AppAssets.paytm,
-                              label: 'Paytm',
-                            ),
-                          ],
-                        )
-                      else
-                        Text(
-                          description,
-                          style: const TextStyle(color: _muted, fontSize: 11),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _paymentBrandIcon({required String asset, required String label}) =>
-      Semantics(
-        image: true,
-        label: label,
-        child: Image.asset(asset, width: 32, height: 22, fit: BoxFit.contain),
-      );
-
   Widget _paymentDetailRow(
     String label,
     String value, {
@@ -5358,226 +4652,87 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
 
   Widget _bookingConfirmationStep() {
     final preview = _checkoutPreview;
-    if (preview == null) return const Text('No preview booking is available.');
-    final method = switch (preview.paymentMethod) {
-      CheckoutPaymentMethod.upi => 'UPI',
-      CheckoutPaymentMethod.card => 'Credit / Debit Card',
-      CheckoutPaymentMethod.cashOnService => 'Cash on Service',
-    };
+    if (preview == null) {
+      return Container(
+        key: const ValueKey('booking-confirmation-review'),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _bookingLine),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Review your booking',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: _ink,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Your booking is confirmed only after it is saved successfully.',
+              style: TextStyle(color: _muted, fontSize: 12),
+            ),
+            const Divider(height: 28, color: _bookingLine),
+            for (final service in _plan) ...[
+              _paymentDetailRow(
+                '${service.name} × ${_cartQuantities[service.id] ?? 1}',
+                '₹${_formatServicePrice(service.price * (_cartQuantities[service.id] ?? 1))}',
+              ),
+              const SizedBox(height: 10),
+            ],
+            const Divider(height: 24, color: _bookingLine),
+            _paymentDetailRow(
+              'Date',
+              '${_formatWeekday(_bookingDate)}, ${_formatShortDate(_bookingDate)}',
+            ),
+            const SizedBox(height: 10),
+            _paymentDetailRow('Time', _bookingTime),
+            const SizedBox(height: 10),
+            Text(
+              _selectedAddress.label,
+              style: const TextStyle(fontWeight: FontWeight.w700, color: _ink),
+            ),
+            Text(
+              _selectedAddress.details,
+              style: const TextStyle(color: _muted, fontSize: 12),
+            ),
+            const Divider(height: 24, color: _bookingLine),
+            _paymentDetailRow(
+              'Total',
+              '₹${_formatServicePrice(_checkoutTotal)}',
+              emphasize: true,
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Pay after service completion.',
+              style: TextStyle(color: _muted, fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
-          child: Column(
-            children: [
-              SizedBox(
-                height: 100,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    const Positioned(
-                      left: 30,
-                      top: 18,
-                      child: Icon(Icons.diamond, color: _bookingPink, size: 9),
-                    ),
-                    const Positioned(
-                      right: 35,
-                      top: 26,
-                      child: Icon(
-                        Icons.diamond,
-                        color: Color(0xFF23B66C),
-                        size: 9,
-                      ),
-                    ),
-                    const Positioned(
-                      left: 66,
-                      bottom: 17,
-                      child: Icon(
-                        Icons.circle,
-                        color: Color(0xFFFFB136),
-                        size: 7,
-                      ),
-                    ),
-                    const Positioned(
-                      right: 72,
-                      bottom: 18,
-                      child: Icon(
-                        Icons.circle,
-                        color: Color(0xFF83B9F6),
-                        size: 7,
-                      ),
-                    ),
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF33C778), Color(0xFF11864A)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0x3321B76D),
-                            blurRadius: 16,
-                            offset: Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: 44,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Text(
-                'Booking Confirmed!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF16894D),
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 7),
-              const Text(
-                'Sample booking · Development preview',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _bookingBerry,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 7),
-              Text(
-                preview.paymentMethod == CheckoutPaymentMethod.cashOnService
-                    ? 'Pay after service completion. We will assign a professional shortly.'
-                    : 'Online payment was not processed in this preview.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: _muted, fontSize: 12),
-              ),
-              const SizedBox(height: 5),
-              const Text(
-                'No real booking was created. No payment was collected.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: _muted, fontSize: 10),
-              ),
-            ],
-          ),
+        Text(
+          'Booking ${_liveBookingId ?? ''}',
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _bookingLine),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Booking details',
-                style: TextStyle(
-                  color: _ink,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _paymentDetailRow('Booking ID', 'Not issued in preview'),
-              const SizedBox(height: 8),
-              _paymentDetailRow('Booking status', 'Sample confirmed'),
-              const SizedBox(height: 8),
-              _paymentDetailRow('Payment status', 'Pending'),
-              const SizedBox(height: 8),
-              _paymentDetailRow('Payment method', method),
-              const Divider(height: 24, color: _bookingLine),
-              for (final service in preview.services) ...[
-                _paymentDetailRow(
-                  '${service.name} × ${service.quantity}',
-                  '₹${_formatServicePrice(service.lineTotal)}',
-                ),
-                const SizedBox(height: 7),
-              ],
-              const Divider(height: 20, color: _bookingLine),
-              Text(
-                '${_formatWeekday(preview.date)}, ${_formatShortDate(preview.date)} · ${preview.time}',
-                style: const TextStyle(
-                  color: _ink,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                preview.bookingPreference,
-                style: const TextStyle(color: _muted, fontSize: 11),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                preview.addressLabel,
-                style: const TextStyle(
-                  color: _ink,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                preview.addressDetails,
-                style: const TextStyle(color: _muted, fontSize: 11),
-              ),
-              if (preview.tip > 0) ...[
-                const SizedBox(height: 10),
-                _bookingTotalLine('Tip', preview.tip),
-              ],
-              const Divider(height: 24, color: _bookingLine),
-              _paymentDetailRow(
-                preview.paymentMethod == CheckoutPaymentMethod.cashOnService
-                    ? 'Due after service'
-                    : 'Grand Total',
-                '₹${_formatServicePrice(preview.total)}',
-                emphasize: true,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: FilledButton(
-            key: const ValueKey('booking-back-home'),
-            onPressed: () =>
-                _startNewBooking(showCategories: false, openHome: true),
-            style: FilledButton.styleFrom(
-              backgroundColor: _bookingPink,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(13),
-              ),
-            ),
-            child: const Text(
-              'Go to Home',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
+        Text(_liveBookingStatus ?? 'Status unavailable'),
+        _bookingPreviewDetailCard(),
       ],
     );
   }
 
   Widget _offers() {
     final discountedServices = _serviceDetails
-        .where((service) => service.discount != null)
-        .where((service) => _offerMatchesCategory(service))
+        .where((service) => service.originalPrice != null)
+        .where(_offerMatchesCategory)
         .where((service) {
           final query = _offerSearchQuery.trim().toLowerCase();
           return query.isEmpty ||
@@ -5586,35 +4741,15 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
               service.description.toLowerCase().contains(query);
         })
         .toList();
-    const featuredOfferOrder = [
-      'Gold Facial',
-      'Hair Spa',
-      'Bridal Makeup',
-      'Manicure & Pedicure',
-      'Full Body Waxing',
-    ];
-    discountedServices.sort((left, right) {
-      final leftIndex = featuredOfferOrder.indexOf(left.name);
-      final rightIndex = featuredOfferOrder.indexOf(right.name);
-      final leftPriority = leftIndex < 0
-          ? featuredOfferOrder.length
-          : leftIndex;
-      final rightPriority = rightIndex < 0
-          ? featuredOfferOrder.length
-          : rightIndex;
-      if (leftPriority != rightPriority) {
-        return leftPriority.compareTo(rightPriority);
-      }
-      return left.name.compareTo(right.name);
-    });
+    final visibleOffers = _offersData.where((offer) {
+      final query = _offerSearchQuery.trim().toLowerCase();
+      return query.isEmpty ||
+          '${offer['name'] ?? ''}'.toLowerCase().contains(query) ||
+          '${offer['description'] ?? ''}'.toLowerCase().contains(query) ||
+          '${offer['code'] ?? ''}'.toLowerCase().contains(query);
+    }).toList();
     final showPackages = _offersTab == 'Packages';
-    final packagesByCategory = <String, List<_Service>>{};
-    for (final service in _serviceDetails) {
-      packagesByCategory.putIfAbsent(service.category, () => []).add(service);
-    }
-    final packages = packagesByCategory.entries
-        .where((entry) => entry.value.length > 1)
-        .toList();
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -5624,195 +4759,198 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
           excludeFromSemantics: true,
         ),
         ColoredBox(color: Colors.white.withValues(alpha: 0.58)),
-        ListView(
-          key: const ValueKey('offers-packages-screen'),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  key: const ValueKey('offers-back'),
-                  tooltip: 'Back to Home',
-                  onPressed: () => setState(() => _tab = 0),
-                  style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFE8EF),
-                    foregroundColor: _bookingPink,
-                    fixedSize: const Size(42, 42),
-                    padding: EdgeInsets.zero,
+        RefreshIndicator(
+          onRefresh: _syncBookingCatalog,
+          child: ListView(
+            key: const ValueKey('offers-packages-screen'),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    key: const ValueKey('offers-back'),
+                    tooltip: 'Back to Home',
+                    onPressed: () => setState(() => _tab = 0),
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFE8EF),
+                      foregroundColor: _bookingPink,
+                      fixedSize: const Size(42, 42),
+                      padding: EdgeInsets.zero,
+                    ),
+                    icon: const Icon(Icons.arrow_back_rounded, size: 21),
                   ),
-                  icon: const Icon(Icons.arrow_back_rounded, size: 21),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _offerSearchVisible
-                      ? TextField(
-                          key: const ValueKey('offers-search'),
-                          autofocus: true,
-                          onChanged: (value) =>
-                              setState(() => _offerSearchQuery = value),
-                          decoration: InputDecoration(
-                            hintText: 'Search offers',
-                            isDense: true,
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 11,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _offerSearchVisible
+                        ? TextField(
+                            key: const ValueKey('offers-search'),
+                            autofocus: true,
+                            onChanged: (value) =>
+                                setState(() => _offerSearchQuery = value),
+                            decoration: InputDecoration(
+                              hintText: 'Search offers',
+                              isDense: true,
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 11,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: const BorderSide(
+                                  color: _bookingLine,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: const BorderSide(
+                                  color: _bookingLine,
+                                ),
+                              ),
                             ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              borderSide: const BorderSide(color: _bookingLine),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              borderSide: const BorderSide(color: _bookingLine),
+                          )
+                        : const Text(
+                            'Offers & Packages',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: _ink,
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                        )
-                      : const Text(
-                          'Offers & Packages',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: _ink,
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  key: const ValueKey('toggle-offers-search'),
-                  tooltip: _offerSearchVisible
-                      ? 'Close search'
-                      : 'Search offers',
-                  onPressed: () => setState(() {
-                    _offerSearchVisible = !_offerSearchVisible;
-                    if (!_offerSearchVisible) _offerSearchQuery = '';
-                  }),
-                  style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFE8EF),
-                    foregroundColor: _bookingPink,
-                    fixedSize: const Size(42, 42),
-                    padding: EdgeInsets.zero,
                   ),
-                  icon: Icon(
-                    _offerSearchVisible
-                        ? Icons.close_rounded
-                        : Icons.search_rounded,
-                    size: 23,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(19),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  key: const ValueKey('offers-apply-beauty20'),
-                  onTap: () => _setOffer(!_offerApplied),
-                  child: Semantics(
-                    button: true,
-                    label: _offerApplied
-                        ? 'Remove BEAUTY20 coupon'
-                        : 'Apply BEAUTY20 coupon',
-                    child: Image.asset(
-                      AppAssets.offersBanner,
-                      width: double.infinity,
-                      height: 126,
-                      fit: BoxFit.cover,
+                  const SizedBox(width: 8),
+                  IconButton(
+                    key: const ValueKey('toggle-offers-search'),
+                    tooltip: _offerSearchVisible
+                        ? 'Close search'
+                        : 'Search offers',
+                    onPressed: () => setState(() {
+                      _offerSearchVisible = !_offerSearchVisible;
+                      if (!_offerSearchVisible) _offerSearchQuery = '';
+                    }),
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFE8EF),
+                      foregroundColor: _bookingPink,
+                      fixedSize: const Size(42, 42),
+                      padding: EdgeInsets.zero,
+                    ),
+                    icon: Icon(
+                      _offerSearchVisible
+                          ? Icons.close_rounded
+                          : Icons.search_rounded,
+                      size: 23,
                     ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(19),
+                child: Image.asset(
+                  AppAssets.offersBanner,
+                  width: double.infinity,
+                  height: 126,
+                  fit: BoxFit.cover,
                 ),
               ),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFE8EF),
-                borderRadius: BorderRadius.circular(28),
-              ),
-              child: Row(
-                children: [
-                  for (final tab in const ['Offers', 'Packages'])
-                    Expanded(
-                      child: InkWell(
-                        key: ValueKey('offers-tab-$tab'),
-                        onTap: () => setState(() => _offersTab = tab),
-                        borderRadius: BorderRadius.circular(24),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: _offersTab == tab
-                                ? _bookingPink
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: Center(
-                            child: Text(
-                              tab,
-                              style: TextStyle(
-                                color: _offersTab == tab ? Colors.white : _ink,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFE8EF),
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: Row(
+                  children: [
+                    for (final tab in const ['Offers', 'Packages'])
+                      Expanded(
+                        child: InkWell(
+                          key: ValueKey('offers-tab-$tab'),
+                          onTap: () => setState(() => _offersTab = tab),
+                          borderRadius: BorderRadius.circular(24),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: _offersTab == tab
+                                  ? _bookingPink
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: Center(
+                              child: Text(
+                                tab,
+                                style: TextStyle(
+                                  color: _offersTab == tab
+                                      ? Colors.white
+                                      : _ink,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-            ),
-            if (!showPackages) ...[
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 84,
-                child: ListView(
-                  key: const ValueKey('offers-category-list'),
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _offerCategoryChip('All', Icons.auto_awesome_rounded),
-                    _offerCategoryChip('Facial', Icons.face_retouching_natural),
-                    _offerCategoryChip('Hair Care', Icons.face_3_outlined),
-                    _offerCategoryChip('Makeup', Icons.brush_outlined),
-                    _offerCategoryChip('Waxing', Icons.auto_fix_high_outlined),
-                    _offerCategoryChip('Manicure', Icons.back_hand_outlined),
-                    _offerCategoryChip('Spa', Icons.spa_outlined),
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
-              for (final service in discountedServices)
-                _offerServiceTile(service),
-              if (discountedServices.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 32),
-                  child: Text(
-                    _offerSearchQuery.isEmpty
-                        ? 'No offers in this category yet.'
-                        : 'No offers match “$_offerSearchQuery”.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: _muted, fontSize: 13),
+              if (!showPackages) ...[
+                const SizedBox(height: 14),
+                SizedBox(
+                  height: 84,
+                  child: ListView(
+                    key: const ValueKey('offers-category-list'),
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      _offerCategoryChip('All', Icons.auto_awesome_rounded),
+                      _offerCategoryChip(
+                        'Facial',
+                        Icons.face_retouching_natural,
+                      ),
+                      _offerCategoryChip('Hair Care', Icons.face_3_outlined),
+                      _offerCategoryChip('Makeup', Icons.brush_outlined),
+                      _offerCategoryChip(
+                        'Waxing',
+                        Icons.auto_fix_high_outlined,
+                      ),
+                      _offerCategoryChip('Manicure', Icons.back_hand_outlined),
+                      _offerCategoryChip('Spa', Icons.spa_outlined),
+                    ],
                   ),
                 ),
-            ] else ...[
-              const SizedBox(height: 14),
-              for (final package in packages)
-                _offerPackageTile(package.key, package.value),
+                const SizedBox(height: 8),
+                for (final offer in visibleOffers) _offerPromotionTile(offer),
+                for (final service in discountedServices)
+                  _offerServiceTile(service),
+                if (visibleOffers.isEmpty && discountedServices.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    child: Text(
+                      _offerSearchQuery.isEmpty
+                          ? 'No offers in this category yet.'
+                          : 'No offers match “$_offerSearchQuery”.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: _muted, fontSize: 13),
+                    ),
+                  ),
+              ] else ...[
+                const SizedBox(height: 14),
+                if (_packagesData.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 32),
+                    child: Text(
+                      'No packages are available right now.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: _muted, fontSize: 13),
+                    ),
+                  ),
+                for (final package in _packagesData) _offerPackageTile(package),
+              ],
             ],
-            const SizedBox(height: 8),
-            const Center(
-              child: Text(
-                'Preview deals · Prices and availability are examples',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: _muted, fontSize: 10),
-              ),
-            ),
-          ],
+          ),
         ),
       ],
     );
@@ -5820,17 +4958,16 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
 
   bool _offerMatchesCategory(_Service service) {
     if (_offersCategory == 'All') return true;
-    final matchingCategories = switch (_offersCategory) {
-      'Hair Care' => const {
-        'Hair Spa',
-        'Hair Color',
-        'Hair Cut',
-        'Hair Mehendi',
-      },
-      'Spa' => const {'Body Polish', 'Clean Up'},
-      _ => {_offersCategory},
+    final category = service.category.toLowerCase();
+    return switch (_offersCategory) {
+      'Hair Care' => category.contains('hair') || category.contains('mehendi'),
+      'Spa' =>
+        category.contains('spa') ||
+            category.contains('polish') ||
+            category.contains('clean'),
+      'Manicure' => category.contains('manicure') || category.contains('nail'),
+      _ => category.contains(_offersCategory.toLowerCase()),
     };
-    return matchingCategories.contains(service.category);
   }
 
   Widget _offerCategoryChip(String label, IconData icon) {
@@ -5870,6 +5007,146 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _offerPromotionTile(Map<String, dynamic> offer) => Container(
+    key: ValueKey('offer-promotion-${offer['code'] ?? offer['name']}'),
+    margin: const EdgeInsets.only(bottom: 9),
+    padding: const EdgeInsets.all(8),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.96),
+      border: Border.all(color: const Color(0xFFFFE2EA)),
+      borderRadius: BorderRadius.circular(18),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x0AF31B78),
+          blurRadius: 12,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: SizedBox(
+            width: 108,
+            height: 126,
+            child: _catalogCover(
+              offer['thumbnail'] ??
+                  ((offer['images'] as List?)?.firstOrNull is Map
+                      ? ((offer['images'] as List).first as Map)['url']
+                      : null),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${offer['name'] ?? ''}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _ink,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '${offer['description'] ?? ''}',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _muted,
+                  fontSize: 10,
+                  height: 1.25,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${_offerDiscountLabel(offer)} · Code ${offer['code'] ?? ''}',
+                style: const TextStyle(
+                  color: _bookingBerry,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (offer['minimumOrderPaise'] != null)
+                Text(
+                  'Minimum spend ${CatalogService.formatPaise(BigInt.parse('${offer['minimumOrderPaise']}'))}',
+                  style: const TextStyle(color: _muted, fontSize: 9),
+                ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  key: ValueKey(
+                    'offer-promotion-details-${offer['code'] ?? offer['name']}',
+                  ),
+                  onPressed: () => _showOfferDetails(offer),
+                  style: TextButton.styleFrom(
+                    foregroundColor: _bookingPink,
+                    minimumSize: const Size(0, 30),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'View Details',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+
+  void _showOfferDetails(Map<String, dynamic> offer) {
+    final minimumOrderPaise = num.tryParse(
+      '${offer['minimumOrderPaise'] ?? ''}',
+    );
+    final endsAt = DateTime.tryParse('${offer['endsAt'] ?? ''}');
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${offer['name'] ?? 'Offer details'}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${offer['description'] ?? ''}'),
+              const SizedBox(height: 12),
+              Text('Discount: ${_offerDiscountLabel(offer)}'),
+              Text('Code: ${offer['code'] ?? 'Not provided'}'),
+              if (minimumOrderPaise != null)
+                Text(
+                  'Minimum spend: ${CatalogService.formatPaise(BigInt.from(minimumOrderPaise.toInt()))}',
+                ),
+              if (endsAt != null)
+                Text(
+                  'Valid until: ${MaterialLocalizations.of(context).formatMediumDate(endsAt.toLocal())}',
+                ),
+              if ('${offer['terms'] ?? ''}'.trim().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('${offer['terms']}'),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }
@@ -6052,14 +5329,32 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     ],
   );
 
-  Widget _offerPackageTile(String category, List<_Service> services) {
-    final packageServices = services.take(3).toList();
-    final subtotal = packageServices.fold<int>(
-      0,
-      (total, service) => total + service.price,
-    );
+  Widget _offerPackageTile(Map<String, dynamic> package) {
+    final components = package['components'] is List
+        ? (package['components'] as List)
+        : package['items'] is List
+        ? (package['items'] as List)
+        : const [];
+    final serviceNames = [
+      for (final component in components)
+        if (component is Map)
+          for (final service in _serviceDetails)
+            if (service.backendId != null &&
+                '${component['serviceId'] ?? component['service'] ?? ''}' ==
+                    service.backendId)
+              service.name,
+    ];
+    final image =
+        package['thumbnail'] ??
+        ((package['images'] as List?)?.firstOrNull is Map
+            ? ((package['images'] as List).first as Map)['url']
+            : null);
+    final price = num.tryParse('${package['pricePaise'] ?? ''}') ?? 0;
+    final duration = package['durationMinutes'];
     return Container(
-      key: ValueKey('offer-package-${category.toLowerCase()}'),
+      key: ValueKey(
+        'offer-package-${package['_id'] ?? package['id'] ?? package['name']}',
+      ),
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
@@ -6074,11 +5369,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: _ServicePhoto(
-                  service: packageServices.first,
-                  width: 62,
-                  height: 62,
-                ),
+                child: _catalogThumbnail(image),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -6086,7 +5377,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$category Beauty Package',
+                      '${package['name'] ?? ''}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -6097,16 +5388,17 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      packageServices
-                          .map((service) => service.name)
-                          .join(' · '),
+                      serviceNames.isEmpty
+                          ? '${package['description'] ?? ''}'
+                          : '${serviceNames.join(' · ')} · ${package['description'] ?? ''}',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: _muted, fontSize: 10),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '₹${_formatServicePrice(subtotal)} · BEAUTY20 for 20% off',
+                      '${CatalogService.formatPaise(BigInt.from(price.toInt()))}'
+                      '${duration == null ? '' : ' · $duration mins'}',
                       style: const TextStyle(
                         color: _bookingBerry,
                         fontSize: 10,
@@ -6123,8 +5415,10 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
             width: double.infinity,
             height: 38,
             child: OutlinedButton(
-              key: ValueKey('add-package-${category.toLowerCase()}'),
-              onPressed: () => _addOfferPackage(packageServices),
+              key: ValueKey(
+                'add-package-${'${package['name'] ?? ''}'.toLowerCase()}',
+              ),
+              onPressed: () => _addCatalogPackage(package),
               style: OutlinedButton.styleFrom(
                 foregroundColor: _bookingPink,
                 side: const BorderSide(color: _bookingPink),
@@ -6143,160 +5437,234 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     );
   }
 
-  void _addOfferPackage(List<_Service> services) {
-    if (_checkoutPreview != null) _startNewBooking(showCategories: false);
-    final newServices = services
-        .where((service) => !_plan.any((item) => item.id == service.id))
-        .toList();
-    if (newServices.isEmpty) {
-      _message('All services in this package are already in your cart.');
+  void _addCatalogPackage(Map<String, dynamic> package) {
+    final components = package['components'] is List
+        ? (package['components'] as List)
+        : package['items'] is List
+        ? (package['items'] as List)
+        : const [];
+    final services = <_Service>[];
+    for (final component in components) {
+      if (component is! Map) continue;
+      final id = '${component['serviceId'] ?? component['service'] ?? ''}';
+      for (final service in _serviceDetails) {
+        if (service.backendId == id && !services.contains(service)) {
+          services.add(service);
+        }
+      }
+    }
+    if (services.isEmpty) {
+      _message('Package services are unavailable right now.');
       return;
     }
+    if (_checkoutPreview != null || _liveBookingId != null) {
+      _startNewBooking(showCategories: false);
+    }
     setState(() {
-      for (final service in newServices) {
+      for (final service in services) {
+        if (_plan.any((item) => item.id == service.id)) continue;
         _plan.add(service);
         _cartQuantities[service.id] = 1;
       }
-      _offerApplied = true;
       _tab = 1;
     });
-    _message('Package added to your cart. BEAUTY20 has been applied.');
+    _message('${package['name']} services added to your cart.');
   }
 
-  Widget _profile() => ListView(
-    key: const ValueKey('profile-settings-screen'),
-    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-    children: [
-      const Text(
-        'My Profile',
-        style: TextStyle(
-          color: _ink,
-          fontSize: 21,
-          fontWeight: FontWeight.w800,
+  String _offerDiscountLabel(Map<String, dynamic> offer) {
+    final value = int.parse('${offer['value']}');
+    return offer['discountType'] == 'percentage'
+        ? '$value% off'
+        : '${CatalogService.formatPaise(BigInt.from(value))} off';
+  }
+
+  Widget _catalogThumbnail(dynamic value) {
+    final url = value is String ? Uri.tryParse(value) : null;
+    if (url == null || !url.hasAuthority) {
+      return const SizedBox(
+        width: 52,
+        height: 52,
+        child: Icon(Icons.spa_outlined),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.network(
+        value as String,
+        width: 52,
+        height: 52,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => const SizedBox(
+          width: 52,
+          height: 52,
+          child: Icon(Icons.spa_outlined),
         ),
       ),
-      const SizedBox(height: 12),
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _bookingLine),
+    );
+  }
+
+  Widget _catalogCover(dynamic value) {
+    final uri = value is String ? Uri.tryParse(value) : null;
+    if (uri == null || !uri.hasAuthority) {
+      return const ColoredBox(
+        color: Color(0xFFFFE9ED),
+        child: Center(child: Icon(Icons.local_offer_outlined, color: _berry)),
+      );
+    }
+    return Image.network(
+      value as String,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => const ColoredBox(
+        color: Color(0xFFFFE9ED),
+        child: Center(child: Icon(Icons.local_offer_outlined, color: _berry)),
+      ),
+    );
+  }
+
+  Widget _profile() => RefreshIndicator(
+    onRefresh: _loadAccount,
+    child: ListView(
+      key: const ValueKey('profile-settings-screen'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        const Text(
+          'My Profile',
+          style: TextStyle(
+            color: _ink,
+            fontSize: 21,
+            fontWeight: FontWeight.w800,
+          ),
         ),
-        child: Row(
-          children: [
-            const CircleAvatar(
-              radius: 30,
-              backgroundImage: AssetImage(AppAssets.onboardingPortrait),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _customerName,
-                    style: const TextStyle(
-                      color: _ink,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: _bookingLine),
+          ),
+          child: Row(
+            children: [
+              _customerAvatar(),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _customerName.isEmpty
+                          ? 'Customer account'
+                          : _customerName,
+                      style: const TextStyle(
+                        color: _ink,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  const Text(
-                    'Customer account · Preview',
-                    style: TextStyle(color: _muted, fontSize: 10),
-                  ),
-                ],
+                    const SizedBox(height: 3),
+                    Text(
+                      '${_account['mobileNumber'] ?? _account['email'] ?? 'Customer account'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: _muted, fontSize: 10),
+                    ),
+                  ],
+                ),
               ),
+              IconButton(
+                key: const ValueKey('edit-customer-profile'),
+                tooltip: 'Edit profile',
+                onPressed: _editCustomerProfile,
+                icon: const Icon(Icons.edit_outlined, color: _bookingPink),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _profileMenuGroup([
+          _ProfileMenuEntry(
+            Icons.location_on_outlined,
+            'My Addresses',
+            _location,
+            _showSavedAddresses,
+          ),
+          _ProfileMenuEntry(
+            Icons.favorite_border_rounded,
+            'Saved Professionals',
+            _favoriteProfessional ? '1 saved' : 'None yet',
+            _showSavedProfessionals,
+          ),
+          _ProfileMenuEntry(
+            Icons.shopping_bag_outlined,
+            'My Bookings',
+            _bookingsData.isEmpty
+                ? 'View your booking history'
+                : '${_bookingsData.length} bookings',
+            _openBookingHistory,
+          ),
+          _ProfileMenuEntry(
+            Icons.local_offer_outlined,
+            'Offers & Wallet',
+            'View current offers and packages',
+            () => setState(() => _tab = 2),
+          ),
+          _ProfileMenuEntry(
+            Icons.card_giftcard_outlined,
+            'Refer & Earn',
+            'Invite friends to Hi Beauty',
+            () => _showProfileInfo(
+              'Refer & Earn',
+              'Referral rewards are not connected in this preview.',
             ),
-            IconButton(
-              key: const ValueKey('edit-customer-profile'),
-              tooltip: 'Edit profile',
-              onPressed: _editCustomerProfile,
-              icon: const Icon(Icons.edit_outlined, color: _bookingPink),
-            ),
-          ],
-        ),
-      ),
-      const SizedBox(height: 12),
-      _profileMenuGroup([
-        _ProfileMenuEntry(
-          Icons.location_on_outlined,
-          'My Addresses',
-          _location,
-          _showSavedAddresses,
-        ),
-        _ProfileMenuEntry(
-          Icons.favorite_border_rounded,
-          'Saved Professionals',
-          _favoriteProfessional ? '1 saved' : 'None yet',
-          _showSavedProfessionals,
-        ),
-        _ProfileMenuEntry(
-          Icons.shopping_bag_outlined,
-          'My Bookings',
-          _checkoutPreview == null ? 'View your booking history' : '1 booking',
-          _openBookingHistory,
-        ),
-        _ProfileMenuEntry(
-          Icons.local_offer_outlined,
-          'Offers & Wallet',
-          _offerApplied ? 'BEAUTY20 applied' : 'View offers and packages',
-          () => setState(() => _tab = 2),
-        ),
-        _ProfileMenuEntry(
-          Icons.card_giftcard_outlined,
-          'Refer & Earn',
-          'Invite friends to Hi Beauty',
-          _showReferralCode,
-        ),
-      ]),
-      const SizedBox(height: 10),
-      _profileMenuGroup([
-        _ProfileMenuEntry(
-          Icons.support_agent_outlined,
-          'Help & Support',
-          'Get help with your account',
-          () => _showProfileInfo(
+          ),
+        ]),
+        const SizedBox(height: 10),
+        _profileMenuGroup([
+          _ProfileMenuEntry(
+            Icons.support_agent_outlined,
             'Help & Support',
-            'Support contact is not connected in this development preview.',
+            'Get help with your account',
+            () => _showProfileInfo(
+              'Help & Support',
+              'Support contact is not connected in this development preview.',
+            ),
           ),
-        ),
-        _ProfileMenuEntry(
-          Icons.settings_outlined,
-          'Settings',
-          'Notifications and preferences',
-          _showProfileSettings,
-        ),
-        _ProfileMenuEntry(
-          Icons.privacy_tip_outlined,
-          'Terms & Privacy',
-          'Review app terms and privacy information',
-          () => _showProfileInfo(
+          _ProfileMenuEntry(
+            Icons.settings_outlined,
+            'Settings',
+            'Notifications and preferences',
+            _showProfileSettings,
+          ),
+          _ProfileMenuEntry(
+            Icons.privacy_tip_outlined,
             'Terms & Privacy',
-            'Terms and privacy documents are not connected in this preview.',
+            'Review app terms and privacy information',
+            () => _showProfileInfo(
+              'Terms & Privacy',
+              'Terms and privacy documents are not connected in this preview.',
+            ),
+          ),
+        ]),
+        const SizedBox(height: 10),
+        _profileMenuGroup([
+          _ProfileMenuEntry(
+            Icons.logout_rounded,
+            'Logout',
+            'Return to the development home',
+            () => setState(() => _tab = 0),
+            color: _bookingPink,
+          ),
+        ]),
+        const SizedBox(height: 12),
+        const Center(
+          child: Text(
+            'Hi Beauty · Development preview',
+            style: TextStyle(color: _muted, fontSize: 10),
           ),
         ),
-      ]),
-      const SizedBox(height: 10),
-      _profileMenuGroup([
-        _ProfileMenuEntry(
-          Icons.logout_rounded,
-          'Logout',
-          'Return to the development home',
-          () => setState(() => _tab = 0),
-          color: _bookingPink,
-        ),
-      ]),
-      const SizedBox(height: 12),
-      const Center(
-        child: Text(
-          'Hi Beauty · Development preview',
-          style: TextStyle(color: _muted, fontSize: 10),
-        ),
-      ),
-    ],
+      ],
+    ),
   );
 
   Widget _profileMenuGroup(List<_ProfileMenuEntry> entries) => Material(
@@ -6309,7 +5677,29 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     child: Column(
       children: [
         for (var index = 0; index < entries.length; index++) ...[
-          _profileMenuTile(entries[index]),
+          ListTile(
+            key: ValueKey('profile-menu-${entries[index].title}'),
+            dense: true,
+            leading: Icon(
+              entries[index].icon,
+              color: entries[index].color ?? _bookingBerry,
+              size: 21,
+            ),
+            title: Text(
+              entries[index].title,
+              style: TextStyle(
+                color: entries[index].color ?? _ink,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            subtitle: Text(
+              entries[index].subtitle,
+              style: const TextStyle(color: _muted, fontSize: 10),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded, size: 19),
+            onTap: entries[index].onTap,
+          ),
           if (index < entries.length - 1)
             const Divider(height: 1, indent: 48, endIndent: 12),
         ],
@@ -6317,24 +5707,95 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     ),
   );
 
-  Widget _profileMenuTile(_ProfileMenuEntry entry) => ListTile(
-    key: ValueKey('profile-menu-${entry.title}'),
-    dense: true,
-    leading: Icon(entry.icon, color: entry.color ?? _bookingBerry, size: 21),
-    title: Text(
-      entry.title,
-      style: TextStyle(
-        color: entry.color ?? _ink,
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
+  Widget _customerAvatar() {
+    final image =
+        [
+          _account['profileImageUrl'],
+          _account['avatarUrl'],
+          _account['profileImage'],
+        ].whereType<String>().firstWhere(
+          (value) => Uri.tryParse(value)?.hasAuthority == true,
+          orElse: () => '',
+        );
+    return CircleAvatar(
+      radius: 30,
+      backgroundColor: const Color(0xFFFFE8EF),
+      backgroundImage: image.isEmpty ? null : NetworkImage(image),
+      child: image.isEmpty
+          ? const Icon(Icons.person_outline_rounded, color: _bookingBerry)
+          : null,
+    );
+  }
+
+  void _showSavedProfessionals() => _showProfileInfo(
+    'Saved Professionals',
+    _favoriteProfessional
+        ? 'Your saved professional is available from the Professionals screen.'
+        : 'You have not saved any professionals yet.',
+  );
+
+  void _showProfileSettings() => showDialog<void>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        title: const Text('Settings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Notifications'),
+              value: _notificationsEnabled,
+              onChanged: _savingPreferences
+                  ? null
+                  : (value) => _saveNotificationPreferences(
+                      value,
+                      _profilePromotionsEnabled,
+                      (fn) {
+                        if (dialogContext.mounted) setDialogState(fn);
+                      },
+                    ),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Offer updates'),
+              value: _profilePromotionsEnabled,
+              onChanged: _savingPreferences
+                  ? null
+                  : (value) => _saveNotificationPreferences(
+                      _notificationsEnabled,
+                      value,
+                      (fn) {
+                        if (dialogContext.mounted) setDialogState(fn);
+                      },
+                    ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: _savingPreferences
+                ? null
+                : () => Navigator.pop(dialogContext),
+            child: const Text('Done'),
+          ),
+        ],
       ),
     ),
-    subtitle: Text(
-      entry.subtitle,
-      style: const TextStyle(color: _muted, fontSize: 10),
+  );
+
+  void _showProfileInfo(String title, String message) => showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Close'),
+        ),
+      ],
     ),
-    trailing: const Icon(Icons.chevron_right_rounded, size: 19),
-    onTap: entry.onTap,
   );
 
   Future<void> _showSavedAddresses() async {
@@ -6371,17 +5832,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       ),
     );
     if (selection == 'add-address' && mounted) {
-      final address = await showDialog<_SavedAddress>(
-        context: context,
-        builder: (context) => _AddAddressDialog(initialCity: _location),
-      );
-      if (address == null || !mounted) return;
-      setState(() {
-        _savedAddresses.add(address);
-        _selectedAddressId = address.id;
-        _location = address.city;
-      });
-      _message('${address.label} added and selected.');
+      await _addAddress();
     } else if (selection is _SavedAddress && mounted) {
       final address = selection;
       setState(() {
@@ -6392,23 +5843,18 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
     }
   }
 
-  void _showSavedProfessionals() {
-    _showProfileInfo(
-      'Saved Professionals',
-      _favoriteProfessional
-          ? 'Priya Shinde is saved to your favourites.'
-          : 'Save a professional from the home screen to find them here.',
-    );
+  void _openBookingHistory() {
+    _syncCustomerHistory();
+    setState(() {
+      _tab = 1;
+      _checkoutStep = 13;
+    });
   }
 
-  void _openBookingHistory() => setState(() {
-    _tab = 1;
-    if (_liveBookingId != null && _liveBookingStatus != 'completed') {
-      _checkoutStep = 6;
-    } else {
-      _checkoutStep = (_checkoutPreview == null && _liveBookingId == null) ? 0 : 13;
-    }
-  });
+  Future<void> _syncCustomerHistory() async {
+    final records = await _operationsApi.getBookings();
+    if (mounted) setState(() => _bookingsData = records);
+  }
 
   void _editCustomerProfile() {
     var name = _customerName;
@@ -6431,14 +5877,20 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
             ),
             FilledButton(
               key: const ValueKey('save-profile-name'),
-              onPressed: () {
+              onPressed: () async {
                 final updatedName = name.trim();
                 if (updatedName.isEmpty) {
                   _message('Enter your name to save your profile.');
                   return;
                 }
-                setState(() => _customerName = updatedName);
-                Navigator.pop(dialogContext);
+                try {
+                  await _operationsApi.updateProfile(updatedName);
+                  if (!mounted || !dialogContext.mounted) return;
+                  setState(() => _customerName = updatedName);
+                  Navigator.pop(dialogContext);
+                } catch (error) {
+                  if (mounted) _message('Unable to save profile: $error');
+                }
               },
               child: const Text('Save'),
             ),
@@ -6447,72 +5899,6 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen> {
       ),
     );
   }
-
-  void _showReferralCode() => showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Refer & Earn'),
-      content: const SelectableText('Your preview referral code: HIBEAUTY20'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Done'),
-        ),
-      ],
-    ),
-  );
-
-  void _showProfileInfo(String title, String message) => showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
-      content: Text(message),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-      ],
-    ),
-  );
-
-  void _showProfileSettings() => showDialog<void>(
-    context: context,
-    builder: (dialogContext) => StatefulBuilder(
-      builder: (context, setDialogState) => AlertDialog(
-        title: const Text('Settings'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Notifications'),
-              value: _notificationsEnabled,
-              onChanged: (value) {
-                setState(() => _notificationsEnabled = value);
-                setDialogState(() {});
-              },
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Offer updates'),
-              value: _profilePromotionsEnabled,
-              onChanged: (value) {
-                setState(() => _profilePromotionsEnabled = value);
-                setDialogState(() {});
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Done'),
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 class _CategoryServicesScreen extends StatelessWidget {
@@ -6577,8 +5963,10 @@ class _CategoryServicesScreen extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.asset(
-                  heroImage ?? services.first.image,
+                Image.network(
+                  (heroImage?.isNotEmpty == true
+                      ? heroImage!
+                      : services.first.image),
                   key: ValueKey('category-hero-$category'),
                   fit: BoxFit.cover,
                   alignment: Alignment.centerRight,
@@ -7406,7 +6794,8 @@ class _ServicePhoto extends StatelessWidget {
                 color: _berry,
                 size: width != null && width! < 80 ? 22 : 26,
               ),
-              if (width == null || width! >= 80) ...[
+              if ((width == null || width! >= 80) &&
+                  (height == null || height! >= 80)) ...[
                 const SizedBox(height: 3),
                 const Text(
                   'Photo coming soon',
@@ -7420,6 +6809,15 @@ class _ServicePhoto extends StatelessWidget {
       ),
     );
     if (service.image.isEmpty) return fallback();
+    if (Uri.tryParse(service.image)?.hasAuthority == true) {
+      return Image.network(
+        service.image,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, _, _) => fallback(),
+      );
+    }
     return Image.asset(
       service.image,
       width: width,
@@ -7576,33 +6974,6 @@ class _AssignmentTimelineItem extends StatelessWidget {
       ),
     );
   }
-}
-
-class _AssignmentBadge extends StatelessWidget {
-  const _AssignmentBadge({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(icon, color: const Color(0xFF15985A), size: 13),
-      const SizedBox(width: 4),
-      Flexible(
-        child: Text(
-          label,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Color(0xFF27845A),
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    ],
-  );
 }
 
 BoxDecoration _softBox(double radius) => BoxDecoration(

@@ -3,6 +3,10 @@ import 'package:flutter/foundation.dart';
 
 /// Opt in explicitly; profile/release builds can never activate local previews.
 abstract final class WorkerEnvironment {
+  static const legacyWorkerOffersEnabled = bool.fromEnvironment(
+    'LEGACY_WORKER_OFFERS_ENABLED',
+    defaultValue: false,
+  );
   static const developmentPreview =
       kDebugMode &&
       bool.fromEnvironment('WORKER_DEVELOPMENT_PREVIEW', defaultValue: false);
@@ -10,7 +14,7 @@ abstract final class WorkerEnvironment {
     const configured = String.fromEnvironment('API_BASE_URL');
     if (configured.isNotEmpty) return configured;
     if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')) return '';
-    return kIsWeb ? 'http://localhost:5001' : 'http://10.0.2.2:5001';
+    return kIsWeb ? 'http://localhost:5001/api' : 'http://10.0.2.2:5001/api';
   }
 
   static Uri? get apiOrigin {

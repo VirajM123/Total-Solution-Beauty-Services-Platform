@@ -147,7 +147,11 @@ class _WorkerProfileSettingsScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(widget.demoMode ? 'Exit worker preview?' : 'Log out of worker session?'),
+        title: Text(
+          widget.demoMode
+              ? 'Exit worker preview?'
+              : 'Log out of worker session?',
+        ),
         content: Text(
           widget.demoMode
               ? 'There is no authenticated server session to revoke. Your saved local profile and settings will remain on this device.'
@@ -334,7 +338,11 @@ class _WorkerProfileSettingsScreenState
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.cloud_done_rounded, color: Color(0xFF2E7D32), size: 16),
+                          Icon(
+                            Icons.cloud_done_rounded,
+                            color: Color(0xFF2E7D32),
+                            size: 16,
+                          ),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -528,7 +536,9 @@ class _WorkerProfileSettingsScreenState
                         ? null
                         : _confirmExitPreview,
                     icon: const Icon(Icons.logout_rounded),
-                    label: Text(widget.demoMode ? 'Exit worker preview' : 'Sign out'),
+                    label: Text(
+                      widget.demoMode ? 'Exit worker preview' : 'Sign out',
+                    ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _pink,
                       side: const BorderSide(color: _border),
@@ -808,9 +818,11 @@ class _WorkerPersonalInformationScreenState
               InputDecorator(
                 decoration: const InputDecoration(labelText: 'Date of birth'),
                 child: Text(
-                  MaterialLocalizations.of(
-                    context,
-                  ).formatMediumDate(widget.profile.dateOfBirth),
+                  widget.profile.dateOfBirth == null
+                      ? 'Not provided'
+                      : MaterialLocalizations.of(
+                          context,
+                        ).formatMediumDate(widget.profile.dateOfBirth!),
                 ),
               ),
               const SizedBox(height: 8),
@@ -851,6 +863,33 @@ class _WorkerServiceSpecializationScreenState
   late String _category = widget.profile.primaryCategory;
   late final Set<String> _services = {...widget.profile.services};
   bool _saving = false;
+  Map<String, List<String>> _catalogOptions = {};
+  bool _loadingCatalog = true;
+  String? _catalogError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCatalog();
+  }
+
+  Future<void> _loadCatalog() async {
+    try {
+      final options = await widget.repository.serviceOptions();
+      if (mounted)
+        setState(() {
+          _catalogOptions = options;
+          _loadingCatalog = false;
+          _catalogError = null;
+        });
+    } catch (error) {
+      if (mounted)
+        setState(() {
+          _loadingCatalog = false;
+          _catalogError = 'Unable to load services. Please retry.';
+        });
+    }
+  }
 
   Future<void> _save() async {
     if (_saving || _services.isEmpty) return;
@@ -877,7 +916,7 @@ class _WorkerServiceSpecializationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final options = workerServiceOptions[_category] ?? const <String>[];
+    final options = _catalogOptions[_category] ?? const <String>[];
     return Scaffold(
       backgroundColor: _background,
       appBar: AppBar(
@@ -888,20 +927,30 @@ class _WorkerServiceSpecializationScreenState
         child: ListView(
           padding: const EdgeInsets.all(14),
           children: [
+            if (_loadingCatalog)
+              const Center(child: CircularProgressIndicator()),
+            if (_catalogError != null) ...[
+              Text(_catalogError!),
+              TextButton(onPressed: _loadCatalog, child: const Text('Retry')),
+            ],
+            if (!_loadingCatalog &&
+                _catalogError == null &&
+                _catalogOptions.isEmpty)
+              const Text('No services are available.'),
             const Text(
               'Changes are saved locally and do not change booking assignments or approval.',
               style: TextStyle(color: _muted, fontSize: 11, height: 1.25),
             ),
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
-              initialValue: workerServiceOptions.containsKey(_category)
+              initialValue: _catalogOptions.containsKey(_category)
                   ? _category
                   : null,
               decoration: const InputDecoration(
                 isDense: true,
                 labelText: 'Primary category',
               ),
-              items: workerServiceOptions.keys
+              items: _catalogOptions.keys
                   .map(
                     (category) => DropdownMenuItem(
                       value: category,
@@ -914,8 +963,7 @@ class _WorkerServiceSpecializationScreenState
                 setState(() {
                   _category = value;
                   _services.removeWhere(
-                    (service) =>
-                        !workerServiceOptions[value]!.contains(service),
+                    (service) => !_catalogOptions[value]!.contains(service),
                   );
                 });
               },

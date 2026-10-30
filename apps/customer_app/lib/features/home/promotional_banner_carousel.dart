@@ -183,82 +183,7 @@ class _PromotionalBannerCarouselState extends State<PromotionalBannerCarousel>
                       onTap: widget.onBannerTap == null
                           ? null
                           : () => widget.onBannerTap!(banner),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          _BannerImage(banner: banner),
-                          const DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                                colors: [
-                                  Color(0xE6FFF0F2),
-                                  Color(0xB3FFF0F2),
-                                  Color(0x00FFF0F2),
-                                ],
-                                stops: [0, 0.55, 1],
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  banner.title,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Color(0xFF7C123A),
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.w700,
-                                    height: 1.04,
-                                  ),
-                                ),
-                                if (banner.subtitle case final subtitle?) ...[
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    subtitle,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 9,
-                                      color: Color(0xFF25212A),
-                                    ),
-                                  ),
-                                ],
-                                const Spacer(),
-                                if (banner.callToAction case final label?)
-                                  Container(
-                                    constraints: const BoxConstraints(
-                                      minHeight: 26,
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 5,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF8D214D),
-                                      borderRadius: BorderRadius.circular(18),
-                                    ),
-                                    child: Text(
-                                      label,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                      child: _BannerImage(banner: banner),
                     ),
                   );
                 },
@@ -310,6 +235,14 @@ class _BannerImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (banner.imageAsset.trim().isEmpty) return const _BannerFallback();
+    if (Uri.tryParse(banner.imageAsset)?.hasAuthority == true) {
+      return Image.network(
+        banner.imageAsset,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => const _BannerFallback(),
+      );
+    }
     return Image.asset(
       banner.imageAsset,
       fit: BoxFit.cover,

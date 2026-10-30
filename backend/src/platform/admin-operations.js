@@ -1,6 +1,6 @@
 const { z } = require('zod')
 const { idSchema, id, money, fail, reply, handler, protectedRouter, atomic, requestIdentity, compareAndSet, requireRecord, list } = require('./core')
-const { cartSchema, quote, reserveCoupon, paise, discountFor } = require('./business')
+const { cartSchema, quote, reserveCoupon, paise, discountFor, notify, notifyAdmins } = require('./business')
 const reason = z.string().trim().min(3).max(1000)
 const addressSchema = z.object({ line1: z.string().trim().min(3).max(200), line2: z.string().trim().max(200).default(''), city: z.string().trim().min(1).max(100), postalCode: z.string().regex(/^\d{6}$/), serviceAreaId: idSchema }).strict()
 const adminCartSchema = z.union([cartSchema, z.object({ packageId: idSchema, serviceAreaId: idSchema, couponCode: z.string().regex(/^[A-Z0-9_-]{3,24}$/).optional() }).strict()])
@@ -56,7 +56,7 @@ async function replay(db, collection, identity, session) {
   return previous
 }
 
-function createAdminOperationsRouter({ db, auth, storage }) {
+function createAdminOperationsRouter({ db, auth, storage, scheduling, controlOtp = require('./booking-control-otp').createBookingControlOtp({db}) }) {
   const router = protectedRouter(auth)
   router.get('/integrations', auth.requirePermission('settings.read'), handler(async (req, res) => {
     reply(req, res, { items: [{ _id: 'runtime', databaseConnected: true, adminAuthentication: true, storageConfigured: storage?.isConfigured === true, paymentProviderConfigured: false, appOtpConfigured: false, appNotificationsConfigured: false }], pagination: { page: 1, limit: 1, total: 1, pages: 1 } })
@@ -170,12 +170,35 @@ function createAdminOperationsRouter({ db, auth, storage }) {
       await reserveCoupon(db, session, priced, customerId, record._id)
       await db.collection('bookings').insertOne(record, { session })
       await db.collection('booking_events').insertOne({ bookingId: record._id, type: 'confirmed', actorUserId: req.auth.user._id, createdAt: new Date() }, { session })
+      await notify(db, session, customerId, 'booking.confirmed', record._id, req.id)
+      await notifyAdmins(db, session, 'booking.created', record._id, 'bookings.read')
       return record
     }); reply(req, res, result, 201)
   }))
   router.get('/bookings/:id/events', auth.requirePermission('bookings.read'), handler(async (req, res) => {
     await requireRecord(db, 'bookings', req.params.id)
     reply(req, res, await list(db, 'booking_events', req.query, { scope: { bookingId: id(req.params.id) }, fields: ['type'] }))
+  }))
+  router.get('/bookings/:id/workflow', auth.requirePermission('bookings.read'), handler(async (req, res) => {
+    const booking=await requireRecord(db,'bookings',req.params.id)
+    const [assignments,evidence,events,controlOtps]=await Promise.all([
+      db.collection('booking_assignments').find({bookingId:booking._id},{projection:{_id:1,workerId:1,workerUserId:1,status:1,reason:1,assignedAt:1,assignedBy:1,changedAt:1,changedBy:1,createdAt:1}}).sort({createdAt:1}).toArray(),
+      db.collection('media_assets').find({bookingId:booking._id,usage:'product_evidence'},{projection:{storageKey:0,publicUrl:0,contentHash:0}}).sort({createdAt:1}).toArray(),
+      db.collection('booking_events').find({bookingId:booking._id}).sort({createdAt:1}).limit(400).toArray(),
+      db.collection('booking_control_otps').find({bookingId:booking._id},{projection:{_id:1,purpose:1,status:1,createdAt:1,expiresAt:1,consumedAt:1}}).sort({createdAt:-1}).limit(10).toArray(),
+    ])
+    reply(req,res,{bookingId:booking._id,assigningAdminUserId:booking.assigningAdminUserId,assignedAt:booking.assignedAt,assignmentReason:booking.assignmentReason,
+      serviceFinishedAt:booking.serviceFinishedAt,paymentStatus:booking.paymentStatus,paymentMethod:booking.paymentMethod,totalPaise:booking.totalPaise,serviceStartedAt:booking.serviceStartedAt,serviceEndsAt:booking.serviceEndsAt,serviceEvidenceIds:booking.serviceEvidenceIds||[],assignments,evidence,durationExtension:booking.durationExtension||null,controlOtps,events})
+  }))
+  router.post('/bookings/:id/control-otp', auth.requirePermission('bookings.assign'), handler(async (req, res) => {
+    const input=z.object({purpose:z.enum(['duration_extension','service_completion'])}).strict().parse(req.body)
+    if(!controlOtp?.issue)fail(503,'CONTROL_OTP_NOT_CONFIGURED','Booking control OTP generation is not configured.')
+    reply(req,res,await controlOtp.issue({bookingId:req.params.id,purpose:input.purpose,req}),201)
+  }))
+  router.get('/bookings/:id/product-evidence/:evidenceId/private-link', auth.requirePermission('bookings.read'), handler(async (req, res) => {
+    if(!storage?.productEvidenceLink)fail(503,'STORAGE_NOT_CONFIGURED','Private photo access is not configured.')
+    const result=await storage.productEvidenceLink(req,req.params.id,req.params.evidenceId)
+    res.set('Cache-Control','no-store');reply(req,res,result)
   }))
   router.post('/bookings/:id/reschedule', auth.requirePermission('bookings.reschedule'), handler(async (req, res) => {
     const input = z.object({ startsAt: z.iso.datetime({ offset: true }), reason }).strict().parse(req.body)
@@ -187,10 +210,15 @@ function createAdminOperationsRouter({ db, auth, storage }) {
       const area = await requireRecord(db, 'service_areas', before.serviceAreaId, session, { isActive: true, isServiceable: true })
       const policy = await db.collection('app_settings').findOne({ key: 'business', isActive: true }, { session })
       const slot = validateSlot(area, policy, input.startsAt, before.durationMinutes)
-      await compareAndSet(db, 'bookings', before, { ...slot, status: 'confirmed', assignmentStatus: 'searching', workerId: null, workerUserId: null, assignmentId: null }, session)
-      await db.collection('booking_assignments').updateMany({ bookingId: before._id, status: { $in: ['offered', 'accepted'] } }, { $set: { status: 'superseded', updatedAt: new Date() } }, { session })
+      const updatedBooking = await compareAndSet(db, 'bookings', before, { ...slot, status: 'confirmed', assignmentStatus: 'searching', workerId: null, workerUserId: null, assignmentId: null }, session)
+      await db.collection('booking_assignments').updateMany({ bookingId: before._id, status: { $in: ['offered', 'accepted', 'assigned'] } }, { $set: { status: 'superseded', updatedAt: new Date() } }, { session })
       const event = { ...identity, bookingId: before._id, type: 'rescheduled', reason: input.reason, ...slot, actorUserId: req.auth.user._id, createdAt: new Date() }
-      await db.collection('booking_events').insertOne(event, { session }); return event
+      await notify(db, session, before.customerId, 'booking.rescheduled', before._id, String(event._id))
+      if (before.workerUserId) await notify(db, session, before.workerUserId, 'booking.rescheduled', before._id, String(event._id))
+      await notifyAdmins(db, session, 'booking.rescheduled', before._id, 'bookings.read')
+      await db.collection('booking_events').insertOne(event, { session })
+      await require('./dispatch').offerNextWorker(db, { booking: updatedBooking, session, scheduling })
+      return event
     }); reply(req, res, result)
   }))
   router.get('/payments/:id/receipt', auth.requirePermission('payments.read'), handler(async (req, res) => {
@@ -258,11 +286,86 @@ function createAdminOperationsRouter({ db, auth, storage }) {
 }
 
 function createScheduling({ db }) {
-  return { async canAssign({ worker, booking, session }) {
-    const windows = await db.collection('worker_availability').find({ workerId: worker._id, isActive: true, startsAt: { $lte: booking.startsAt }, endsAt: { $gte: booking.endsAt } }, { session }).toArray()
-    // Availability must be explicitly recorded; admin cannot manufacture worker consent.
-    return windows.length > 0
-  } }
+  return {
+    async reserve({ startsAt, endsAt, serviceAreaId, items, excludeBookingId, session }) {
+      const area = await requireRecord(db, 'service_areas', serviceAreaId, session, { isActive: true, isServiceable: true })
+      await compareAndSet(db, 'service_areas', area, {}, session)
+
+      const serviceIds = [...new Set((items || []).map(item => String(item.serviceId)))]
+      if (!serviceIds.length) return false
+      const [workers, overlappingBookings] = await Promise.all([
+        db.collection('workers').find({
+          status: 'approved',
+          isActive: true,
+          serviceAreaIds: area._id,
+        }, { session }).toArray(),
+        db.collection('bookings').find({
+          ...(excludeBookingId ? { _id: { $ne: excludeBookingId } } : {}),
+          serviceAreaId: area._id,
+          status: { $nin: ['completed', 'cancelled'] },
+          startsAt: { $lt: endsAt },
+          endsAt: { $gt: startsAt },
+        }, { session }).toArray(),
+      ])
+      const bookings = [...overlappingBookings, { startsAt, endsAt, items, status: 'capacity_check' }]
+      const minimumStart = bookings.reduce((value, booking) => booking.startsAt < value ? booking.startsAt : value, startsAt)
+      const maximumEnd = bookings.reduce((value, booking) => booking.endsAt > value ? booking.endsAt : value, endsAt)
+      const workerIds = workers.map(worker => worker._id)
+      const [availability, leaves] = await Promise.all([
+        db.collection('worker_availability').find({
+          workerId: { $in: workerIds },
+          isActive: true,
+          startsAt: { $lt: maximumEnd },
+          endsAt: { $gt: minimumStart },
+        }, { session }).toArray(),
+        db.collection('worker_leaves').find({
+          workerId: { $in: workerIds },
+          status: 'approved',
+          startsAt: { $lt: maximumEnd },
+          endsAt: { $gt: minimumStart },
+        }, { session }).toArray(),
+      ])
+      const candidates = bookings.map(booking => workers.filter(worker => {
+        const neededServices = booking.items?.map(item => String(item.serviceId)) || serviceIds
+        if (!neededServices.every(serviceId => worker.serviceIds?.some(value => String(value) === serviceId))) return false
+        if (booking.workerId && String(booking.workerId) !== String(worker._id)) return false
+        const explicitlyOnline = worker.isOnline === true
+        const hasWindow = availability.some(window =>
+          String(window.workerId) === String(worker._id) &&
+          window.startsAt <= booking.startsAt &&
+          window.endsAt >= booking.endsAt,
+        )
+        if (!explicitlyOnline && !hasWindow) return false
+        return !leaves.some(leave =>
+          String(leave.workerId) === String(worker._id) &&
+          leave.startsAt < booking.endsAt &&
+          leave.endsAt > booking.startsAt,
+        )
+      }).map(worker => String(worker._id)))
+
+      const assignedBookings = new Map()
+      const findWorker = (bookingIndex, visited) => {
+        for (const workerId of candidates[bookingIndex]) {
+          if (visited.has(workerId)) continue
+          visited.add(workerId)
+          const previousBooking = assignedBookings.get(workerId)
+          if (previousBooking === undefined || findWorker(previousBooking, visited)) {
+            assignedBookings.set(workerId, bookingIndex)
+            return true
+          }
+        }
+        return false
+      }
+      const bookingOrder = candidates.map((values, index) => ({ values, index }))
+        .sort((left, right) => left.values.length - right.values.length)
+      return bookingOrder.every(({ index }) => findWorker(index, new Set()))
+    },
+    async canAssign({ worker, booking, session }) {
+      if (worker.isOnline === true) return true
+      const windows = await db.collection('worker_availability').find({ workerId: worker._id, isActive: true, startsAt: { $lte: booking.startsAt }, endsAt: { $gte: booking.endsAt } }, { session }).toArray()
+      return windows.length > 0
+    },
+  }
 }
 function createCompensation() {
   return { async calculate({ jobs }) {

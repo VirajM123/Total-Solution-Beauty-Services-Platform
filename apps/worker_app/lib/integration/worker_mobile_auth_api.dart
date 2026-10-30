@@ -1,3 +1,4 @@
+import 'mobile_push.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -78,8 +79,10 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
         'Configure API_BASE_URL for the central Hii Beauty backend.',
       );
     }
+    final relative = Uri.parse(path);
     return base.replace(
-      path: '${base.path.replaceFirst(RegExp(r'/+$'), '')}$path',
+      path: '${base.path.replaceFirst(RegExp(r'/+$'), '')}${relative.path}',
+      query: relative.hasQuery ? relative.query : null,
     );
   }
 
@@ -267,6 +270,7 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
       );
     }
     await _storage.write(token);
+    unawaited(MobilePush.instance?.sync() ?? Future<void>.value());
     final approval = switch ('${data['workerStatus'] ?? 'not_registered'}') {
       'approved' => WorkerApproval.approved,
       'pending' => WorkerApproval.pending,
@@ -385,36 +389,33 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
 
   @override
   Future<List<Map<String, dynamic>>> fetchServiceAreas() async {
-    try {
-      final uri = _uri('/catalog/service-areas');
-      final response = await _client
-          .get(uri)
-          .timeout(const Duration(seconds: 10));
-      final decoded = jsonDecode(response.body);
-      if (decoded is Map &&
-          decoded['data'] is Map &&
-          decoded['data']['items'] is List) {
-        return List<Map<String, dynamic>>.from(decoded['data']['items']);
-      }
-    } catch (_) {}
-    return [];
+    return _fetchCatalogRecords('/catalog/service-areas');
   }
 
   @override
   Future<List<Map<String, dynamic>>> fetchServices() async {
-    try {
-      final uri = _uri('/api/catalog/services');
-      final response = await _client
-          .get(uri)
-          .timeout(const Duration(seconds: 10));
-      final decoded = jsonDecode(response.body);
-      if (decoded is Map &&
-          decoded['data'] is Map &&
-          decoded['data']['items'] is List) {
-        return List<Map<String, dynamic>>.from(decoded['data']['items']);
+    return _fetchCatalogRecords('/catalog/services');
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchCatalogRecords(String path) async {
+    final records = <Map<String, dynamic>>[];
+    for (var page = 1; ; page++) {
+      final data = await _request('GET', '$path?page=$page&limit=100');
+      final items = data['items'];
+      if (items is! List) {
+        throw const WorkerAuthException(
+          'INVALID_RESPONSE',
+          'The server returned an invalid catalog list.',
+        );
       }
-    } catch (_) {}
-    return [];
+      records.addAll(items.whereType<Map<String, dynamic>>());
+      final pagination = data['pagination'];
+      if (pagination is! Map || items.isEmpty) return records;
+      final pages = int.tryParse('${pagination['pages']}');
+      if (pagination['hasMore'] != true && (pages == null || page >= pages)) {
+        return records;
+      }
+    }
   }
 
   Future<Map<String, dynamic>> checkWorkerStatus() async {
@@ -453,6 +454,7 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
       );
     } finally {
       await _storage.delete();
+      await MobilePush.instance?.signedOut();
       _challengeId = null;
       _requestedMobile = null;
     }

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:worker_app/integration/worker_api.dart';
 import 'package:worker_app/integration/worker_environment.dart';
 import 'package:worker_app/integration/worker_mobile_auth_api.dart';
+import 'package:worker_app/integration/worker_mobile_operations_api.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -128,7 +129,7 @@ void main() {
       await api.requestOtp('9876543210');
       final loggedIn = await api.verifyOtp('9876543210', '654321');
       expect(loggedIn.approval, WorkerApproval.pending);
-      expect(storage.token, '${'s' * 43}');
+      expect(storage.token, 's' * 43);
       final current = await api.currentIdentity();
       expect(current.workerId, 'worker-profile');
       expect(current.approval, WorkerApproval.pending);
@@ -171,14 +172,14 @@ void main() {
       );
       await api.requestOtp('9876543210', forRegistration: true);
       final proof = await api.verifyOtp('9876543210', '654321');
-      expect(proof.registrationToken, '${'r' * 43}');
+      expect(proof.registrationToken, 'r' * 43);
       final identity = await api.completeRegistration(
         registrationToken: proof.registrationToken!,
         fullName: 'Worker',
       );
       expect(identity.workerId, 'worker-user');
       expect(identity.approval, WorkerApproval.notRegistered);
-      expect(storage.token, '${'w' * 43}');
+      expect(storage.token, 'w' * 43);
       api.close();
     },
   );
@@ -208,6 +209,42 @@ void main() {
         ),
       );
       api.close();
+    },
+  );
+
+  test(
+    'worker polling reads server offers and does not hide expired sessions',
+    () async {
+      final api = WorkerMobileOperationsApi(
+        apiBaseUrl: 'https://example.test/api',
+        tokenStorage: _MemoryWorkerTokenStorage()..token = 'session-token',
+        client: MockClient((request) async {
+          expect(request.url.path, '/api/mobile/worker/offers');
+          return http.Response(
+            '{"success":true,"data":{"items":[{"_id":"offer-1","bookingId":"booking-1"}]}}',
+            200,
+          );
+        }),
+      );
+      final offers = await api.fetchOffers();
+      expect(offers.single['bookingId'], 'booking-1');
+      api.close();
+
+      final expiredApi = WorkerMobileOperationsApi(
+        apiBaseUrl: 'https://example.test/api',
+        tokenStorage: _MemoryWorkerTokenStorage()..token = 'expired-session',
+        client: MockClient(
+          (_) async => http.Response(
+            '{"success":false,"error":{"code":"UNAUTHENTICATED","message":"Session expired."}}',
+            401,
+          ),
+        ),
+      );
+      await expectLater(
+        expiredApi.fetchSettlements(),
+        throwsA(isA<WorkerAuthException>()),
+      );
+      expiredApi.close();
     },
   );
 }

@@ -122,10 +122,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   late bool _previewOnline;
   bool _availabilityBusy = false;
   int _navIndex = 0;
-  int _offerIndex = 0;
-  late final PageController _offersController = PageController(
-    viewportFraction: .86,
-  );
+  List<Map<String, dynamic>> _liveBanners = [];
   Object? _storeError;
   bool _storeLoading = true;
 
@@ -133,12 +130,31 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   void initState() {
     super.initState();
     _previewOnline = widget.initialOnline;
+    if (!widget.demoMode) _loadBanners();
     widget.notificationRepository?.addListener(_onNotificationChanged);
     if (widget.demoMode) {
       WorkerDemoBookingStore.repository.addListener(_onStoreChanged);
       _loadDemoStore();
     } else {
       _storeLoading = false;
+    }
+  }
+
+  Future<void> _loadBanners() async {
+    try {
+      final banners =
+          await (widget.operationsApi is WorkerMobileOperationsApi
+                  ? widget.operationsApi as WorkerMobileOperationsApi
+                  : WorkerMobileOperationsApi())
+              .fetchCatalogRecords('banners');
+      if (mounted)
+        setState(
+          () => _liveBanners = banners
+              .where((b) => (b['audiences'] as List? ?? []).contains('worker'))
+              .toList(),
+        );
+    } catch (_) {
+      /* Optional promotional content stays empty when unavailable. */
     }
   }
 
@@ -183,7 +199,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
 
   @override
   void dispose() {
-    _offersController.dispose();
     widget.notificationRepository?.removeListener(_onNotificationChanged);
     if (widget.demoMode) {
       WorkerDemoBookingStore.repository.removeListener(_onStoreChanged);
@@ -206,8 +221,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   bool get _isOnline => _previewOnline;
 
   DateTime get _now => (widget.currentDate ?? DateTime.now()).toLocal();
-
-  String _rupees(int amount) => formatCustomerRupees(amount);
 
   String get _greeting {
     final hour = _now.hour;
@@ -786,145 +799,18 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     ],
   );
 
-  Widget _offerCard({
-    required String title,
-    required String description,
-    required String image,
-    required Color accent,
-    required Alignment imageAlignment,
-  }) => InkWell(
-    onTap: () => _notice('Offer details are coming soon.'),
-    borderRadius: BorderRadius.circular(18),
-    child: Container(
-      margin: const EdgeInsets.only(right: 10),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: .12),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _border),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(image, fit: BoxFit.cover, alignment: imageAlignment),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  accent.withValues(alpha: .94),
-                  accent.withValues(alpha: .85),
-                  accent.withValues(alpha: .08),
-                ],
-                stops: const [0, .57, 1],
-              ),
-            ),
+  Widget _offersSection() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      for (final banner in _liveBanners)
+        Card(
+          child: ListTile(
+            title: Text('${banner['name'] ?? ''}'),
+            subtitle: Text('${banner['subtitle'] ?? ''}'),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: SizedBox(
-                width: 165,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _pink,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _deep,
-                        fontSize: 9,
-                        height: 1.1,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    const Text(
-                      'Know more  →',
-                      style: TextStyle(
-                        color: _pink,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
+        ),
+    ],
   );
-
-  Widget _offersSection() {
-    const offerCount = 2;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _sectionTitle('Offers for You'),
-        const SizedBox(height: 5),
-        SizedBox(
-          height: 84,
-          child: PageView(
-            key: const Key('worker-offers-carousel'),
-            clipBehavior: Clip.none,
-            controller: _offersController,
-            onPageChanged: (index) => setState(() => _offerIndex = index),
-            children: [
-              _offerCard(
-                title: 'Earn More This Season',
-                description: 'Get extra bookings with seasonal offers.',
-                image: 'assets/images/dashboard/worker_hero.jpg',
-                accent: const Color(0xFFFFD9E8),
-                imageAlignment: const Alignment(.8, -.25),
-              ),
-              _offerCard(
-                title: 'Refer & Earn',
-                description: 'Invite beauty professionals to join you.',
-                image: 'assets/images/dashboard/makeup_brushes.jpg',
-                accent: const Color(0xFFFFEAD8),
-                imageAlignment: Alignment.centerRight,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 5),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            offerCount,
-            (index) => AnimatedContainer(
-              key: Key('offer-indicator-$index'),
-              duration: const Duration(milliseconds: 180),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: _offerIndex == index ? 13 : 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: _offerIndex == index ? _pink : const Color(0xFFD9D7DC),
-                borderRadius: BorderRadius.circular(5),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _dashboardAction({
     Key? key,
@@ -1201,7 +1087,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                       ),
                     ),
                     Text(
-                      _rupees(next.customerPayable),
+                      formatCustomerPaise(
+                        next.customerPayablePaise ?? next.customerPayable * 100,
+                      ),
                       style: const TextStyle(
                         color: _deep,
                         fontSize: 13,
@@ -1377,7 +1265,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     final todayCount = todayBookings.length;
     final todayCustomerPayable = todayBookings.fold<int>(
       0,
-      (total, order) => total + order.customerPayable,
+      (total, order) =>
+          total + (order.customerPayablePaise ?? order.customerPayable * 100),
     );
     final todaySchedule =
         orders.where((order) {
@@ -1518,7 +1407,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                   _overviewStat(
                                     icon: Icons.account_balance_wallet_outlined,
                                     label: 'Customer Payable',
-                                    value: _rupees(todayCustomerPayable),
+                                    value: formatCustomerPaise(
+                                      todayCustomerPayable,
+                                    ),
                                     color: _deep,
                                   ),
                                   const SizedBox(
@@ -1708,24 +1599,21 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                       ),
                 selectedIcon:
                     (widget.notificationRepository?.unreadCount ?? 0) > 0
-                        ? Badge(
-                            backgroundColor: _pink,
-                            label: Text(
-                              '${widget.notificationRepository!.unreadCount}',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.white,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.notifications_rounded,
-                              color: _pink,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.notifications_rounded,
-                            color: _pink,
+                    ? Badge(
+                        backgroundColor: _pink,
+                        label: Text(
+                          '${widget.notificationRepository!.unreadCount}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
                           ),
+                        ),
+                        child: const Icon(
+                          Icons.notifications_rounded,
+                          color: _pink,
+                        ),
+                      )
+                    : const Icon(Icons.notifications_rounded, color: _pink),
                 label: 'Alerts',
               ),
               NavigationDestination(

@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'cancellable_http.dart';
 import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -19,6 +19,7 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
        _apiBaseUrl = apiBaseUrl ?? WorkerEnvironment.apiBaseUrl;
 
   final http.Client _client;
+  late final _transport = CancellableHttp(_client);
   final WorkerTokenStorage _storage;
   final String _apiBaseUrl;
 
@@ -36,8 +37,10 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
         'Configure API_BASE_URL for the central Hii Beauty backend.',
       );
     }
+    final relative = Uri.parse(path);
     return base.replace(
-      path: '${base.path.replaceFirst(RegExp(r'/+$'), '')}$path',
+      path: '${base.path.replaceFirst(RegExp(r'/+$'), '')}${relative.path}',
+      query: relative.hasQuery ? relative.query : null,
     );
   }
 
@@ -51,30 +54,20 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
     final uri = _uri(path);
     final headers = {
       'Accept': 'application/json',
-      if (body != null) 'Content-Type': 'application/json',
+      ...?body == null ? null : {'Content-Type': 'application/json'},
       if (token != null) 'Authorization': 'Bearer $token',
-      if (idempotencyKey != null) 'x-idempotency-key': idempotencyKey,
+      ...?idempotencyKey == null ? null : {'x-idempotency-key': idempotencyKey},
     };
     try {
-      final response = await switch (method) {
-        'GET' =>
-          _client
-              .get(uri, headers: headers)
-              .timeout(const Duration(seconds: 12)),
-        'POST' =>
-          _client
-              .post(uri, headers: headers, body: jsonEncode(body))
-              .timeout(const Duration(seconds: 12)),
-        'PUT' =>
-          _client
-              .put(uri, headers: headers, body: jsonEncode(body))
-              .timeout(const Duration(seconds: 12)),
-        'PATCH' =>
-          _client
-              .patch(uri, headers: headers, body: jsonEncode(body))
-              .timeout(const Duration(seconds: 12)),
-        _ => throw ArgumentError.value(method, 'method'),
-      };
+      if (!const {'GET', 'POST', 'PUT', 'PATCH', 'DELETE'}.contains(method))
+        throw ArgumentError.value(method, 'method');
+      final response = await _transport.request(
+        method,
+        uri,
+        headers: headers,
+        body: body == null ? null : jsonEncode(body),
+        timeout: Duration(seconds: path.endsWith('/payment-qr') ? 30 : 12),
+      );
       final decoded = jsonDecode(response.body);
       if (decoded is! Map<String, dynamic>) {
         throw const WorkerAuthException(
@@ -137,56 +130,105 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
   @override
   Future<bool> availability() async {
     final token = await _storage.read();
-    if (token == null) return false;
-    try {
-      final data = await _request(
-        'GET',
-        '/mobile/worker/profile',
-        token: token,
+    if (token == null) {
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
       );
-      final profile = data['profile'];
-      if (profile is Map) {
-        return profile['isOnline'] == true;
-      }
-    } catch (_) {}
-    return false;
+    }
+    final data = await _request('GET', '/mobile/worker/profile', token: token);
+    final profile = data['profile'];
+    if (profile is! Map) {
+      throw const WorkerAuthException(
+        'WORKER_PROFILE_NOT_FOUND',
+        'The worker profile for this login was not found.',
+      );
+    }
+    return profile['isOnline'] == true;
   }
 
   Future<List<WorkerDashboardOrder>> fetchWorkerOrders() async {
     final token = await _storage.read();
-    if (token == null) return const [];
-    try {
+    if (token == null) {
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
+    }
+    final orders = <WorkerDashboardOrder>[];
+    for (var page = 1; ; page++) {
       final data = await _request(
         'GET',
-        '/mobile/worker/bookings',
+        '/mobile/worker/bookings?page=$page&limit=100',
         token: token,
       );
-      final items = data['items'] as List?;
-      if (items == null) return const [];
-      return items
+      final items = data['items'];
+      if (items is! List) {
+        throw const WorkerAuthException(
+          'INVALID_RESPONSE',
+          'The server returned an invalid bookings list.',
+        );
+      }
+      orders.addAll(items.whereType<Map<String, dynamic>>().map(_mapOrder));
+      final pagination = data['pagination'];
+      if (pagination is! Map || items.isEmpty) return orders;
+      final pages = int.tryParse('${pagination['pages']}');
+      if (pagination['hasMore'] != true && (pages == null || page >= pages))
+        return orders;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchCatalogServices() async {
+    return fetchCatalogRecords('services');
+  }
+
+  Future<List<Map<String, dynamic>>> fetchCatalogRecords(
+    String resource,
+  ) async {
+    if (![
+      'services',
+      'banners',
+      'offers',
+      'packages',
+      'categories',
+    ].contains(resource)) {
+      throw ArgumentError.value(resource, 'resource');
+    }
+    final items = <Map<String, dynamic>>[];
+    for (var page = 1; ; page++) {
+      final data = await _request(
+        'GET',
+        '/catalog/$resource?page=$page&limit=100',
+      );
+      final records = (data['items'] as List? ?? const [])
           .whereType<Map<String, dynamic>>()
-          .map(_mapOrder)
-          .toList(growable: false);
-    } catch (_) {
-      return const [];
+          .toList();
+      items.addAll(records);
+      final pagination = data['pagination'];
+      if (pagination is! Map || records.isEmpty) return items;
+      final pages = int.tryParse('${pagination['pages']}');
+      if (pagination['hasMore'] != true && (pages == null || page >= pages))
+        return items;
     }
   }
 
   Future<List<Map<String, dynamic>>> fetchOffers() async {
     final token = await _storage.read();
-    if (token == null) return const [];
-    try {
-      final data = await _request(
-        'GET',
-        '/mobile/worker/offers',
-        token: token,
+    if (token == null) {
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
       );
-      final items = data['items'] as List?;
-      if (items == null) return const [];
-      return items.whereType<Map<String, dynamic>>().toList(growable: false);
-    } catch (_) {
-      return const [];
     }
+    final data = await _request('GET', '/mobile/worker/offers', token: token);
+    final items = data['items'];
+    if (items is! List) {
+      throw const WorkerAuthException(
+        'INVALID_RESPONSE',
+        'The server returned an invalid booking-offers list.',
+      );
+    }
+    return items.whereType<Map<String, dynamic>>().toList(growable: false);
   }
 
   Future<bool> respondToOffer({
@@ -217,6 +259,7 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
     required String bookingId,
     required String action,
     String? otp,
+    List<String> evidenceIds = const [],
   }) async {
     final token = await _storage.read();
     if (token == null) {
@@ -228,6 +271,7 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
     final body = <String, dynamic>{
       'action': action,
       if (otp != null && otp.trim().isNotEmpty) 'otp': otp.trim(),
+      if (evidenceIds.isNotEmpty) 'evidenceIds': evidenceIds,
     };
     final data = await _request(
       'POST',
@@ -236,6 +280,127 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
       body: body,
     );
     return data;
+  }
+
+  Future<Map<String, dynamic>> reportCashCollection({
+    required String bookingId,
+    required int amountPaise,
+    required String reference,
+    required String idempotencyKey,
+  }) async {
+    final token = await _storage.read();
+    if (token == null) {
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
+    }
+    return _request(
+      'POST',
+      '/mobile/worker/bookings/$bookingId/cash-collection',
+      token: token,
+      body: {'amountPaise': amountPaise, 'reference': reference},
+      idempotencyKey: idempotencyKey,
+    );
+  }
+
+  Future<Map<String, dynamic>> uploadProductEvidence({
+    required String bookingId,
+    required Uint8List bytes,
+    required String fileName,
+  }) async {
+    if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
+      throw const WorkerAuthException(
+        'INVALID_FILE',
+        'Product photos must be smaller than 5 MB.',
+      );
+    }
+    final token = await _storage.read();
+    if (token == null) {
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
+    }
+    final uri = _uri('/mobile/worker/bookings/$bookingId/product-evidence');
+    final response = await _client
+        .post(
+          uri,
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'image/jpeg',
+            'x-file-name': Uri.encodeComponent(fileName),
+            'x-idempotency-key':
+                'evidence_${bookingId}_${DateTime.now().microsecondsSinceEpoch}',
+          },
+          body: bytes,
+        )
+        .timeout(const Duration(seconds: 20));
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const WorkerAuthException(
+        'INVALID_RESPONSE',
+        'The server returned an invalid evidence response.',
+      );
+    }
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        decoded['success'] != true ||
+        decoded['data'] is! Map<String, dynamic>) {
+      final error = decoded['error'];
+      throw WorkerAuthException(
+        error is Map ? '${error['code'] ?? 'API_ERROR'}' : 'API_ERROR',
+        error is Map && error['message'] is String
+            ? error['message'] as String
+            : 'Could not upload the product photo.',
+      );
+    }
+    return decoded['data'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> proposeExtraService({
+    required String bookingId,
+    required String serviceKey,
+    required String name,
+    required int amountPaise,
+    required int durationMinutes,
+  }) async {
+    final token = await _storage.read();
+    if (token == null) {
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
+    }
+    return _request(
+      'POST',
+      '/mobile/worker/bookings/$bookingId/extra-services',
+      token: token,
+      idempotencyKey: 'extra_${bookingId}_$serviceKey',
+      body: {
+        'name': name,
+        'amountPaise': amountPaise,
+        'durationMinutes': durationMinutes,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> createBookingPaymentQr(String bookingId) async {
+    final token = await _storage.read();
+    if (token == null) {
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
+    }
+    return _request(
+      'POST',
+      '/mobile/worker/bookings/$bookingId/payment-qr',
+      token: token,
+      idempotencyKey: 'qr_$bookingId',
+      body: const {},
+    );
   }
 
   WorkerDashboardOrder _mapOrder(Map<String, dynamic> doc) {
@@ -248,11 +413,9 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
     final customerName = customerSnapshot?['fullName'] ?? 'Customer';
     final addressSnapshot = doc['addressSnapshot'] as Map?;
     final line1 = addressSnapshot?['line1'] ?? '';
-    final city = addressSnapshot?['city'] ?? 'Latur';
+    final city = addressSnapshot?['city'] ?? '';
     final location = line1.isNotEmpty ? '$line1, $city' : city;
-    final totalPaise = doc['totalPaise'] is num
-        ? (doc['totalPaise'] as num).toInt()
-        : 0;
+    final totalPaise = int.tryParse('${doc['totalPaise']}') ?? 0;
     final customerPayable = totalPaise ~/ 100;
 
     DateTime? startsAt;
@@ -264,8 +427,23 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
     if (doc['completedAt'] != null) {
       completedAt = DateTime.tryParse('${doc['completedAt']}');
     }
+    final serviceStartedAt = doc['serviceStartedAt'] == null
+        ? null
+        : DateTime.tryParse('${doc['serviceStartedAt']}');
+    final serviceEndsAt = doc['serviceEndsAt'] == null
+        ? null
+        : DateTime.tryParse('${doc['serviceEndsAt']}');
+    final serviceFinishedAt = doc['serviceFinishedAt'] == null
+        ? null
+        : DateTime.tryParse('${doc['serviceFinishedAt']}');
+    final cashCollectionReportedAt = doc['cashCollectionReportedAt'] == null
+        ? null
+        : DateTime.tryParse('${doc['cashCollectionReportedAt']}');
+    final extension = doc['durationExtension'] is Map
+        ? Map<String, dynamic>.from(doc['durationExtension'] as Map)
+        : null;
 
-    String timeStr = '10:00 AM';
+    String timeStr = 'Schedule unavailable';
     if (startsAt != null) {
       final local = startsAt.toLocal();
       final hour = local.hour;
@@ -275,7 +453,10 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
       timeStr = '$displayHour:$minute $period';
     }
 
-    final rawStatus = '${doc['status'] ?? 'scheduled'}';
+    final rawStatus =
+        doc['serviceFinishedAt'] != null && doc['paymentStatus'] != 'paid'
+        ? 'payment pending'
+        : '${doc['status'] ?? 'scheduled'}';
     final status = switch (rawStatus.toLowerCase()) {
       'assigned' => 'Assigned',
       'confirmed' => 'Confirmed',
@@ -286,7 +467,7 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
       'cancelled' => 'Cancelled',
       _ => rawStatus,
     };
-    final durationMinutes = doc['durationMinutes'] ?? 60;
+    final durationMinutes = doc['durationMinutes'];
 
     final customerPhone = customerSnapshot?['mobileNumber']?.toString();
     final paymentMethod = doc['paymentMethod']?.toString();
@@ -294,18 +475,23 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
     final compensationPaise = doc['compensationPaise'] is num
         ? (doc['compensationPaise'] as num).toInt()
         : null;
-    final compensationRupees =
-        compensationPaise != null ? compensationPaise ~/ 100 : null;
+    final compensationRupees = compensationPaise != null
+        ? compensationPaise ~/ 100
+        : null;
 
     String? itemsDescription;
     if (items != null && items.isNotEmpty) {
-      itemsDescription = items.map((i) {
-        final name = i['name'] ?? 'Service';
-        final qty = i['quantity'] ?? 1;
-        final pricePaise = i['pricePaise'] is num ? (i['pricePaise'] as num).toInt() : 0;
-        final priceRupees = pricePaise ~/ 100;
-        return '$name (x$qty) - ₹$priceRupees';
-      }).join('\n');
+      itemsDescription = items
+          .map((i) {
+            final name = i['name'] ?? 'Service';
+            final qty = i['quantity'] ?? 1;
+            final pricePaise = i['pricePaise'] is num
+                ? (i['pricePaise'] as num).toInt()
+                : 0;
+            final priceRupees = pricePaise ~/ 100;
+            return '$name (x$qty) - ₹$priceRupees';
+          })
+          .join('\n');
     }
 
     return WorkerDashboardOrder(
@@ -316,27 +502,45 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
       location: location,
       customerPayable: customerPayable,
       status: status,
-      duration: '$durationMinutes min',
+      duration: durationMinutes == null
+          ? 'Duration unavailable'
+          : '$durationMinutes min',
       appointmentDate: startsAt,
       completedAt: completedAt,
       customerPhone: customerPhone,
       itemsDescription: itemsDescription,
       paymentMethod: paymentMethod,
       paymentStatus: paymentStatus,
+      customerPayablePaise: totalPaise,
       compensationRupees: compensationRupees,
+      serviceStartedAt: serviceStartedAt,
+      serviceEndsAt: serviceEndsAt,
+      serviceFinishedAt: serviceFinishedAt,
+      cashCollectionReportedAt: cashCollectionReportedAt,
+      durationExtension: extension,
     );
   }
 
-  Future<WorkerDashboardOrder?> fetchBookingDetails(String bookingId) async {
+  Future<WorkerDashboardOrder> fetchBookingDetailsOrThrow(
+    String bookingId,
+  ) async {
     final token = await _storage.read();
-    if (token == null) return null;
-    try {
-      final doc = await _request(
-        'GET',
-        '/mobile/worker/bookings/$bookingId',
-        token: token,
+    if (token == null)
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
       );
-      return _mapOrder(doc);
+    final doc = await _request(
+      'GET',
+      '/mobile/worker/bookings/$bookingId',
+      token: token,
+    );
+    return _mapOrder(doc);
+  }
+
+  Future<WorkerDashboardOrder?> fetchBookingDetails(String bookingId) async {
+    try {
+      return await fetchBookingDetailsOrThrow(bookingId);
     } catch (_) {
       return null;
     }
@@ -373,18 +577,31 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
 
   Future<List<Map<String, dynamic>>> fetchSettlements() async {
     final token = await _storage.read();
-    if (token == null) return const [];
-    try {
+    if (token == null) {
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
+    }
+    final records = <Map<String, dynamic>>[];
+    for (var page = 1; ; page++) {
       final data = await _request(
         'GET',
-        '/mobile/worker/settlements',
+        '/mobile/worker/settlements?page=$page&limit=100',
         token: token,
       );
-      final items = data['items'] as List?;
-      if (items == null) return const [];
-      return items.whereType<Map<String, dynamic>>().toList(growable: false);
-    } catch (_) {
-      return const [];
+      final items = data['items'];
+      if (items is! List)
+        throw const WorkerAuthException(
+          'INVALID_RESPONSE',
+          'The server returned an invalid settlements list.',
+        );
+      records.addAll(items.whereType<Map<String, dynamic>>());
+      final pagination = data['pagination'];
+      if (items.isEmpty || pagination is! Map) return records;
+      final pages = int.tryParse(pagination['pages'].toString());
+      if (pagination['hasMore'] != true && (pages == null || page >= pages))
+        return records;
     }
   }
 
@@ -393,40 +610,45 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
     return WorkerPage(items: const [], page: page, hasMore: false);
   }
 
-
   Future<List<Map<String, dynamic>>> fetchLeaves() async {
     final token = await _storage.read();
-    if (token == null) return const [];
-    try {
-      final data = await _request(
-        'GET',
-        '/mobile/worker/leaves',
-        token: token,
+    if (token == null) {
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
       );
-      final items = data['items'] as List?;
-      if (items == null) return const [];
-      return items.whereType<Map<String, dynamic>>().toList(growable: false);
-    } catch (_) {
-      return const [];
     }
+    final data = await _request('GET', '/mobile/worker/leaves', token: token);
+    final items = data['items'];
+    if (items is! List) {
+      throw const WorkerAuthException(
+        'INVALID_RESPONSE',
+        'The server returned an invalid leave list.',
+      );
+    }
+    return items.whereType<Map<String, dynamic>>().toList(growable: false);
   }
 
   Future<Map<String, dynamic>> fetchWorkerProfile() async {
     final token = await _storage.read();
     if (token == null) {
-      throw const WorkerAuthException('UNAUTHENTICATED', 'Sign in is required.');
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
     }
-    return await _request(
-      'GET',
-      '/mobile/worker/profile',
-      token: token,
-    );
+    return await _request('GET', '/mobile/worker/profile', token: token);
   }
 
-  Future<Map<String, dynamic>> updateWorkerProfile(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> updateWorkerProfile(
+    Map<String, dynamic> body,
+  ) async {
     final token = await _storage.read();
     if (token == null) {
-      throw const WorkerAuthException('UNAUTHENTICATED', 'Sign in is required.');
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
     }
     return await _request(
       'PATCH',
@@ -502,6 +724,5 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
     }
   }
 
-  void close() => _client.close();
+  void close() => _transport.close();
 }
-

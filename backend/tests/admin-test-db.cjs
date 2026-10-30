@@ -4,7 +4,7 @@ function matches(record,filter){
  return Object.entries(filter).every(([key,value])=>{
   if(key==='$and')return value.every(v=>matches(record,v))
   if(key==='$or')return value.some(v=>matches(record,v))
-  const actual=record[key]
+  const actual=key.split('.').reduce((value,part)=>value?.[part],record)
   if(value instanceof RegExp)return value.test(String(actual||''))
   if(value&&typeof value==='object'&&!value._bsontype&&!(value instanceof Date)){
    return Object.entries(value).every(([operator,expected])=>{
@@ -28,6 +28,7 @@ function memoryDatabase(seed={}){
  const rows=name=>records[name]||(records[name]=[])
  const update=(record,change)=>{
   Object.assign(record,change.$set||{})
+  for(const key of Object.keys(change.$unset||{}))delete record[key]
   for(const [key,value]of Object.entries(change.$inc||{}))record[key]=(record[key]||0)+value
   return record
  }

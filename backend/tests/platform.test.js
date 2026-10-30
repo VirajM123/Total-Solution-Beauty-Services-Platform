@@ -7,11 +7,13 @@ const {z}=require('zod')
 const {errorHandler}=require('../src/middleware/errorHandler')
 const {listFilter,requestIdentity,csv}=require('../src/platform/core')
 const {definitions,permissions}=require('../src/platform/definitions')
-const {createResourcesRouter,validateRelationships}=require('../src/platform/resources.routes')
+const {createResourcesRouter,createPublicResourcesRouter,validateRelationships}=require('../src/platform/resources.routes')
 const {createWorkflowsRouter}=require('../src/platform/workflows.routes')
 const {mediaService,validateFile}=require('../src/platform/media')
 const {mobileAuth,createMobileAuthRouter}=require('../src/platform/mobileAuth')
 const {createMobileRouter}=require('../src/platform/mobile.routes')
+const {createPlatformRouter}=require('../src/platform')
+const {createServiceOtp}=require('../src/platform/service-otp')
 const {discountFor,ensureTransition,collectionEvidence,cartSchema}=require('../src/platform/business')
 const {encodeMoney}=require('../src/platform/database')
 const userId=new mongoose.Types.ObjectId(),resourceId=new mongoose.Types.ObjectId()
@@ -236,6 +238,24 @@ test('worker approval requires private identity proof; optional certificates do 
   assert.equal(db.records().notifications[0].recipientUserId.toString(),userId.toString())
  })
 })
+test('public service areas expose only active serviceable backend records',async()=>{
+ const areaId=new mongoose.Types.ObjectId()
+ const db=memoryDatabase({service_areas:[
+  {_id:areaId,name:'Backend Area',city:'Latur',postalCodes:['413512'],status:'active',isActive:true,isServiceable:true},
+  {_id:new mongoose.Types.ObjectId(),name:'Disabled',status:'disabled',isActive:false,isServiceable:true},
+  {_id:new mongoose.Types.ObjectId(),name:'Unavailable',status:'active',isActive:true,isServiceable:false},
+ ]})
+ await serve(foundation(createPublicResourcesRouter({db})),async base=>{
+  const response=await fetch(base+'/service-areas?page=1&limit=100')
+  assert.equal(response.status,200)
+  const result=(await response.json()).data
+  assert.equal(result.items.length,1)
+  assert.equal(result.items[0].name,'Backend Area')
+  assert.equal(result.items[0]._id,String(areaId))
+  assert.equal(result.pagination.hasMore,false)
+ })
+})
+
 test('customer mobile profile cannot read another customer booking',async()=>{
  const token='c'.repeat(43)
  const db=memoryDatabase({users:[{_id:userId,userType:'customer',isActive:true,status:'active'}],
@@ -246,6 +266,242 @@ test('customer mobile profile cannot read another customer booking',async()=>{
   const listed=await fetch(base+'/customer/bookings',{headers:{Authorization:'Bearer '+token}})
   assert.equal(listed.status,200)
   assert.deepEqual((await listed.json()).data.items,[])
+ })
+})
+test('customer booking creates a server-side service OTP once, including idempotent replay',async()=>{
+ const customerUserId=new mongoose.Types.ObjectId(),areaId=new mongoose.Types.ObjectId()
+ const addressId=new mongoose.Types.ObjectId(),serviceId=new mongoose.Types.ObjectId(),categoryId=new mongoose.Types.ObjectId()
+ const token='c'.repeat(43),hash=require('node:crypto').createHash('sha256').update(token).digest('hex')
+ const db=memoryDatabase({
+  users:[{_id:customerUserId,userType:'customer',isActive:true,status:'active'}],
+  auth_sessions:[{_id:new mongoose.Types.ObjectId(),userId:customerUserId,refreshTokenHash:hash,appType:'customer',revokedAt:null,isActive:true,expiresAt:new Date(Date.now()+60000)}],
+  service_areas:[{_id:areaId,isActive:true,isServiceable:true}],
+  customer_addresses:[{_id:addressId,customerId:customerUserId,serviceAreaId:areaId,isActive:true}],
+  service_categories:[{_id:categoryId,status:'published',isActive:true}],
+  services:[{_id:serviceId,categoryId,status:'published',isActive:true,isHomeServiceAvailable:true,
+   serviceAreaIds:[areaId],name:'Hair Spa',pricePaise:100000,durationMinutes:30}],
+  app_settings:[{key:'business',isActive:true,bookingLeadMinutes:30,assignmentTimeoutMinutes:5}],
+ })
+ const scheduling={async reserve(){return true}}
+ const serviceOtp=createServiceOtp({db})
+ await serve(foundation(createMobileRouter({db,scheduling,serviceOtp})),async base=>{
+  const headers={Authorization:'Bearer '+token,'content-type':'application/json','x-idempotency-key':'booking-otp-test-0001'}
+  const body={
+   cart:{serviceAreaId:String(areaId),items:[{serviceId:String(serviceId),quantity:1}]},
+   addressId:String(addressId),
+   startsAt:new Date(Date.now()+60*60*1000).toISOString(),
+   method:'cash',
+  }
+  const create=()=>fetch(base+'/customer/bookings',{
+   method:'POST',headers,body:JSON.stringify(body),
+  })
+  const first=await create()
+  assert.equal(first.status,201)
+  assert.equal((await first.json()).data.serviceOtp.status,'available')
+  const replay=await create()
+  assert.equal(replay.status,201)
+  const challenges=db.records().service_otp_challenges
+  assert.equal(challenges.length,1)
+  assert.match(challenges[0].otpHash,/^\$argon2id\$/)
+  assert.equal(challenges[0].otp,undefined)
+ })
+})
+test('customer bookings reach eligible online workers and rejection advances to the next worker',async()=>{
+ const customerId=new mongoose.Types.ObjectId(),areaId=new mongoose.Types.ObjectId()
+ const addressId=new mongoose.Types.ObjectId(),serviceId=new mongoose.Types.ObjectId(),categoryId=new mongoose.Types.ObjectId()
+ const workerUserIds=[new mongoose.Types.ObjectId(),new mongoose.Types.ObjectId()]
+ const workerIds=[new mongoose.Types.ObjectId(),new mongoose.Types.ObjectId()]
+ const customerToken='c'.repeat(43),workerTokens=['w'.repeat(43),'x'.repeat(43)]
+ const hashToken=token=>require('node:crypto').createHash('sha256').update(token).digest('hex')
+ const workers=workerIds.map((workerId,index)=>({
+  _id:workerId,userId:workerUserIds[index],status:'approved',isActive:true,isOnline:true,
+  serviceIds:[serviceId],serviceAreaIds:[areaId],
+  compensationRule:{amountPaise:2500,effectiveFrom:new Date('2020-01-01')},
+ }))
+ const db=memoryDatabase({
+  users:[
+   {_id:customerId,userType:'customer',isActive:true,status:'active'},
+   ...workerUserIds.map(_id=>({_id,userType:'worker',isActive:true,status:'active'})),
+  ],
+  auth_sessions:[
+   {_id:new mongoose.Types.ObjectId(),userId:customerId,refreshTokenHash:hashToken(customerToken),appType:'customer',revokedAt:null,isActive:true,expiresAt:new Date(Date.now()+60000)},
+   ...workerUserIds.map((userId,index)=>({_id:new mongoose.Types.ObjectId(),userId,refreshTokenHash:hashToken(workerTokens[index]),appType:'worker',revokedAt:null,isActive:true,expiresAt:new Date(Date.now()+60000)})),
+  ],
+  service_areas:[{_id:areaId,isActive:true,isServiceable:true}],
+  customer_addresses:[{_id:addressId,customerId,serviceAreaId:areaId,isActive:true}],
+  service_categories:[{_id:categoryId,status:'published',isActive:true}],
+  services:[{_id:serviceId,categoryId,status:'published',isActive:true,isHomeServiceAvailable:true,
+   serviceAreaIds:[areaId],name:'Hair Spa',pricePaise:100000,durationMinutes:30}],
+  workers,
+  app_settings:[{key:'business',isActive:true,bookingLeadMinutes:30,assignmentTimeoutMinutes:5}],
+  worker_settlements:[{_id:new mongoose.Types.ObjectId(),workerId:workerIds[1],status:'paid'}],
+ })
+ const serviceOtp=createServiceOtp({db})
+ await serve(foundation(createPlatformRouter({db,auth:authentication(permissions),serviceOtp,legacyWorkerOffersEnabled:true})),async base=>{
+  const customerHeaders={Authorization:'Bearer '+customerToken,'content-type':'application/json','x-idempotency-key':'online-booking-test-0001'}
+  const body={
+   cart:{serviceAreaId:String(areaId),items:[{serviceId:String(serviceId),quantity:1}]},
+   addressId:String(addressId),
+   startsAt:new Date(Date.now()+60*60*1000).toISOString(),
+   method:'cash',
+  }
+  const created=await fetch(base+'/mobile/customer/bookings',{method:'POST',headers:customerHeaders,body:JSON.stringify(body)})
+  assert.equal(created.status,201)
+  const booking=(await created.json()).data
+  assert.equal(booking.status,'assigned')
+  assert.equal(booking.assignmentStatus,'offered')
+  assert.equal(String(booking.workerId),String(workerIds[0]))
+
+  const firstOffers=await fetch(base+'/mobile/worker/offers',{headers:{Authorization:'Bearer '+workerTokens[0]}})
+  const firstOffer=(await firstOffers.json()).data.items[0]
+  assert.equal(String(firstOffer.bookingId),String(booking._id))
+  assert.equal(firstOffer.items[0].name,'Hair Spa')
+
+  const reject=await fetch(base+'/mobile/worker/assignments/'+firstOffer._id+'/respond',{
+   method:'POST',
+   headers:{Authorization:'Bearer '+workerTokens[0],'content-type':'application/json','x-idempotency-key':'worker-reject-test-0001'},
+   body:JSON.stringify({decision:'reject',reason:'Unavailable today'}),
+  })
+  assert.equal(reject.status,200)
+  const secondOffers=await fetch(base+'/mobile/worker/offers',{headers:{Authorization:'Bearer '+workerTokens[1]}})
+  const secondOffer=(await secondOffers.json()).data.items[0]
+  assert.equal(String(secondOffer.bookingId),String(booking._id))
+
+  const settlements=await fetch(base+'/mobile/worker/settlements',{headers:{Authorization:'Bearer '+workerTokens[1]}})
+  assert.equal(settlements.status,200)
+  assert.equal((await settlements.json()).data.items.length,1)
+ })
+})
+test('only the customer can reveal a code and only the worker route can start service',async()=>{
+ const workerUserId=new mongoose.Types.ObjectId(),customerUserId=new mongoose.Types.ObjectId(),workerId=new mongoose.Types.ObjectId()
+ const customerToken='c'.repeat(43),workerToken='w'.repeat(43)
+ const hashToken=token=>require('node:crypto').createHash('sha256').update(token).digest('hex')
+ const assignmentId=new mongoose.Types.ObjectId(),evidenceId=new mongoose.Types.ObjectId()
+ const booking={_id:resourceId,customerId:customerUserId,workerId,workerUserId,assignmentId,durationMinutes:60,
+  status:'arrived',assignmentStatus:'accepted',isActive:true}
+ const db=memoryDatabase({
+  users:[
+   {_id:workerUserId,userType:'worker',isActive:true,status:'active'},
+   {_id:customerUserId,userType:'customer',isActive:true,status:'active'},
+  ],
+  auth_sessions:[
+   {_id:new mongoose.Types.ObjectId(),userId:workerUserId,refreshTokenHash:hashToken(workerToken),appType:'worker',revokedAt:null,isActive:true,expiresAt:new Date(Date.now()+60000)},
+   {_id:new mongoose.Types.ObjectId(),userId:customerUserId,refreshTokenHash:hashToken(customerToken),appType:'customer',revokedAt:null,isActive:true,expiresAt:new Date(Date.now()+60000)},
+  ],
+  workers:[{_id:workerId,userId:workerUserId,status:'approved',isActive:true}],
+  bookings:[booking],
+  booking_assignments:[{_id:assignmentId,bookingId:resourceId,workerId,workerUserId,status:'accepted'}],
+  media_assets:[{_id:evidenceId,bookingId:resourceId,workerId,uploadedBy:workerUserId,usage:'product_evidence',
+   visibility:'private',uploadStatus:'ready',isActive:true,retentionExpiresAt:new Date(Date.now()+86400000)}],
+ })
+ const serviceOtp={
+  configured:true,
+  async availability(){return{status:'available',revealAllowed:true}},
+  async reveal(){return{bookingId:resourceId,otp:'123456'}},
+  async verify({code}){return code==='123456'},
+ }
+ await serve(foundation(createMobileRouter({db,serviceOtp})),async base=>{
+  const customerHeaders={Authorization:'Bearer '+customerToken,'content-type':'application/json'}
+  const workerHeaders={Authorization:'Bearer '+workerToken,'content-type':'application/json'}
+  const details=await fetch(base+'/customer/bookings/'+resourceId,{headers:customerHeaders})
+  assert.equal((await details.json()).data.serviceOtp.status,'available')
+
+  const reveal=await fetch(base+'/customer/bookings/'+resourceId+'/service-otp/reveal',{
+   method:'POST',headers:customerHeaders,body:'{}',
+  })
+  assert.equal(reveal.status,200)
+  assert.equal(reveal.headers.get('cache-control'),'private, no-store')
+  assert.equal((await reveal.json()).data.otp,'123456')
+
+  const customerStart=await fetch(base+'/customer/bookings/'+resourceId+'/progress',{
+   method:'POST',headers:customerHeaders,body:JSON.stringify({action:'start',otp:'123456'}),
+  })
+  assert.equal(customerStart.status,404)
+
+  const workerStart=await fetch(base+'/worker/bookings/'+resourceId+'/progress',{
+   method:'POST',headers:workerHeaders,body:JSON.stringify({action:'start',otp:'123456',evidenceIds:[String(evidenceId)]}),
+  })
+  assert.equal(workerStart.status,200)
+  assert.equal((await workerStart.json()).data.status,'in_progress')
+ })
+})
+test('worker extra requests require customer approval and Razorpay QR uses the updated server total',async()=>{
+ const workerUserId=new mongoose.Types.ObjectId(),customerUserId=new mongoose.Types.ObjectId(),workerId=new mongoose.Types.ObjectId(),assignmentId=new mongoose.Types.ObjectId()
+ const workerToken='w'.repeat(43),customerToken='c'.repeat(43)
+ const hashToken=token=>require('node:crypto').createHash('sha256').update(token).digest('hex')
+ const db=memoryDatabase({
+  users:[
+   {_id:workerUserId,userType:'worker',isActive:true,status:'active'},
+   {_id:customerUserId,userType:'customer',isActive:true,status:'active'},
+  ],
+  auth_sessions:[
+   {_id:new mongoose.Types.ObjectId(),userId:workerUserId,refreshTokenHash:hashToken(workerToken),appType:'worker',revokedAt:null,isActive:true,expiresAt:new Date(Date.now()+60000)},
+   {_id:new mongoose.Types.ObjectId(),userId:customerUserId,refreshTokenHash:hashToken(customerToken),appType:'customer',revokedAt:null,isActive:true,expiresAt:new Date(Date.now()+60000)},
+  ],
+  workers:[{_id:workerId,userId:workerUserId,status:'approved',isActive:true}],
+  bookings:[{_id:resourceId,customerId:customerUserId,workerId,workerUserId,assignmentId,status:'in_progress',
+   assignmentStatus:'accepted',totalPaise:12000,paymentStatus:'pending'}],
+  booking_assignments:[{_id:assignmentId,bookingId:resourceId,workerId,workerUserId,status:'accepted'}],
+ })
+ let providerCalls=0,providerAmount
+ const razorpay={
+  isConfigured:()=>true,
+  async createQrCode(input){
+   providerCalls++;providerAmount=input.amountPaise
+   return{id:'qr_test_booking',image_url:'https://razorpay.test/qr.png'}
+  },
+  verifyWebhook:(body,signature)=>Buffer.isBuffer(body)&&signature==='verified-test-signature',
+ }
+ const app=express()
+ app.use(express.json({verify(req,res,buffer){if(req.originalUrl.includes('/payments/razorpay/webhook'))req.rawBody=Buffer.from(buffer)}}))
+ app.use(createMobileRouter({db,razorpay}))
+ app.use(errorHandler)
+ await serve(app,async base=>{
+  const workerHeaders={Authorization:'Bearer '+workerToken,'content-type':'application/json','x-idempotency-key':'worker-extra-test-001'}
+  const customerHeaders={Authorization:'Bearer '+customerToken,'content-type':'application/json'}
+  const proposed=await fetch(base+'/worker/bookings/'+resourceId+'/extra-services',{
+   method:'POST',headers:workerHeaders,body:JSON.stringify({name:'Hair Spa',amountPaise:5000,durationMinutes:45}),
+  })
+  assert.equal(proposed.status,201)
+  let bookingResponse=await fetch(base+'/customer/bookings/'+resourceId,{headers:customerHeaders})
+  const bookingData=(await bookingResponse.json()).data
+  assert.equal(bookingData.pendingExtraServices.length,1)
+  const extraId=bookingData.pendingExtraServices[0]._id
+  const completeWhilePending=await fetch(base+'/worker/bookings/'+resourceId+'/progress',{
+   method:'POST',headers:{...workerHeaders,'x-idempotency-key':'worker-complete-test-001'},
+   body:JSON.stringify({action:'complete'}),
+  })
+  assert.equal(completeWhilePending.status,409)
+  const approved=await fetch(base+'/customer/bookings/'+resourceId+'/extra-services/'+extraId+'/respond',{
+   method:'POST',headers:customerHeaders,body:JSON.stringify({decision:'approve'}),
+  })
+  assert.equal(approved.status,200)
+  assert.equal(db.records().bookings[0].totalPaise,17000)
+  const completeBeforePayment=await fetch(base+'/worker/bookings/'+resourceId+'/progress',{
+   method:'POST',headers:{...workerHeaders,'x-idempotency-key':'worker-complete-test-002'},
+   body:JSON.stringify({action:'complete'}),
+  })
+  assert.equal(completeBeforePayment.status,409)
+  const qr=await fetch(base+'/worker/bookings/'+resourceId+'/payment-qr',{
+   method:'POST',headers:{...workerHeaders,'x-idempotency-key':'worker-qr-test-0001'},body:'{}',
+  })
+  assert.equal(qr.status,201)
+  assert.equal(providerAmount,17000)
+  assert.equal((await qr.json()).data.amountPaise,17000)
+  const retry=await fetch(base+'/worker/bookings/'+resourceId+'/payment-qr',{
+   method:'POST',headers:{...workerHeaders,'x-idempotency-key':'worker-qr-test-0002'},body:'{}',
+  })
+  assert.equal(retry.status,200)
+  assert.equal(providerCalls,1)
+  const webhook=await fetch(base+'/payments/razorpay/webhook',{
+   method:'POST',headers:{'content-type':'application/json','x-razorpay-signature':'verified-test-signature'},
+   body:JSON.stringify({event:'qr_code.credited',payload:{payment:{entity:{
+    id:'pay_test_booking',qr_code_id:'qr_test_booking',status:'captured',amount:17000,currency:'INR',
+   }}}}),
+  })
+  assert.equal(webhook.status,200)
+  assert.equal(db.records().bookings[0].paymentStatus,'paid')
+  assert.equal(db.records().bookings[0].status,'in_progress')
  })
 })
 
@@ -265,16 +521,21 @@ test('fake storage adapter persists private metadata without publishing a privat
 })
 test('fake SMS verifies once, creates one customer, and never returns the OTP or password hash',async()=>{
  const db=memoryDatabase();let delivered
- const sms={async send(input){delivered=input}}
+ const sms={configured:true,async send(input){delivered=input;return{requestId:'provider-test'}},async verify(input){return input.code==='654321'},async resend(){return true}}
  await serve(foundation(createMobileAuthRouter({db,sms})),async base=>{
-  const requested=await fetch(base+'/otp/request',{method:'POST',headers,body:JSON.stringify({mobileNumber:'+919999999999',appType:'customer'})})
+  const requested=await fetch(base+'/otp/request',{method:'POST',headers,body:JSON.stringify({mobileNumber:'+919999999999',appType:'customer',flow:'registration'})})
   assert.equal(requested.status,201)
   const challenge=(await requested.json()).data
   assert.equal(challenge.code,undefined)
-  const verifyBody={challengeId:challenge.challengeId,code:delivered.code,fullName:'Mock customer'}
+  const verifyBody={challengeId:challenge.challengeId,code:'654321',fullName:'Mock customer'}
   const response=await fetch(base+'/otp/verify',{method:'POST',headers,body:JSON.stringify(verifyBody)})
   assert.equal(response.status,200)
-  const verified=(await response.json()).data
+  const proof=(await response.json()).data
+  assert.equal(proof.registrationRequired,true)
+  assert.equal(delivered.code,undefined)
+  const registered=await fetch(base+'/register/customer',{method:'POST',headers,body:JSON.stringify({registrationToken:proof.registrationToken,fullName:'Mock customer'})})
+  assert.equal(registered.status,201)
+  const verified=(await registered.json()).data
   assert.equal(verified.accessToken.length,43)
   assert.equal(verified.passwordHash,undefined)
   assert.equal(db.records().users.length,1)

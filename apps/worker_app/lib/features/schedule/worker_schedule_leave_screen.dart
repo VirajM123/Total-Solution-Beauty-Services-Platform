@@ -72,9 +72,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
       _repo = widget.leaveRepository!;
       _isBackend = _repo is WorkerBackendLeaveRepository;
     } else if (widget.operationsApi != null) {
-      _repo = WorkerBackendLeaveRepository(
-        operationsApi: widget.operationsApi,
-      );
+      _repo = WorkerBackendLeaveRepository(operationsApi: widget.operationsApi);
       _isBackend = true;
     } else {
       _repo = WorkerDemoLeaveStore.repository;
@@ -127,9 +125,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
   }
 
   List<WorkerLeaveRequest> get _requests =>
-      (!_leaveLoading && _leaveError == null)
-          ? _repo.requests
-          : const [];
+      (!_leaveLoading && _leaveError == null) ? _repo.requests : const [];
 
   static DateTime _day(DateTime value) =>
       DateTime(value.year, value.month, value.day);
@@ -279,7 +275,9 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
               ),
               const SizedBox(height: 5),
               Text(
-                _isBackend ? 'Submit request to salon management for approval.' : 'Saved locally as a draft. No admin is notified.',
+                _isBackend
+                    ? 'Submit request to salon management for approval.'
+                    : 'Saved locally as a draft. No admin is notified.',
                 style: const TextStyle(color: _muted, fontSize: 12),
               ),
               const SizedBox(height: 10),
@@ -343,7 +341,9 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                     reason: reason,
                   ),
                 ),
-                child: Text(_isBackend ? 'Submit Leave Request' : 'Save Demo Request'),
+                child: Text(
+                  _isBackend ? 'Submit Leave Request' : 'Save Demo Request',
+                ),
               ),
             ],
           ),
@@ -362,7 +362,11 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
       setState(() => _leaveTab = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_isBackend ? '✅ Leave request submitted to salon admin for review!' : 'Draft saved locally. No admin approval requested.'),
+          content: Text(
+            _isBackend
+                ? '✅ Leave request submitted to salon admin for review!'
+                : 'Draft saved locally. No admin approval requested.',
+          ),
         ),
       );
     } catch (error) {
@@ -597,7 +601,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                     ),
                   ),
                   Text(
-                    formatCustomerRupees(item.booking.customerPayable),
+                    item.booking.formattedCustomerPayable,
                     style: const TextStyle(
                       color: _deep,
                       fontWeight: FontWeight.w800,
@@ -638,7 +642,9 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Center(
               child: Text(
-                _isBackend ? 'No leave requests submitted yet.' : 'No demo leave requests yet.',
+                _isBackend
+                    ? 'No leave requests submitted yet.'
+                    : 'No demo leave requests yet.',
                 style: const TextStyle(color: _muted, fontSize: 12),
               ),
             ),
@@ -676,19 +682,21 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                 Text(
                   _isBackend
                       ? (request.status == WorkerLeaveStatus.approved
-                          ? 'Approved by salon admin. Assignments paused for these dates.'
-                          : request.status == WorkerLeaveStatus.rejected
-                              ? 'Request was declined by salon management.'
-                              : 'Pending salon admin review.')
+                            ? 'Approved by salon admin. Assignments paused for these dates.'
+                            : request.status == WorkerLeaveStatus.rejected
+                            ? 'Request was declined by salon management.'
+                            : 'Pending salon admin review.')
                       : 'Local demo only. No admin action or booking reassignment occurred.',
                   style: TextStyle(
                     color: request.status == WorkerLeaveStatus.approved
                         ? const Color(0xFF00A95C)
                         : request.status == WorkerLeaveStatus.rejected
-                            ? const Color(0xFFDC2626)
-                            : _muted,
+                        ? const Color(0xFFDC2626)
+                        : _muted,
                     fontSize: 11,
-                    fontWeight: request.status == WorkerLeaveStatus.approved ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: request.status == WorkerLeaveStatus.approved
+                        ? FontWeight.w600
+                        : FontWeight.w400,
                   ),
                 ),
               ],
@@ -773,7 +781,9 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                     style: TextStyle(
                       color: _isBackend ? const Color(0xFF00A95C) : _muted,
                       fontSize: 9,
-                      fontWeight: _isBackend ? FontWeight.w700 : FontWeight.w400,
+                      fontWeight: _isBackend
+                          ? FontWeight.w700
+                          : FontWeight.w400,
                     ),
                   ),
                 ),

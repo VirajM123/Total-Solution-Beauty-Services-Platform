@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/app_assets.dart';
 import '../../core/constants/pinkora_brand.dart';
 
 class _ServiceCategory {
@@ -19,100 +18,6 @@ class _ServiceCategory {
   final String homeCategory;
 }
 
-const _categories = [
-  _ServiceCategory(
-    name: 'Facial',
-    description: 'Glow with healthy, radiant skin',
-    image: AppAssets.serviceFacial,
-    icon: Icons.spa_outlined,
-    homeCategory: 'Facial',
-  ),
-  _ServiceCategory(
-    name: 'Hair Care & Spa',
-    description: 'Nourish, strengthen and shine',
-    image: AppAssets.serviceHairCareSpa,
-    icon: Icons.face_3_outlined,
-    homeCategory: 'Hair Spa',
-  ),
-  _ServiceCategory(
-    name: 'Makeup',
-    description: 'Look beautiful for every occasion',
-    image: AppAssets.serviceMakeup,
-    icon: Icons.brush_outlined,
-    homeCategory: 'Makeup',
-  ),
-  _ServiceCategory(
-    name: 'Waxing',
-    description: 'Smooth and confident skin',
-    image: AppAssets.serviceWaxing,
-    icon: Icons.auto_fix_high_outlined,
-    homeCategory: 'Waxing',
-  ),
-  _ServiceCategory(
-    name: 'Manicure & Pedicure',
-    description: 'Perfect care for your hands & feet',
-    image: AppAssets.serviceManicurePedicure,
-    icon: Icons.back_hand_outlined,
-    homeCategory: 'Manicure',
-  ),
-  _ServiceCategory(
-    name: 'Threading',
-    description: 'Clean, precise and well-shaped',
-    image: AppAssets.serviceThreading,
-    icon: Icons.remove_red_eye_outlined,
-    homeCategory: 'Threading',
-  ),
-  _ServiceCategory(
-    name: 'Bridal Services',
-    description: 'Make your special day more special',
-    image: AppAssets.serviceBridal,
-    icon: Icons.face_retouching_natural_outlined,
-    homeCategory: 'Bridal Services',
-  ),
-  _ServiceCategory(
-    name: 'Beauty Packages',
-    description: 'Complete care for total beauty',
-    image: AppAssets.serviceBeautyPackages,
-    icon: Icons.spa_outlined,
-    homeCategory: 'Beauty Packages',
-  ),
-  _ServiceCategory(
-    name: 'Body Polish',
-    description: 'Smooth, nourish and brighten your skin',
-    image: AppAssets.bodyPolishMain,
-    icon: Icons.spa_outlined,
-    homeCategory: 'Body Polish',
-  ),
-  _ServiceCategory(
-    name: 'Clean Up',
-    description: 'A quick refresh for clear, healthy-looking skin',
-    image: AppAssets.cleanUpMain,
-    icon: Icons.face_retouching_natural_outlined,
-    homeCategory: 'Clean Up',
-  ),
-  _ServiceCategory(
-    name: 'Hair Color',
-    description: 'Refresh your look with professional color',
-    image: AppAssets.hairColorMain,
-    icon: Icons.palette_outlined,
-    homeCategory: 'Hair Color',
-  ),
-  _ServiceCategory(
-    name: 'Hair Mehendi',
-    description: 'Natural color and care for your hair',
-    image: AppAssets.hairMehendiMain,
-    icon: Icons.brush_outlined,
-    homeCategory: 'Hair Mehendi',
-  ),
-  _ServiceCategory(
-    name: 'Hair Cut',
-    description: 'Find a cut that suits your style',
-    image: AppAssets.hairCutMain,
-    icon: Icons.content_cut_outlined,
-    homeCategory: 'Hair Cut',
-  ),
-];
-
 class AllServicesScreen extends StatefulWidget {
   const AllServicesScreen({
     super.key,
@@ -120,12 +25,14 @@ class AllServicesScreen extends StatefulWidget {
     required this.onCategorySelected,
     required this.onServiceSelected,
     required this.subservicesByCategory,
+    this.categoryNames = const [],
   });
 
   final VoidCallback onBack;
   final ValueChanged<String> onCategorySelected;
   final ValueChanged<String> onServiceSelected;
   final Map<String, List<String>> subservicesByCategory;
+  final List<String> categoryNames;
 
   @override
   State<AllServicesScreen> createState() => _AllServicesScreenState();
@@ -143,14 +50,27 @@ class _AllServicesScreenState extends State<AllServicesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final categories = [
+      for (final name
+          in widget.categoryNames.isEmpty
+              ? widget.subservicesByCategory.keys
+              : widget.categoryNames)
+        _ServiceCategory(
+          name: name,
+          description: '',
+          image: '',
+          icon: Icons.spa_outlined,
+          homeCategory: name,
+        ),
+    ];
     final query = _search.text.trim().toLowerCase();
-    final visibleCategories = _categories
+    final visibleCategories = categories
         .where((category) => category.name.toLowerCase().contains(query))
         .toList();
     final matchingServices = query.isEmpty
         ? <({String category, String name})>[]
         : [
-            for (final category in _categories)
+            for (final category in categories)
               for (final name
                   in widget.subservicesByCategory[category.homeCategory] ??
                       const <String>[])
@@ -193,7 +113,7 @@ class _AllServicesScreenState extends State<AllServicesScreen> {
                           ),
                           SizedBox(height: 1),
                           Text(
-                            'Preview catalog · sample prices and durations',
+                            'Browse available services',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
@@ -275,21 +195,22 @@ class _AllServicesScreenState extends State<AllServicesScreen> {
                           borderRadius: BorderRadius.circular(14),
                           child: ListTile(
                             key: ValueKey('search-service-${service.name}'),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            leading: const Icon(
+                              Icons.spa_outlined,
+                              color: PinkoraBrand.berry,
+                            ),
+                            title: Text(service.name),
+                            subtitle: Text(service.category),
+                            trailing: const Icon(
+                              Icons.chevron_right_rounded,
+                              color: PinkoraBrand.rose,
+                            ),
+                            onTap: () => widget.onServiceSelected(service.name),
                           ),
-                          leading: const Icon(
-                            Icons.spa_outlined,
-                            color: PinkoraBrand.berry,
-                          ),
-                          title: Text(service.name),
-                          subtitle: Text(service.category),
-                          trailing: const Icon(
-                            Icons.chevron_right_rounded,
-                            color: PinkoraBrand.rose,
-                          ),
-                          onTap: () => widget.onServiceSelected(service.name),
-                        ));
+                        );
                       }
                       final category = visibleCategories[index];
                       return _CategoryCard(
@@ -457,7 +378,12 @@ class _CategoryCard extends StatelessWidget {
               child: IgnorePointer(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(13),
-                  child: Image.asset(
+                  child: category.image.trim().isEmpty
+                      ? const ColoredBox(
+                          color: Color(0xFFFFE8EE),
+                          child: Icon(Icons.spa_outlined, color: PinkoraBrand.rose),
+                        )
+                      : Image.asset(
                     category.image,
                     fit: BoxFit.cover,
                     cacheWidth:

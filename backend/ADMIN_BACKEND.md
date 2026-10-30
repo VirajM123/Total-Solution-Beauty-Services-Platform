@@ -1,6 +1,6 @@
 # Hi Beauty admin backend
 
-This implementation extends the existing Express backend. No new customer/worker app endpoints were implemented. Existing app routers were preserved to avoid changing unrelated behavior.
+This implementation extends the existing Express backend with final admin-owned assignment, private product evidence, evidence-gated OTP start, and a server-timed extension decision flow. Existing worker-offer endpoints remain available behind `LEGACY_WORKER_OFFERS_ENABLED`; the default is disabled.
 
 ## Local configuration
 
@@ -24,7 +24,11 @@ No default administrator or default password is shipped. All 37 existing databas
 - Worker creation with private identity-document references, approval/rejection, document access, skills/areas and compensation rules.
 - Server-priced service/package quotes and bookings with immutable snapshots.
 - Assignment eligibility, availability windows, compensation snapshots, cancellation and price-preserving rescheduling.
-- Restart-safe assignment offer expiry with conditional state updates.
+- Direct worker assignment by an admin with reason, actor, timestamp, assignment history and notifications.
+- Restart-safe legacy offer expiry with conditional state updates; stale offers cannot be accepted after direct assignment.
+- Booking-scoped private product photos, uploaded by the assigned worker before service start. Photos accept JPEG/PNG/WebP, up to 5 MB each and three per booking; retention is 90 days.
+- Worker OTP start verifies the assigned worker, arrived state, linked product evidence and one-time OTP, then persists server start/end timestamps.
+- Idempotent 15-minute extension requests at booked service expiry, with a five-minute customer decision window. Approval extends server end time; decline/timeout adds no duration charge. Catalog extra services remain a separate flow.
 - Collection reconciliation and receipt APIs. Completion and collection remain separate states.
 - Refund requests with reserved balances; approval/rejection; external completed-refund reconciliation. No transfer is initiated by these actions.
 - Worker cash handover and compensation reconciliation with independent outstanding-balance limits.
@@ -35,9 +39,10 @@ Customer IDs in existing bookings may refer to user records. The admin adapter h
 
 ## Financial and booking policies
 
-- An admin booking is confirmed, searching for assignment, and unpaid.
+- An admin booking is confirmed, searching for assignment, and unpaid. Admin assignment is final and does not wait for worker acceptance.
 - Appointment validation checks lead time, slot alignment and opening/closing hours.
-- A booking does not promise that a worker has accepted. Acceptance and verified service execution remain future app integration boundaries.
+- Legacy offers remain available only when explicitly enabled. They cannot act on a booking assigned directly by an admin.
+- Extension duration pricing is currently zero, so the booked total remains unchanged unless a separately approved catalog extra service is added. Repeated duration extensions are disabled.
 - Administrative cancellation/rescheduling require reasons; they preserve financial snapshots and produce server history.
 - Coupon usage is consumed at confirmed booking creation. Cancellation currently does not restore coupon usage; this is an explicit policy, not a refund of money.
 - Recorded refunds require evidence of an external completed refund. They are distinguished from provider-verified transfers.
@@ -45,19 +50,19 @@ Customer IDs in existing bookings may refer to user records. The admin adapter h
 
 ## External configuration still required
 
-The storage service accepts an adapter implementing `put`, `remove` and `signedRead`. Public images must have persistent HTTPS URLs. Identity documents remain private and use authorized expiring links. No adapter is configured at server startup until the existing provider and credential-file path are supplied.
+The storage service accepts an adapter implementing `put`, `remove` and `signedRead`. The parallel `admin web panel/backend` supports S3; this backend provides a MongoDB-backed private adapter in development when a valid session secret is configured. Product evidence is private and opened only through authorized 60-second signed links. Configure `DEVELOPMENT_MEDIA_BASE_URL` to a device-reachable API base when verifying uploads from a phone. Production requires persistent private storage; uploads fail closed when no adapter is configured.
 
-Razorpay order creation, live webhook processing, provider-initiated refunds, SMS/OTP delivery and app push delivery are not configured or verified. Do not treat manual reconciliation as payment-provider verification. Customer/worker authentication and service-start OTP are future app backend work.
+Razorpay single-use QR creation and signed webhook verification are implemented, but require backend credentials and have not been verified against a live Razorpay account. Provider-initiated refunds, SMS/OTP delivery and app push delivery are not configured. Do not treat manual reconciliation as payment-provider verification.
 
-Availability windows can be recorded through the admin API. Existing workers without explicit availability or effective compensation rules cannot be assigned. Administrative status edits are not worker consent or proof of OTP verification.
+Availability windows can be recorded through the admin API. A worker who explicitly sets their profile online is also eligible for matching during that period; offline workers still need a covering availability window. Admin assignment continues to use the backend eligibility and conflict checks. The legacy sequential offer workflow is preserved but disabled by default. An effective compensation rule is required for assignment. Administrative status edits are not proof of OTP verification.
 
 ## Tests and evidence
 
-Backend unit/API tests use deterministic transaction doubles, not the development database. These verify application rollback/replay behavior but do not establish real MongoDB concurrency correctness.
+Backend unit/API tests use deterministic transaction doubles, not the development database. These verify application rollback/replay behavior, extension idempotency, and evidence-gated start behavior but do not establish real MongoDB concurrency correctness. Both backend suites, both admin builds/tests, and targeted worker/customer Flutter analysis/tests passed after the workflow changes.
 
 The live checks are read-only: database ping, collection validator inspection, backend health/readiness and unauthenticated-session rejection. Browser verification could not run because the session exposed no browser surface. Authenticated browser and live-provider workflows require the initial admin account and storage configuration.
 
-The frontend build and tests must be rerun after integration changes. Existing lint warnings are recorded separately; successful build output is not proof that every production workflow is complete.
+Production rollout still requires verifying configured storage and notification delivery. Successful builds and deterministic tests are not proof that every production workflow is complete.
 
 ## Rollback
 

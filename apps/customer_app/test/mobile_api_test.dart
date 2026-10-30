@@ -1,12 +1,23 @@
 import 'dart:async';
+import 'package:customer_app/core/config/app_config.dart';
+import 'package:customer_app/core/config/environment.dart';
 import 'package:customer_app/core/api/mobile_api.dart';
 import 'package:customer_app/integration/customer_backend.dart';
 import 'package:customer_app/integration/customer_content.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test('development uses the shared Admin backend by default', () {
+    const config = AppConfig(Environment.development);
+    expect(
+      config.apiBaseUrl,
+      kIsWeb ? 'http://localhost:5001/api' : 'http://10.0.2.2:5001/api',
+    );
+  });
+
   test('unmounted promotions and private content remain pending', () async {
     const content = PendingCustomerContentBackend();
     await expectLater(content.packages(page: 1), throwsA(isA<IntegrationPending>()));

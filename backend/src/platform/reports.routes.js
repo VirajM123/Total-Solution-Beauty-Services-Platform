@@ -29,9 +29,18 @@ function createReportsRouter({db,auth}){
    reply(req,res,await list(db,spec.collection,req.query,{fields:spec.fields,dateField:spec.date,projection:{passwordHash:0,otpHash:0,refreshTokenHash:0}}))
   }))
   router.get('/reports/'+name+'/export',auth.requirePermission('reports.read'),auth.requirePermission((name==='redemptions'?'offers':name)+'.read'),handler(async(req,res)=>{
-   const result=await list(db,spec.collection,req.query,{fields:spec.fields,dateField:spec.date,projection:{_id:1,status:1,createdAt:1,totalPaise:1,amountPaise:1,earningsPaise:1,method:1}})
+   const {filter}=listFilter(req.query,spec.fields,spec.date)
+   const cursor=db.collection(spec.collection).find({$and:[filter,{isDeleted:{$ne:true}}]},{projection:{_id:1,status:1,createdAt:1,totalPaise:1,amountPaise:1,earningsPaise:1,method:1}}).sort({createdAt:-1,_id:1})
    const fields=['_id','status','createdAt','totalPaise','amountPaise','earningsPaise','method']
-   res.type('text/csv').attachment('hii-beauty-'+name+'.csv').send(csv([fields,...result.items.map(record=>fields.map(field=>record[field]))]))
+   res.type('text/csv').attachment('hii-beauty-'+name+'.csv')
+   res.write(csv([fields])+'\r\n')
+   try{
+    for await(const record of cursor){
+     if(res.destroyed)break
+     if(!res.write(csv([fields.map(field=>record[field])]).slice(1)+'\r\n'))await require('node:events').once(res,'drain')
+    }
+   }finally{await cursor.close()}
+   res.end()
   }))
  }
  return router

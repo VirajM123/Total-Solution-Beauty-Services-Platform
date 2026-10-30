@@ -78,6 +78,44 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('live service OTP is returned for server verification', (
+    tester,
+  ) async {
+    String? submittedCode;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                submittedCode = await Navigator.of(context).push<String>(
+                  MaterialPageRoute(
+                    builder: (_) => WorkerStartServiceOtpScreen(
+                      order: _order,
+                      demoMode: false,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Open OTP'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open OTP'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('start-service-otp')),
+      '123456',
+    );
+    await tester.tap(find.byKey(const Key('verify-start-service')));
+    await tester.pumpAndSettle();
+
+    expect(submittedCode, '123456');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('entering registration OTP digits uses a light impact', (
     tester,
   ) async {

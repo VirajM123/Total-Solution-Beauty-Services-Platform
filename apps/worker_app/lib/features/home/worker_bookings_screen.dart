@@ -182,9 +182,9 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
         ? WorkerDemoBookingStore.resolveAll(widget.orders)
         : widget.orders;
     final visible = currentOrders.where(_matches).toList();
-    final total = visible.fold<int>(
+    final totalPaise = visible.fold<int>(
       0,
-      (sum, order) => sum + order.customerPayable,
+      (sum, order) => sum + order.exactCustomerPayablePaise,
     );
     return Scaffold(
       backgroundColor: _cream,
@@ -362,7 +362,9 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                                         children: [
                                           const TextSpan(text: 'Payable  '),
                                           TextSpan(
-                                            text: formatCustomerRupees(total),
+                                            text: formatCustomerPaise(
+                                              totalPaise,
+                                            ),
                                             style: const TextStyle(
                                               color: _deep,
                                               fontSize: 13,
@@ -632,9 +634,7 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
                                                 const SizedBox(width: 6),
                                                 Expanded(
                                                   child: Text(
-                                                    formatCustomerRupees(
-                                                      o.customerPayable,
-                                                    ),
+                                                    o.formattedCustomerPayable,
                                                     style: const TextStyle(
                                                       color: _deep,
                                                       fontWeight:

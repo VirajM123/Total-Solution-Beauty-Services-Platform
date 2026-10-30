@@ -1,3 +1,5 @@
+import 'mobile_push.dart';
+import 'dart:async';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../core/api/mobile_api.dart';
@@ -144,6 +146,7 @@ class CustomerAuthApi {
       );
     }
     await _tokenStorage.write(token);
+    unawaited(MobilePush.instance?.sync() ?? Future<void>.value());
     return CustomerOtpResult(
       identity: CustomerIdentity(
         id: '${user['id']}',
@@ -175,6 +178,7 @@ class CustomerAuthApi {
       );
     }
     await _tokenStorage.write(token);
+    unawaited(MobilePush.instance?.sync() ?? Future<void>.value());
     return CustomerIdentity(
       id: '${user['id']}',
       phone: '${user['mobileNumber']}',
@@ -193,6 +197,7 @@ class CustomerAuthApi {
       );
     } finally {
       await _tokenStorage.delete();
+      await MobilePush.instance?.signedOut();
     }
   }
   Future<String?> sessionToken() => _tokenStorage.read();
@@ -205,6 +210,7 @@ class CustomerAuthApi {
     String fullName = 'Omkar Bhange',
   }) async {
     await _tokenStorage.write(token);
+    unawaited(MobilePush.instance?.sync() ?? Future<void>.value());
     return CustomerIdentity(
       id: customerId,
       phone: phone,

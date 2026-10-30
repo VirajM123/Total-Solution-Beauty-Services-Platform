@@ -5,7 +5,15 @@ const reason=z.string().trim().min(3).max(1000)
 function createWorkflowsRouter({db,auth,scheduling,compensation}){
  const router=protectedRouter(auth)
  router.get('/pending-payments',auth.requirePermission('payments.read'),handler(async(req,res)=>{
-  reply(req,res,await list(db,'bookings',req.query,{scope:{paymentStatus:'pending',status:{$ne:'cancelled'}},fields:[],projection:{_id:1,customerId:1,workerId:1,totalPaise:1,paymentMethod:1,createdAt:1,status:1}}))
+  const result=await list(db,'bookings',req.query,{scope:{paymentStatus:'pending',status:{$ne:'cancelled'}},fields:[],projection:{_id:1,customerId:1,workerId:1,totalPaise:1,paymentMethod:1,createdAt:1,status:1,serviceFinishedAt:1}})
+  for(const booking of result.items){
+   if(booking.paymentMethod==='cash'&&booking.serviceFinishedAt){
+    const report=await db.collection('payment_events').findOne({bookingId:booking._id,workerId:booking.workerId,type:'cash_reported',verification:'pending_reconciliation'},{projection:{reference:1,createdAt:1}})
+    booking.cashReportReference=report?.reference||''
+    booking.cashReportedAt=report?.createdAt||null
+   }
+  }
+  reply(req,res,result)
  }))
  router.patch('/admins/:id/status',auth.requirePermission('admins.update'),handler(async(req,res)=>{
   const input=z.object({status:z.enum(['active','suspended'])}).strict().parse(req.body)
@@ -64,7 +72,10 @@ function createWorkflowsRouter({db,auth,scheduling,compensation}){
  router.post('/bookings/:id/assign',auth.requirePermission('bookings.assign'),handler(async(req,res)=>{
   if(!scheduling)fail(503,'SCHEDULING_NOT_CONFIGURED','Approved scheduling/availability strategy is required.')
   const input=z.object({workerId:idSchema,reason:reason}).strict().parse(req.body)
+  const identity=requestIdentity(req,'admin.assignment.'+req.params.id)
   const result=await atomic(db,req,'booking.assign','bookings',async session=>{
+   const previous=await db.collection('booking_events').findOne({_id:identity._id},{session})
+   if(previous){if(previous.requestHash!==identity.requestHash)fail(409,'IDEMPOTENCY_CONFLICT','This key was used with a different allocation.');return previous.result}
    const booking=await requireRecord(db,'bookings',req.params.id,session)
    if(!['confirmed','assigned'].includes(booking.status))fail(409,'INVALID_TRANSITION','This booking cannot be assigned.')
    const worker=await requireRecord(db,'workers',input.workerId,session,{status:'approved',isOnline:true,isActive:true})
@@ -76,15 +87,22 @@ function createWorkflowsRouter({db,auth,scheduling,compensation}){
    const overlap=await db.collection('bookings').findOne({_id:{$ne:booking._id},workerId:worker._id,status:{$nin:['completed','cancelled']},
      startsAt:{$lt:booking.endsAt},endsAt:{$gt:booking.startsAt}},{session})
    if(overlap||!await scheduling.canAssign({worker,booking,session}))fail(409,'WORKER_UNAVAILABLE','Worker has a conflicting booking or unavailable schedule.')
-   await db.collection('booking_assignments').updateMany({bookingId:booking._id,status:{$in:['offered','accepted']}},{$set:{status:'superseded',updatedAt:new Date()}},{session})
-   const assignment={_id:new(require('mongoose').Types.ObjectId)(),bookingId:booking._id,workerId:worker._id,workerUserId:worker.userId,status:'offered',
-     offeredAt:new Date(),expiresAt:new Date(Date.now()+booking.assignmentTimeoutMinutes*60000),reason:input.reason,createdAt:new Date(),isActive:true}
-   if(!Number.isFinite(assignment.expiresAt.getTime()))fail(503,'POLICY_NOT_CONFIGURED','Booking assignment timeout policy is missing.')
+   const assignedAt=new Date()
+   const previousAssignments=await db.collection('booking_assignments').find({bookingId:booking._id,status:{$in:['offered','accepted','assigned']}},{session}).toArray()
+   for(const previous of previousAssignments){
+     await compareAndSet(db,'booking_assignments',previous,{status:'superseded',reason:input.reason,changedAt:assignedAt,changedBy:req.auth.user._id},session)
+     if(String(previous.workerUserId)!==String(worker.userId))await notify(db,session,previous.workerUserId,'assignment.revoked',previous._id)
+   }
+   const assignment={_id:new(require('mongoose').Types.ObjectId)(),bookingId:booking._id,workerId:worker._id,workerUserId:worker.userId,status:'assigned',
+     reason:input.reason,assignedAt,assignedBy:req.auth.user._id,createdAt:assignedAt,isActive:true}
    await db.collection('booking_assignments').insertOne(assignment,{session})
    if(!worker.compensationRule || new Date(worker.compensationRule.effectiveFrom)>booking.startsAt)fail(409,'COMPENSATION_NOT_CONFIGURED','Configure an effective compensation rule before assigning this worker.')
    const compensationPaise=paise(worker.compensationRule.amountPaise)
-   const updated=await compareAndSet(db,'bookings',booking,{compensationPaise,workerId:worker._id,workerUserId:worker.userId,assignmentId:assignment._id,assignmentStatus:'offered',status:'assigned'},session)
-   await notify(db,session,worker.userId,'assignment.offered',assignment._id);return updated
+   const updated=await compareAndSet(db,'bookings',booking,{compensationPaise,workerId:worker._id,workerUserId:worker.userId,assignmentId:assignment._id,assignmentStatus:'assigned',assigningAdminUserId:req.auth.user._id,assignedAt,assignmentReason:input.reason,status:'assigned'},session)
+   await db.collection('booking_events').insertOne({...identity,result:updated,bookingId:booking._id,type:'assignment_assigned',workerId:worker._id,actorUserId:req.auth.user._id,reason:input.reason,createdAt:assignedAt},{session})
+   await notify(db,session,worker.userId,'assignment.assigned',assignment._id)
+   await notify(db,session,booking.customerId,'booking.assigned',booking._id)
+   return updated
   });reply(req,res,result)
  }))
  router.post('/bookings/:id/cancel',auth.requirePermission('bookings.cancel'),handler(async(req,res)=>{
@@ -92,10 +110,12 @@ function createWorkflowsRouter({db,auth,scheduling,compensation}){
   const result=await atomic(db,req,'booking.cancel','bookings',async session=>{
    const booking=await requireRecord(db,'bookings',req.params.id,session)
    ensureTransition(booking.status,'cancel','admin',booking)
-   await db.collection('booking_assignments').updateMany({bookingId:booking._id,status:{$in:['offered','accepted']}},{$set:{status:'cancelled',updatedAt:new Date()}},{session})
+   await db.collection('booking_assignments').updateMany({bookingId:booking._id,status:{$in:['offered','accepted','assigned']}},{$set:{status:'cancelled',updatedAt:new Date()}},{session})
    const updated=await compareAndSet(db,'bookings',booking,{status:'cancelled',assignmentStatus:'cancelled',cancellationReason:input.reason},session)
    await db.collection('booking_events').insertOne({bookingId:booking._id,type:'cancelled',actorUserId:req.auth.user._id,reason:input.reason,createdAt:new Date()},{session})
-   await notify(db,session,booking.customerId,'booking.cancelled',booking._id,req.id);return updated
+   await notify(db,session,booking.customerId,'booking.cancelled',booking._id,req.id)
+   if(booking.workerUserId)await notify(db,session,booking.workerUserId,'booking.cancelled',booking._id,req.id)
+   return updated
   });reply(req,res,result)
  }))
  router.post('/payments/reconcile',auth.requirePermission('payments.reconcile'),handler(async(req,res)=>{
@@ -107,6 +127,10 @@ function createWorkflowsRouter({db,auth,scheduling,compensation}){
    const booking=await requireRecord(db,'bookings',input.bookingId,session)
    collectionEvidence(booking,input,'admin')
    if(booking.paymentStatus==='paid')fail(409,'ALREADY_PAID','Payment is already recorded.')
+   if(booking.status==='in_progress'&&input.method==='cash'){
+    const report=await db.collection('payment_events').findOne({bookingId:booking._id,workerId:booking.workerId,type:'cash_reported',verification:'pending_reconciliation',amountPaise:input.amountPaise,reference:input.evidenceReference},{session})
+    if(!report)fail(409,'CASH_REPORT_REQUIRED','Verify the worker cash report before reconciling payment.')
+   }
    await compareAndSet(db,'bookings',booking,{paymentStatus:'paid'},session)
    // A deterministic reference guard prevents reuse across different bookings/keys.
    const {createHash}=require('node:crypto')
@@ -115,7 +139,9 @@ function createWorkflowsRouter({db,auth,scheduling,compensation}){
    const payment={...identity,bookingId:booking._id,customerId:booking.customerId,workerId:booking.workerId,amountPaise:input.amountPaise,method:input.method,
     status:'paid',verification:'authorized_reconciliation',evidenceReference:input.evidenceReference,verifiedBy:req.auth.user._id,paidAt:new Date(),createdAt:new Date(),isActive:true}
    await db.collection('payments').insertOne(payment,{session})
-   await notify(db,session,booking.customerId,'payment.recorded',payment._id);return payment
+   await notify(db,session,booking.customerId,'payment.recorded',payment._id)
+   if(booking.workerUserId)await notify(db,session,booking.workerUserId,'booking.payment_received',booking._id,String(payment._id))
+   return payment
   });reply(req,res,result,201)
  }))
  router.post('/settlements/generate',auth.requirePermission('settlements.approve'),handler(async(req,res)=>{
