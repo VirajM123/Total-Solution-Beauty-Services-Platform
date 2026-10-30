@@ -26,6 +26,7 @@ class AllServicesScreen extends StatefulWidget {
     required this.onServiceSelected,
     required this.subservicesByCategory,
     this.categoryNames = const [],
+    this.categoryImages = const {},
   });
 
   final VoidCallback onBack;
@@ -33,6 +34,7 @@ class AllServicesScreen extends StatefulWidget {
   final ValueChanged<String> onServiceSelected;
   final Map<String, List<String>> subservicesByCategory;
   final List<String> categoryNames;
+  final Map<String, String> categoryImages;
 
   @override
   State<AllServicesScreen> createState() => _AllServicesScreenState();
@@ -58,7 +60,7 @@ class _AllServicesScreenState extends State<AllServicesScreen> {
         _ServiceCategory(
           name: name,
           description: '',
-          image: '',
+          image: widget.categoryImages[name] ?? '',
           icon: Icons.spa_outlined,
           homeCategory: name,
         ),
@@ -272,7 +274,7 @@ class _CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final imageWidth = constraints.maxWidth * 0.36;
-      final cardHeight = (constraints.maxWidth * 0.25).clamp(92.0, 108.0);
+      final cardHeight = (constraints.maxWidth * 0.36).clamp(120.0, 150.0);
       final badgeSize = (constraints.maxWidth * 0.12).clamp(44.0, 58.0);
       return SizedBox(
         height: cardHeight,
@@ -381,19 +383,25 @@ class _CategoryCard extends StatelessWidget {
                   child: category.image.trim().isEmpty
                       ? const ColoredBox(
                           color: Color(0xFFFFE8EE),
-                          child: Icon(Icons.spa_outlined, color: PinkoraBrand.rose),
+                          child: Icon(
+                            Icons.spa_outlined,
+                            color: PinkoraBrand.rose,
+                          ),
                         )
-                      : Image.asset(
-                    category.image,
-                    fit: BoxFit.cover,
-                    cacheWidth:
-                        (imageWidth * MediaQuery.devicePixelRatioOf(context))
-                            .ceil(),
-                    errorBuilder: (_, _, _) => const ColoredBox(
-                      color: Color(0xFFFFE8EE),
-                      child: Icon(Icons.spa_outlined, color: PinkoraBrand.rose),
-                    ),
-                  ),
+                      : Image(
+                          image:
+                              Uri.tryParse(category.image)?.hasAuthority == true
+                              ? NetworkImage(category.image)
+                              : AssetImage(category.image) as ImageProvider,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, _, _) => const ColoredBox(
+                            color: Color(0xFFFFE8EE),
+                            child: Icon(
+                              Icons.spa_outlined,
+                              color: PinkoraBrand.rose,
+                            ),
+                          ),
+                        ),
                 ),
               ),
             ),

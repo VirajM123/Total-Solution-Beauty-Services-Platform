@@ -312,6 +312,10 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
 
   bool _underThousand = false;
   bool _offerApplied = false;
+  String? _couponCode;
+  String? _quotedOfferFingerprint;
+  int _quotedDiscountPaise = 0;
+  bool _applyingOffer = false;
   String _offersTab = 'Offers';
   String _offersCategory = 'All';
   String _offerSearchQuery = '';
@@ -710,6 +714,73 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     }
   }
 
+  Future<void> _applyOffer(Map<String, dynamic> offer) async {
+    if (_applyingOffer || _submittingPreview) return;
+    if (_liveBookingId != null || _checkoutPreview != null) {
+      _message('Start a new booking to use this offer.');
+      return;
+    }
+    final code = '${offer['code'] ?? ''}'.trim();
+    if (code.isEmpty) {
+      _message('This promotion has no available coupon.');
+      return;
+    }
+    setState(() {
+      _couponCode = code;
+      _offerApplied = false;
+      _quotedOfferFingerprint = null;
+      _tab = 1;
+    });
+    if (_plan.isEmpty || _savedAddresses.isEmpty) {
+      _message(
+        '$code selected. Add services and select an address to validate it.',
+      );
+      return;
+    }
+    if (await _validateSelectedOffer() && mounted) {
+      _message('$code applied successfully.');
+    }
+  }
+
+  Future<bool> _validateSelectedOffer() async {
+    if (_applyingOffer) return false;
+    final code = _couponCode;
+    if (code == null) return true;
+    final fingerprint = _offerFingerprint;
+    setState(() => _applyingOffer = true);
+    try {
+      final quote = await _operationsApi.quoteCart(
+        serviceAreaId: _selectedAddress.serviceAreaId,
+        items: _couponItems,
+        couponCode: code,
+      );
+      if (!mounted || fingerprint != _offerFingerprint) return false;
+      setState(() {
+        _quotedDiscountPaise = int.tryParse('${quote['discountPaise']}') ?? 0;
+        _quotedOfferFingerprint = fingerprint;
+        _offerApplied = true;
+      });
+      return true;
+    } catch (error) {
+      if (mounted && fingerprint == _offerFingerprint) {
+        setState(() {
+          _couponCode = null;
+          _offerApplied = false;
+          _quotedDiscountPaise = 0;
+          _quotedOfferFingerprint = null;
+        });
+        _message(
+          error is CustomerMobileApiException
+              ? error.message
+              : 'Unable to apply offer. Please try again.',
+        );
+      }
+      return false;
+    } finally {
+      if (mounted) setState(() => _applyingOffer = false);
+    }
+  }
+
   void _setOffer(bool enabled) {
     setState(() => _tab = 2);
   }
@@ -758,7 +829,26 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     (sum, item) => sum + item.price * (_cartQuantities[item.id] ?? 1),
   );
 
-  int get _cartDiscount => 0;
+  String get _offerFingerprint => jsonEncode({
+    'coupon': _couponCode,
+    'address': _selectedAddressId,
+    'subtotal': _cartSubtotal,
+    'items': _couponItems,
+  });
+
+  List<Map<String, dynamic>> get _couponItems => [
+    for (final service in _plan)
+      {
+        'serviceId':
+            service.backendId ??
+            _catalogServiceIds[service.name.trim().toLowerCase()],
+        'quantity': _cartQuantities[service.id] ?? 1,
+      },
+  ];
+
+  int get _cartDiscount => _quotedOfferFingerprint == _offerFingerprint
+      ? (_quotedDiscountPaise / 100).round()
+      : 0;
 
   int get _cartTotal => _cartSubtotal - _cartDiscount;
 
@@ -800,6 +890,9 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
       _reviewRating = 0;
 
       _offerApplied = false;
+      _couponCode = null;
+      _quotedOfferFingerprint = null;
+      _quotedDiscountPaise = 0;
       _bookingDate = tomorrow;
       _calendarWeekStart = _mondayOf(tomorrow);
       _bookingTime = '10:00 AM';
@@ -819,13 +912,15 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
       _bookingTime.isNotEmpty &&
       _savedAddresses.any((address) => address.id == _selectedAddressId);
 
-  void _openBookingConfirmation() {
+  Future<void> _openBookingConfirmation() async {
     if (!_hasValidCheckoutSelection) {
       _message(
         'Review your service, date, time and address before continuing.',
       );
       return;
     }
+    if (_couponCode != null && !await _validateSelectedOffer()) return;
+    if (!mounted) return;
     setState(() => _checkoutStep = 4);
   }
 
@@ -1142,7 +1237,11 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
           (offer) => '${offer['_id'] ?? offer['id']}' == banner.targetId,
         );
         if (available) {
-          setState(() => _tab = 2);
+          _applyOffer(
+            _offersData.firstWhere(
+              (offer) => '${offer['_id'] ?? offer['id']}' == banner.targetId,
+            ),
+          );
         } else {
           _message('This promotion is no longer available.');
         }
@@ -1178,6 +1277,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                       onAddToCart: _addToCart,
                     )
                   : AllServicesScreen(
+                      categoryImages: _categoryImages,
                       categoryNames: _categories
                           .skip(1)
                           .map((category) => category.$1)
@@ -1399,149 +1499,48 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         ],
         if (_offersData.isNotEmpty) ...[
           const SizedBox(height: 10),
-          _discount(_offersData.first),
-          const SizedBox(height: 8),
           _heading('Offers for You', () => setState(() => _tab = 2)),
           const SizedBox(height: 4),
-          SizedBox(
-            height: 72,
-            child: Row(
-              children: [
-                for (
-                  var index = 0;
-                  index < _offersData.length.clamp(0, 2);
-                  index++
-                )
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        right: index == 0 && _offersData.length > 1 ? 10 : 0,
-                      ),
-                      child: _offerCard(_offersData[index]),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          _offerCarousel(width),
         ],
       ],
     );
   }
 
-  Widget _discount(Map<String, dynamic> offer) => InkWell(
-    key: const ValueKey('discount-banner'),
-    onTap: () => setState(() => _tab = 2),
-    borderRadius: BorderRadius.circular(17),
-    child: Container(
-      padding: const EdgeInsets.fromLTRB(9, 5, 10, 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFDDE6),
-        borderRadius: BorderRadius.circular(17),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: _berry,
-            child: Text(
-              offer['discountType'] == 'percentage' ? '%' : '₹',
-              style: const TextStyle(color: Colors.white, fontSize: 18),
-            ),
-          ),
-          const SizedBox(width: 7),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _offerDiscountLabel(offer).toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: _berry,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  '${offer['code'] ?? offer['name'] ?? ''}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 8),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.arrow_forward_ios, size: 13, color: _berry),
-        ],
-      ),
-    ),
+  Widget _offerCarousel(double width) => PromotionalBannerCarousel(
+    key: const ValueKey('footer-offer-carousel'),
+    width: width,
+    height: (width * 2 / 3).clamp(180.0, 240.0),
+    isActive: _tab == 0 && !_showServiceCategories,
+    banners: [
+      for (final offer in _offersData)
+        PromotionalBanner(
+          id: '${offer['_id'] ?? offer['id'] ?? offer['code']}',
+          title: '${offer['name'] ?? ''}',
+          imageAsset: '',
+        ),
+    ],
+    itemBuilder: (_, index) => _offerCard(_offersData[index]),
   );
 
   Widget _offerCard(Map<String, dynamic> offer) => InkWell(
     key: ValueKey('home-offer-${offer['_id'] ?? offer['id'] ?? offer['name']}'),
-    onTap: () => setState(() => _tab = 2),
+    onTap: () => _applyOffer(offer),
     child: Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          _catalogCover(offer['thumbnail']),
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0x55FCE3E9), Color(0x00FCE3E9)],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(7),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${offer['name'] ?? ''}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 10,
-                  ),
-                ),
-                Text(
-                  _offerDiscountLabel(offer).toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Explore',
-                      style: TextStyle(
-                        color: _berry,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(width: 2),
-                    Icon(Icons.arrow_forward, size: 10, color: _berry),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: _catalogCover(offer['thumbnail'], fit: BoxFit.contain),
       ),
     ),
   );
 
   Widget _hero(double width) => PromotionalBannerCarousel(
+    key: const ValueKey('home-header-carousel'),
     banners: _banners,
     width: width,
-    isActive: _tab == 0,
+    isActive: _tab == 0 && !_showServiceCategories,
     onBannerTap: _openBanner,
   );
 
@@ -1776,7 +1775,9 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                 key: const ValueKey('cart-offer'),
                 icon: Icons.local_offer_outlined,
                 title: 'Offers & Packages',
-                subtitle: 'View available offers',
+                subtitle: _couponCode == null
+                    ? 'View available offers'
+                    : 'Selected: $_couponCode',
 
                 onTap: () => _setOffer(!_offerApplied),
               ),
@@ -1838,6 +1839,9 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
               _plan.clear();
               _cartQuantities.clear();
               _offerApplied = false;
+              _couponCode = null;
+              _quotedOfferFingerprint = null;
+              _quotedDiscountPaise = 0;
             }),
             color: _berry,
             icon: const Icon(Icons.delete_outline_rounded),
@@ -2095,7 +2099,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         ),
         const SizedBox(height: 8),
         _summaryRow('Subtotal', _cartSubtotal),
-        if (_offerApplied) _summaryRow('Discount · BEAUTY20', -_cartDiscount),
+        if (_offerApplied && _quotedOfferFingerprint == _offerFingerprint)
+          _summaryRow('Discount · ${_couponCode ?? ''}', -_cartDiscount),
         _summaryRow('Convenience Fee', 0),
         const Divider(height: 14, color: Color(0xFFF4E5E9)),
         Row(
@@ -4028,7 +4033,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
           children: [
             _bookingTotalLine('Service Total', _cartSubtotal),
             const SizedBox(height: 7),
-            if (_offerApplied) ...[
+            if (_offerApplied &&
+                _quotedOfferFingerprint == _offerFingerprint) ...[
               _bookingTotalLine('Discount', -_cartDiscount),
               const SizedBox(height: 7),
             ],
@@ -4205,6 +4211,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         'addressId': aId,
         'startsAt': startsAt.toIso8601String(),
         'method': 'cash',
+        if (_couponCode != null) 'couponCode': _couponCode,
       });
       if (_pendingBookingFingerprint != fingerprint ||
           _pendingBookingIdempotencyKey == null) {
@@ -4219,6 +4226,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         addressId: aId,
         startsAt: startsAt,
         method: 'cash',
+        couponCode: _couponCode,
         idempotencyKey: _pendingBookingIdempotencyKey,
       );
       if (!mounted) return false;
@@ -4731,7 +4739,9 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
 
   Widget _offers() {
     final discountedServices = _serviceDetails
-        .where((service) => service.originalPrice != null)
+        // A comparison price can be zero or equal to the current price.
+        // Only actual discounts have the label required by the deal tile.
+        .where((service) => service.discount != null)
         .where(_offerMatchesCategory)
         .where((service) {
           final query = _offerSearchQuery.trim().toLowerCase();
@@ -5142,6 +5152,13 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
           ),
         ),
         actions: [
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _applyOffer(offer);
+            },
+            child: const Text('Apply Offer'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Close'),
@@ -5504,7 +5521,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     );
   }
 
-  Widget _catalogCover(dynamic value) {
+  Widget _catalogCover(dynamic value, {BoxFit fit = BoxFit.cover}) {
     final uri = value is String ? Uri.tryParse(value) : null;
     if (uri == null || !uri.hasAuthority) {
       return const ColoredBox(
@@ -5514,7 +5531,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     }
     return Image.network(
       value as String,
-      fit: BoxFit.cover,
+      fit: fit,
       errorBuilder: (_, _, _) => const ColoredBox(
         color: Color(0xFFFFE9ED),
         child: Center(child: Icon(Icons.local_offer_outlined, color: _berry)),
@@ -5956,7 +5973,7 @@ class _CategoryServicesScreen extends StatelessWidget {
         ),
         if (services.isNotEmpty) ...[
           Container(
-            height: 132,
+            height: 190,
             margin: const EdgeInsets.fromLTRB(14, 2, 14, 12),
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(22)),

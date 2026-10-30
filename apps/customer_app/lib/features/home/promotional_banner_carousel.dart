@@ -32,6 +32,8 @@ class PromotionalBannerCarousel extends StatefulWidget {
     required this.isActive,
     this.onBannerTap,
     this.onPageChanged,
+    this.itemBuilder,
+    this.height,
     super.key,
   });
 
@@ -40,6 +42,8 @@ class PromotionalBannerCarousel extends StatefulWidget {
   final bool isActive;
   final ValueChanged<PromotionalBanner>? onBannerTap;
   final ValueChanged<int>? onPageChanged;
+  final Widget Function(BuildContext, int)? itemBuilder;
+  final double? height;
 
   @override
   State<PromotionalBannerCarousel> createState() =>
@@ -148,7 +152,7 @@ class _PromotionalBannerCarouselState extends State<PromotionalBannerCarousel>
   Widget build(BuildContext context) {
     if (widget.banners.isEmpty) return const SizedBox.shrink();
 
-    final height = (widget.width * 0.48).clamp(139.0, 170.0);
+    final height = widget.height ?? (widget.width * 0.65).clamp(180.0, 240.0);
     final animationDuration = _disableAnimations
         ? Duration.zero
         : const Duration(milliseconds: 220);
@@ -183,7 +187,9 @@ class _PromotionalBannerCarouselState extends State<PromotionalBannerCarousel>
                       onTap: widget.onBannerTap == null
                           ? null
                           : () => widget.onBannerTap!(banner),
-                      child: _BannerImage(banner: banner),
+                      child:
+                          widget.itemBuilder?.call(context, index) ??
+                          _BannerImage(banner: banner),
                     ),
                   );
                 },
@@ -239,13 +245,13 @@ class _BannerImage extends StatelessWidget {
     if (Uri.tryParse(banner.imageAsset)?.hasAuthority == true) {
       return Image.network(
         banner.imageAsset,
-        fit: BoxFit.cover,
+        fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) => const _BannerFallback(),
       );
     }
     return Image.asset(
       banner.imageAsset,
-      fit: BoxFit.cover,
+      fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) => const _BannerFallback(),
     );
   }

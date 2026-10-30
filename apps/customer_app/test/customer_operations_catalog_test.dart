@@ -17,6 +17,46 @@ class _TokenStorage implements CustomerTokenStorage {
 
 void main() {
   test(
+    'selected coupon is quoted and sent unchanged in the booking cart',
+    () async {
+      final requests = <Map<String, dynamic>>[];
+      final api = CustomerMobileOperationsApi(
+        apiBaseUrl: 'https://example.test/api/v1',
+        tokenStorage: _TokenStorage(),
+        client: MockClient((request) async {
+          requests.add(jsonDecode(request.body) as Map<String, dynamic>);
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {'discountPaise': 25000, 'totalPaise': 75000},
+            }),
+            200,
+          );
+        }),
+      );
+      addTearDown(api.close);
+      const items = [
+        {'serviceId': '123456789012345678901234', 'quantity': 1},
+      ];
+      final quote = await api.quoteCart(
+        serviceAreaId: 'area-id',
+        items: items,
+        couponCode: 'LIVE25',
+      );
+      expect(quote['discountPaise'], 25000);
+      await api.createBooking(
+        serviceAreaId: 'area-id',
+        items: items,
+        addressId: 'address-id',
+        couponCode: 'LIVE25',
+        idempotencyKey: 'coupon-booking-attempt',
+      );
+      expect(requests.first['couponCode'], 'LIVE25');
+      expect((requests.last['cart'] as Map)['couponCode'], 'LIVE25');
+    },
+  );
+
+  test(
     'booking retries can reuse their idempotency key and preserve conflicts',
     () async {
       final keys = <String?>[];

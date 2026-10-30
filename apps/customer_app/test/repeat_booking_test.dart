@@ -54,6 +54,7 @@ class _BookingApi extends CustomerMobileOperationsApi {
     DateTime? startsAt,
     String method = 'cash',
     String? idempotencyKey,
+    String? couponCode,
   }) async {
     bookingIdempotencyKeys.add(idempotencyKey);
     expect(items.single['serviceId'], '123456789012345678901234');
@@ -61,6 +62,66 @@ class _BookingApi extends CustomerMobileOperationsApi {
       statusCode: 409,
       code: 'SLOT_UNAVAILABLE',
       message: 'Appointment slot is unavailable.',
+    );
+  }
+}
+
+class _CouponApi extends _OfferApi {
+  final coupons = <String?>[];
+  bool rejectCoupon = false;
+
+  @override
+  Future<List<Map<String, dynamic>>> getRecords(String path) async {
+    if (path.endsWith('/banners')) {
+      return [
+        {
+          'id': 'offer-header',
+          'name': 'Offer Header',
+          'audiences': ['customer'],
+          'targetType': 'offer',
+          'targetId': 'offer-1',
+        },
+      ];
+    }
+    return super.getRecords(path);
+  }
+
+  @override
+  Future<Map<String, dynamic>> quoteCart({
+    required String serviceAreaId,
+    required List<Map<String, dynamic>> items,
+    required String couponCode,
+  }) async {
+    expect(couponCode, 'LIVE25');
+    if (rejectCoupon) {
+      throw const CustomerMobileApiException(
+        statusCode: 400,
+        code: 'COUPON_EXHAUSTED',
+        message: 'Coupon usage limit reached.',
+      );
+    }
+    return {'discountPaise': 30000, 'totalPaise': 90000};
+  }
+
+  @override
+  Future<Map<String, dynamic>> createBooking({
+    required String serviceAreaId,
+    required List<Map<String, dynamic>> items,
+    required String addressId,
+    DateTime? startsAt,
+    String method = 'cash',
+    String? idempotencyKey,
+    String? couponCode,
+  }) {
+    coupons.add(couponCode);
+    return super.createBooking(
+      serviceAreaId: serviceAreaId,
+      items: items,
+      addressId: addressId,
+      startsAt: startsAt,
+      method: method,
+      idempotencyKey: idempotencyKey,
+      couponCode: couponCode,
     );
   }
 }
@@ -227,9 +288,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Real Backend Offer'), findsOneWidget);
-    expect(find.text('LIVE25'), findsOneWidget);
-    expect(find.text('25% OFF'), findsNWidgets(2));
+    expect(find.byKey(const ValueKey('discount-carousel')), findsNothing);
+    expect(find.text('Real Backend Offer'), findsNothing);
+    expect(find.text('LIVE25'), findsNothing);
+    expect(find.text('25% OFF'), findsNothing);
     expect(find.text('BEAUTY20'), findsNothing);
     expect(
       find.byWidgetPredicate(
@@ -241,6 +303,19 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byKey(const ValueKey('category-All Services')));
+    await tester.pumpAndSettle();
+    final photo = find.byWidgetPredicate(
+      (widget) =>
+          widget is Image &&
+          widget.image is NetworkImage &&
+          (widget.image as NetworkImage).url ==
+              'https://images.example.test/facial.jpg',
+    );
+    expect(photo, findsOneWidget);
+    expect((tester.widget(photo) as Image).fit, BoxFit.contain);
+    expect(tester.getSize(photo).height, greaterThanOrEqualTo(120));
     expect(tester.takeException(), isNull);
   });
 
@@ -344,6 +419,79 @@ void main() {
     expect(find.text('Offer updates'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final entry in ['header', 'footer', 'details', 'rejected']) {
+    testWidgets(
+      '$entry offer selection validates coupon and preserves booking flow',
+      (tester) async {
+        tester.view.physicalSize = const Size(360, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(() => tester.pumpWidget(const SizedBox.shrink()));
+        final api = _CouponApi()..rejectCoupon = entry == 'rejected';
+        await tester.pumpWidget(
+          MaterialApp(home: DevelopmentHomeScreen(operationsApi: api)),
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('add-Gold Facial')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('add-Gold Facial')));
+        await tester.pumpAndSettle();
+        if (entry == 'header') {
+          await tester.ensureVisible(
+            find.byKey(const ValueKey('home-header-carousel')),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.bySemanticsLabel('Offer Header'));
+        } else if (entry == 'details') {
+          await tester.tap(find.text('Offers').last);
+          await tester.pumpAndSettle();
+          final details = find.byKey(
+            const ValueKey('offer-promotion-details-LIVE25'),
+          );
+          await tester.ensureVisible(details);
+          await tester.tap(details);
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Apply Offer'));
+        } else {
+          await tester.ensureVisible(
+            find.byKey(const ValueKey('footer-offer-carousel')),
+          );
+          await tester.pumpAndSettle();
+          final offer = find.byKey(const ValueKey('home-offer-offer-1'));
+          await tester.ensureVisible(offer);
+          await tester.tap(offer);
+        }
+        await tester.pumpAndSettle();
+        if (entry == 'rejected') {
+          expect(find.text('Coupon usage limit reached.'), findsOneWidget);
+          expect(find.text('Discount · LIVE25'), findsNothing);
+        } else {
+          expect(find.text('LIVE25 applied successfully.'), findsOneWidget);
+          expect(find.text('Discount · LIVE25'), findsOneWidget);
+          await tester.pump(const Duration(seconds: 5));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const ValueKey('proceed-to-booking')));
+          await tester.pumpAndSettle();
+          for (var step = 0; step < 2; step++) {
+            await tester.tap(find.byKey(const ValueKey('checkout-continue')));
+            await tester.pumpAndSettle();
+          }
+          await tester.tap(
+            find.byKey(const ValueKey('continue-to-booking-confirmation')),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const ValueKey('confirm-booking')));
+          await tester.pumpAndSettle();
+          expect(api.coupons, ['LIVE25']);
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   Future<void> confirmGoldFacial(
     WidgetTester tester, {

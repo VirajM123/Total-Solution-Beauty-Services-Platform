@@ -216,6 +216,20 @@ class CustomerMobileOperationsApi {
     );
   }
 
+  Future<Map<String, dynamic>> quoteCart({
+    required String serviceAreaId,
+    required List<Map<String, dynamic>> items,
+    required String couponCode,
+  }) => _request(
+    'POST',
+    '/api/mobile/customer/quote',
+    body: {
+      'serviceAreaId': serviceAreaId,
+      'items': items,
+      'couponCode': couponCode,
+    },
+  );
+
   Future<Map<String, dynamic>> createBooking({
     required String serviceAreaId,
     required List<Map<String, dynamic>> items,
@@ -223,6 +237,7 @@ class CustomerMobileOperationsApi {
     DateTime? startsAt,
     String method = 'cash',
     String? idempotencyKey,
+    String? couponCode,
   }) async {
     // Lead time must be in future (minimum 30-60 minutes ahead)
     final slot =
@@ -231,7 +246,11 @@ class CustomerMobileOperationsApi {
       'POST',
       '/api/mobile/customer/bookings',
       body: {
-        'cart': {'serviceAreaId': serviceAreaId, 'items': items},
+        'cart': {
+          'serviceAreaId': serviceAreaId,
+          'items': items,
+          if (couponCode != null) 'couponCode': couponCode,
+        },
         'addressId': addressId,
         'startsAt': slot.toIso8601String(),
         'method': method,

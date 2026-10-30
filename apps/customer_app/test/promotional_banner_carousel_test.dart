@@ -48,6 +48,25 @@ Widget _carousel({
 );
 
 void main() {
+  testWidgets('offer cards autoplay one by one at the requested panel height', (tester) async {
+    final pages = <int>[];
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body:
+      PromotionalBannerCarousel(
+        banners: _banners, width: 320, height: 150, isActive: true,
+        onPageChanged: pages.add,
+        itemBuilder: (_, index) => Center(child: Text('Offer $index')),
+      ),
+    )));
+    expect(tester.getSize(find.byType(PromotionalBannerCarousel)).height, 150);
+    expect(find.text('Offer 0'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 4500));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(pages.last, 1);
+    expect(find.text('Offer 1'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('empty banner image uses fallback without an asset request', (tester) async {
     await tester.pumpWidget(_carousel(banners: const [
       PromotionalBanner(id: 'empty-image', title: 'Announcement', imageAsset: ''),
