@@ -241,9 +241,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ),
                         ),
                         Positioned(
-                          left: 28,
+                          left: 0,
+                          right: 0,
                           bottom: 17,
-                          child: AuthBrandMark(compact: true),
+                          child: Center(child: AuthBrandMark(compact: true)),
                         ),
                       ],
                     ),

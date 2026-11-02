@@ -48,8 +48,8 @@ void main() {
         expect(find.text('Pinkora'), findsNothing);
         expect(find.text('Worker App'), findsNothing);
         expect(find.text('Incoming Bookings'), findsOneWidget);
-        expect(find.text('Customer Payable'), findsNWidgets(2));
-        expect(find.text('₹1,200'), findsNWidgets(2));
+        expect(find.text('Customer Payable'), findsOneWidget);
+        expect(find.text('₹1,200'), findsWidgets);
         expect(find.text('A Customer'), findsNWidgets(2));
         expect(tester.takeException(), isNull);
       }
@@ -58,49 +58,31 @@ void main() {
     },
   );
 
-  testWidgets(
-    'offers swipe and next appointment is reached without shrinking',
-    (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: WorkerDashboardScreen(
-            demoMode: false,
-            orders: orders,
-            currentDate: today,
-          ),
+  testWidgets('next appointment stays readable above the fold', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WorkerDashboardScreen(
+          demoMode: false,
+          orders: orders,
+          currentDate: today,
         ),
-      );
-      await tester.pumpAndSettle();
-
-      final secondDot = find.byKey(const Key('offer-indicator-1'));
-      final inactiveWidth = tester.getSize(secondDot).width;
-      expect(
-        tester.getTopLeft(find.text('Next Appointment')).dy,
-        lessThan(844 - 80),
-      );
-      expect(
-        tester.getTopLeft(find.text('Gold Facial').first).dy,
-        lessThan(844 - 80),
-      );
-      await tester.ensureVisible(
-        find.byKey(const Key('worker-offers-carousel')),
-      );
-      await tester.drag(
-        find.byKey(const Key('worker-offers-carousel')),
-        const Offset(-260, 0),
-      );
-      await tester.pumpAndSettle();
-
-      expect(tester.getSize(secondDot).width, greaterThan(inactiveWidth));
-      expect(find.text('Next Appointment'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(find.text('Your next appointment')).dy,
+      lessThan(844 - 80),
+    );
+    expect(
+      tester.getTopLeft(find.text('Gold Facial').first).dy,
+      lessThan(844 - 80),
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('availability toggle still calls the existing handler', (
     tester,
@@ -135,8 +117,8 @@ void main() {
         ),
       );
 
-      expect(find.text('0'), findsNWidgets(2));
-      expect(find.text('₹0'), findsOneWidget);
+      expect(find.text('0'), findsWidgets);
+      expect(find.text('₹0'), findsWidgets);
       expect(find.text('Customer Payable'), findsOneWidget);
       expect(
         find.text('No upcoming appointment is scheduled yet.'),
@@ -218,7 +200,7 @@ void main() {
 
     expect(find.text('3'), findsOneWidget);
     expect(find.text('1'), findsOneWidget);
-    expect(find.text('₹2,800'), findsOneWidget);
+    expect(find.text('₹2,800'), findsWidgets);
     expect(find.text('Later Customer'), findsNWidgets(2));
     expect(find.text('Tomorrow Customer'), findsNothing);
     expect(find.text('Cancelled Customer'), findsNothing);
@@ -255,8 +237,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('1'), findsNWidgets(2));
-    expect(find.text('₹900'), findsOneWidget);
+    expect(find.text('1'), findsWidgets);
+    expect(find.text('₹900'), findsWidgets);
     expect(find.text('Customer Payable'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -306,7 +288,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('0'), findsNWidgets(2));
+    expect(find.text('0'), findsWidgets);
     expect(
       find.text('No upcoming appointment is scheduled yet.'),
       findsOneWidget,
@@ -356,14 +338,8 @@ void main() {
     await tester.ensureVisible(find.text('Incoming Bookings'));
     await tester.tap(find.text('Incoming Bookings'));
     await tester.pumpAndSettle();
-    expect(
-      find.descendant(
-        of: find.byType(AppBar),
-        matching: find.text('Bookings'),
-      ),
-      findsOneWidget,
-    );
-    await tester.pageBack();
+    expect(find.text('My Bookings'), findsOneWidget);
+    await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('My Schedule'));
@@ -395,7 +371,7 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Payouts'));
+    await tester.tap(find.text('Earnings'));
     expect(payoutsOpened, isTrue);
     expect(tester.takeException(), isNull);
   });

@@ -317,7 +317,15 @@ class WorkerProfileRepository extends ChangeNotifier {
         languages: languagesList,
         about: (profile['about'] as String?) ?? '',
         certificateDetails: (profile['certificateDetails'] as String?) ?? '',
-        profilePhotoPath: profile['profilePhotoPath'] as String?,
+        profilePhotoPath:
+            (user['profileImageUrl'] ??
+                    user['photoUrl'] ??
+                    user['avatarUrl'] ??
+                    profile['profileImageUrl'] ??
+                    profile['photoUrl'] ??
+                    profile['avatarUrl'] ??
+                    profile['profilePhotoPath'])
+                as String?,
         notificationsEnabled:
             (profile['notificationsEnabled'] as bool?) ??
             local?.notificationsEnabled ??

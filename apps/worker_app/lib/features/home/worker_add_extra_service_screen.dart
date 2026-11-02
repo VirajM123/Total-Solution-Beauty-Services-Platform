@@ -1,3 +1,4 @@
+import '../widgets/worker_images.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -5,10 +6,10 @@ import 'worker_booking_data.dart';
 import 'worker_extra_service_item.dart';
 import '../../integration/worker_mobile_operations_api.dart';
 
-const _pink = Color(0xFFE91368);
+const _pink = Color(0xFFF52D7A);
 const _deep = Color(0xFF460621);
 const _muted = Color(0xFF735866);
-const _cream = Color(0xFFFFF9F7);
+const _cream = Color(0xFFFFF8FB);
 const _border = Color(0xFFF0D6DF);
 
 /// Loads catalog extras and sends live customer approval requests.
@@ -71,6 +72,7 @@ class _WorkerAddExtraServiceScreenState
               name: '${service['name']}',
               customerPrice: ((num.parse('${service['pricePaise']}')) / 100)
                   .round(),
+              imageUrl: service['thumbnail'] as String?,
               durationMinutes: int.parse('${service['durationMinutes']}'),
             ),
         ];
@@ -99,16 +101,6 @@ class _WorkerAddExtraServiceScreenState
 
   int get _extraTotal =>
       _selected.fold<int>(0, (sum, item) => sum + item.customerPrice);
-
-  IconData _iconFor(String id) => switch (id) {
-    'face-bleach' => Icons.face_retouching_natural_outlined,
-    'hair-spa' => Icons.spa_outlined,
-    'manicure' => Icons.back_hand_outlined,
-    'pedicure' => Icons.self_improvement_outlined,
-    'threading' => Icons.face_outlined,
-    'head-massage' => Icons.health_and_safety_outlined,
-    _ => Icons.spa_outlined,
-  };
 
   Future<void> _submitExtras() async {
     if (!_canManage || _confirming) return;
@@ -209,13 +201,17 @@ class _WorkerAddExtraServiceScreenState
             child: Row(
               children: [
                 Container(
-                  height: 57,
-                  width: 57,
+                  height: 44,
+                  width: 44,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(13),
                     color: const Color(0xFFFFE3EC),
                   ),
-                  child: Icon(_iconFor(item.id), size: 28, color: _pink),
+                  child: WorkerServiceImage(
+                    service: item.name,
+                    imageUrl: item.imageUrl,
+                    demoMode: _canPreview,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -285,7 +281,7 @@ class _WorkerAddExtraServiceScreenState
                     padding: const EdgeInsets.fromLTRB(17, 7, 17, 12),
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFEAF1),
                           border: Border.all(color: _border),
@@ -336,7 +332,7 @@ class _WorkerAddExtraServiceScreenState
                         'Booking ${widget.order.id} · ${widget.order.customer}',
                         style: const TextStyle(color: _muted, fontSize: 11.5),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
                       if (_loading)
                         const Center(child: CircularProgressIndicator()),
                       if (_loadError != null) ...[

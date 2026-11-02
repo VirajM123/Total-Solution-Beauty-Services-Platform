@@ -1,5 +1,7 @@
+import '../widgets/worker_reference_widgets.dart';
+import '../widgets/worker_auth_visuals.dart';
+import '../widgets/worker_images.dart';
 import '../schedule/worker_leave_repository.dart';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import '../../integration/worker_api.dart';
@@ -27,10 +29,9 @@ export 'worker_booking_data.dart' show WorkerDashboardOrder;
 // Do not use this local toggle or sample booking data for production dispatch.
 // Backend must enforce worker approval, online status and active-service locks.
 
-const _pink = Color(0xFFF50070);
-const _deep = Color(0xFF111D3A);
-const _muted = Color(0xFF667085);
-const _cream = Color(0xFFFFF7FA);
+const _pink = Color(0xFFF52D7A);
+const _deep = Color(0xFF210B35);
+const _muted = Color(0xFF686080);
 const _border = Color(0xFFF4DDE6);
 
 const _upcomingStatuses = {
@@ -121,7 +122,6 @@ class WorkerDashboardScreen extends StatefulWidget {
 class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   late bool _previewOnline;
   bool _availabilityBusy = false;
-  int _navIndex = 0;
   List<Map<String, dynamic>> _liveBanners = [];
   Object? _storeError;
   bool _storeLoading = true;
@@ -256,10 +256,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       first.month == second.month &&
       first.day == second.day;
 
-  String _dateLabel(DateTime date, DateTime now) => _sameDay(date, now)
-      ? 'Today'
-      : '${_weekday(date.weekday)}, ${_month(date.month)} ${date.day}';
-
   void _notice(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -350,6 +346,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           demoMode: widget.demoMode,
           operationsApi: widget.operationsApi,
           onOrderTap: widget.onOrderTap,
+          location: widget.location,
+          onNotificationsTap: _openNotifications,
+          unreadNotifications: widget.notificationRepository?.unreadCount ?? 0,
+          onNavigationSelected: (index) {
+            Navigator.of(context).pop();
+            _navigate(index == 3 ? 4 : index);
+          },
         ),
       ),
     );
@@ -473,7 +476,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
 
   void _navigate(int i) {
     if (i == 0) {
-      setState(() => _navIndex = 0);
       return;
     }
     if (i == 1) {
@@ -538,196 +540,94 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     ],
   );
 
-  Widget _profilePhoto() {
-    final path = widget.profilePhotoPath;
-    return ClipOval(
-      child: path != null && File(path).existsSync()
-          ? Image.file(File(path), width: 42, height: 42, fit: BoxFit.cover)
-          : Image.asset(
-              'assets/images/dashboard/worker_hero.jpg',
-              width: 42,
-              height: 42,
-              fit: BoxFit.cover,
-              alignment: const Alignment(0.52, -0.28),
-            ),
-    );
-  }
-
-  Widget _hero(bool online, int pendingCount) => Container(
-    height: 172,
-    decoration: const BoxDecoration(
-      image: DecorationImage(
-        image: AssetImage('assets/images/dashboard/worker_hero.jpg'),
-        fit: BoxFit.cover,
-        alignment: Alignment(0.42, -0.28),
+  Widget _hero(bool online, int pendingCount) => Column(
+    children: [
+      WorkerReferenceHeader(
+        location: widget.location,
+        onNotifications: _openNotifications,
+        unread: widget.notificationRepository?.unreadCount ?? 0,
       ),
-    ),
-    child: Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xF9FFF7FA), Color(0xE6FFF7FA), Color(0x08FFF7FA)],
-          stops: [0, .45, 1],
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 2, 14, 12),
+        child: Row(
           children: [
-            Row(
-              children: [
-                const Spacer(),
-                Stack(
-                  children: [
-                    SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: _openNotifications,
-                        tooltip: 'Notifications',
-                        icon: const Icon(
-                          Icons.notifications_none_rounded,
-                          size: 25,
-                          color: _deep,
-                        ),
-                      ),
-                    ),
-                    if (pendingCount > 0 ||
-                        (widget.notificationRepository?.unreadCount ?? 0) > 0)
-                      Positioned(
-                        right: 5,
-                        top: 5,
-                        child: Container(
-                          width: 9,
-                          height: 9,
-                          decoration: const BoxDecoration(
-                            color: _pink,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
+            GestureDetector(
+              onTap: _openProfileSettings,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x22F52D7A), blurRadius: 10),
                   ],
                 ),
-                GestureDetector(
-                  onTap: _openProfileSettings,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: _profilePhoto(),
-                  ),
+                child: WorkerProfilePhoto(
+                  path: widget.profilePhotoPath,
+                  size: 65,
                 ),
-              ],
+              ),
             ),
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Expanded(
-                  child: Text.rich(
-                    TextSpan(
-                      style: const TextStyle(
-                        color: _muted,
-                        fontSize: 19,
-                        height: 1.15,
-                      ),
-                      children: [
-                        TextSpan(text: '$_greeting, '),
-                        TextSpan(
-                          text: widget.workerName.split(' ').first,
-                          style: const TextStyle(
-                            color: _deep,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 5),
-                const Icon(Icons.favorite_border, color: _pink, size: 19),
-              ],
-            ),
-            const SizedBox(height: 3),
-            Row(
-              children: [
-                const Icon(Icons.location_on_rounded, color: _pink, size: 17),
-                const SizedBox(width: 3),
-                Flexible(
-                  child: Text(
-                    widget.location,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: _muted, fontSize: 12),
-                  ),
-                ),
-                const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: _muted,
-                  size: 18,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
-              decoration: _surface(
-                radius: 30,
-              ).copyWith(color: const Color(0xF4FFFFFF)),
-              child: Row(
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: online
-                          ? const Color(0xFFE0F8ED)
-                          : const Color(0xFFF1EEF0),
-                      shape: BoxShape.circle,
+                  Text(
+                    '$_greeting,',
+                    style: const TextStyle(color: workerMuted, fontSize: 12),
+                  ),
+                  Text(
+                    widget.workerName.split(' ').first,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: workerInk,
                     ),
-                    child: Icon(
-                      Icons.circle,
-                      size: 10,
-                      color: online ? const Color(0xFF00A95C) : _muted,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Let\'s make today beautiful.',
+                    style: TextStyle(fontSize: 10, color: workerMuted),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.only(left: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: online
+                      ? const Color(0xFF71E3A4)
+                      : const Color(0xFFE6DDE4),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    online ? "You're Online" : "You're Offline",
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: online ? const Color(0xFF00984B) : workerMuted,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          online ? "You're Online" : "You're Offline",
-                          style: TextStyle(
-                            color: online ? const Color(0xFF00A95C) : _deep,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Text(
-                          online
-                              ? 'Available for new bookings'
-                              : 'Go online for new bookings',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: _muted, fontSize: 9),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Transform.scale(
-                    scale: .78,
-                    child: Switch(
-                      value: online,
-                      onChanged: _availabilityBusy ? null : _toggleAvailability,
-                      activeTrackColor: _pink,
+                  SizedBox(
+                    height: 31,
+                    width: 70,
+                    child: Transform.scale(
+                      scale: .72,
+                      child: Switch(
+                        value: online,
+                        onChanged: _availabilityBusy
+                            ? null
+                            : _toggleAvailability,
+                        activeTrackColor: const Color(0xFF00C36A),
+                      ),
                     ),
                   ),
                 ],
@@ -736,6 +636,55 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           ],
         ),
       ),
+    ],
+  );
+
+  Widget _earningsCard(int? paise) => Container(
+    decoration: workerReferenceSurface(tinted: true),
+    clipBehavior: Clip.antiAlias,
+    child: Stack(
+      children: [
+        const Positioned(
+          right: -8,
+          top: 2,
+          width: 128,
+          child: Opacity(opacity: .55, child: WorkerLotusArtwork()),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Today\'s earnings',
+                style: TextStyle(fontSize: 14, color: workerMuted),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                paise == null ? 'Unavailable' : formatCustomerPaise(paise),
+                style: const TextStyle(
+                  fontSize: 42,
+                  height: 1.1,
+                  fontWeight: FontWeight.w800,
+                  color: workerInk,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Divider(color: Color(0xFFFFD3E3), height: 10),
+              Text(
+                paise == null
+                    ? 'Earnings awaiting confirmed compensation'
+                    : 'Confirmed compensation from completed services',
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: workerMuted,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     ),
   );
 
@@ -820,312 +769,159 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     required VoidCallback onTap,
     int? badge,
     Color color = _pink,
-  }) => InkWell(
-    key: key,
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(16),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Row(
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: .09),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 20),
+  }) => SizedBox(
+    width: (MediaQuery.sizeOf(context).width.clamp(0, 440) - 30) / 2,
+    child: InkWell(
+      key: key,
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        child: Row(
+          children: [
+            Badge(
+              isLabelVisible: badge != null,
+              label: Text('$badge'),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _deep,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    detail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: _muted, fontSize: 9),
+                  ),
+                ],
               ),
-              if (badge != null)
-                Positioned(
-                  right: -4,
-                  top: -4,
-                  child: Container(
-                    constraints: const BoxConstraints(minWidth: 17),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 2,
-                    ),
-                    decoration: const BoxDecoration(
-                      color: _pink,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '$badge',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: _deep,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  detail,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: _muted, fontSize: 10.5),
-                ),
-              ],
             ),
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            'View',
-            style: TextStyle(
-              color: _pink,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: _pink, size: 20),
-        ],
+          ],
+        ),
       ),
     ),
   );
 
-  Widget _appointmentCard(
-    WorkerDashboardOrder? next,
-    DateTime now,
-  ) => Container(
-    decoration: _surface(radius: 23),
-    clipBehavior: Clip.antiAlias,
-    child: Stack(
-      children: [
-        Positioned.fill(
-          child: Image.asset(
-            'assets/images/dashboard/makeup_brushes.jpg',
-            fit: BoxFit.cover,
-            alignment: Alignment.centerRight,
-          ),
-        ),
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFFFFF8FB),
-                  const Color(0xEEFFF8FB),
-                  const Color(0x88FFF8FB),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+  Widget _appointmentCard(WorkerDashboardOrder? next, DateTime now) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _sectionTitle('Your next appointment', onSeeAll: _openBookings),
+      const SizedBox(height: 8),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: workerReferenceSurface(),
+        child: next == null
+            ? const Padding(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                child: Text(
+                  'No upcoming appointment is scheduled yet.',
+                  style: TextStyle(fontSize: 12, color: workerMuted),
+                ),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Expanded(
-                    child: Text(
-                      'Next Appointment',
-                      style: TextStyle(
-                        color: _deep,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  if (next != null)
-                    Container(
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 4,
+                        horizontal: 10,
+                        vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFDEEC),
+                        color: const Color(0xFFFFE6F1),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        'Upcoming',
-                        style: TextStyle(
-                          color: _pink,
+                      child: Text(
+                        'UP NEXT | ${next.time}',
+                        style: const TextStyle(
                           fontSize: 10,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
+                          color: workerPink,
                         ),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 9),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      WorkerServiceImage(
+                        service: next.service,
+                        serviceId: next.serviceId,
+                        imageUrl: next.serviceImageUrl,
+                        demoMode: widget.demoMode,
+                        width: 90,
+                        height: 85,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              next.service,
+                              style: const TextStyle(
+                                fontSize: 19,
+                                height: 1.15,
+                                fontWeight: FontWeight.w800,
+                                color: workerInk,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            WorkerReferenceLine(
+                              icon: Icons.person_outline,
+                              text: next.customer,
+                            ),
+                            WorkerReferenceLine(
+                              icon: Icons.access_time,
+                              text:
+                                  '${next.duration} | ${next.formattedCustomerPayable}',
+                            ),
+                            WorkerReferenceLine(
+                              icon: Icons.location_on_outlined,
+                              text: next.location,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  FilledButton.icon(
+                    onPressed: () => _openOrder(next),
+                    icon: const Icon(Icons.near_me_rounded, size: 19),
+                    label: const Text('View appointment'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: workerPink,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(38),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 8),
-              if (next == null)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 10),
-                  child: Text(
-                    'No upcoming appointment is scheduled yet.',
-                    style: TextStyle(color: _muted, fontSize: 12),
-                  ),
-                )
-              else ...[
-                Row(
-                  children: [
-                    ClipOval(
-                      child: next.service.toLowerCase().contains('bridal')
-                          ? Image.asset(
-                              'assets/images/dashboard/bridal_portrait.jpg',
-                              width: 50,
-                              height: 50,
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              width: 50,
-                              height: 50,
-                              color: const Color(0xFFFFE1EB),
-                              child: const Icon(
-                                Icons.spa_outlined,
-                                color: _pink,
-                                size: 25,
-                              ),
-                            ),
-                    ),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            next.service,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: _deep,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          Text(
-                            next.customer,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: _muted, fontSize: 10),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today_outlined,
-                                color: _pink,
-                                size: 11,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  '${_dateLabel(next.appointmentDate!.toLocal(), now)}  •  ${next.time}  •  ${next.duration}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: _muted,
-                                    fontSize: 9,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.location_on_outlined,
-                                color: _pink,
-                                size: 12,
-                              ),
-                              const SizedBox(width: 3),
-                              Expanded(
-                                child: Text(
-                                  next.location,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: _muted,
-                                    fontSize: 9,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.payments_outlined, color: _pink, size: 16),
-                    const SizedBox(width: 5),
-                    const Expanded(
-                      child: Text(
-                        'Customer Payable',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: _muted, fontSize: 9),
-                      ),
-                    ),
-                    Text(
-                      formatCustomerPaise(
-                        next.customerPayablePaise ?? next.customerPayable * 100,
-                      ),
-                      style: const TextStyle(
-                        color: _deep,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: () => _openOrder(next),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: _pink,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(0, 30),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                      ),
-                      child: const Text(
-                        'Details',
-                        style: TextStyle(fontSize: 10),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
-    ),
+      ),
+    ],
   );
 
   Widget _activeServiceCard(WorkerDashboardOrder order) => Container(
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.all(12),
     decoration: _surface(radius: 18),
     child: Row(
       children: [
@@ -1162,86 +958,60 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
 
   Widget _scheduleRow(WorkerDashboardOrder order) => InkWell(
     onTap: () => _openOrder(order),
-    borderRadius: BorderRadius.circular(18),
+    borderRadius: BorderRadius.circular(14),
     child: Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      decoration: _surface(radius: 18),
+      padding: const EdgeInsets.all(8),
+      decoration: workerReferenceSurface(radius: 14),
       child: Row(
         children: [
           SizedBox(
-            width: 48,
+            width: 53,
             child: Text(
-              order.time.replaceFirst(' ', '\n'),
+              order.time,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: _pink,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                height: 1.1,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: workerInk,
               ),
             ),
           ),
-          Container(
-            width: 1,
-            height: 39,
-            margin: const EdgeInsets.symmetric(horizontal: 9),
-            color: _border,
+          const SizedBox(width: 8),
+          WorkerServiceImage(
+            service: order.service,
+            serviceId: order.serviceId,
+            imageUrl: order.serviceImageUrl,
+            demoMode: widget.demoMode,
+            width: 56,
+            height: 43,
           ),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  order.customer,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: _deep,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
                   order.service,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: workerInk,
+                    fontWeight: FontWeight.w700,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: _muted, fontSize: 11),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  order.customer,
+                  style: const TextStyle(fontSize: 11, color: workerMuted),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          if (MediaQuery.sizeOf(context).width >= 370) ...[
-            const Icon(Icons.access_time_rounded, color: _muted, size: 14),
-            const SizedBox(width: 3),
-            Text(
-              order.duration,
-              style: const TextStyle(color: _muted, fontSize: 10),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
-            decoration: BoxDecoration(
-              color: order.status.toLowerCase().contains('complet')
-                  ? const Color(0xFFE1F8ED)
-                  : const Color(0xFFFFEAF2),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Text(
-              order.status,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: order.status.toLowerCase().contains('complet')
-                    ? const Color(0xFF00A95C)
-                    : _pink,
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: _muted, size: 18),
+          const Icon(Icons.chevron_right, size: 20, color: workerMuted),
         ],
       ),
     ),
@@ -1346,100 +1116,124 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       }
     }
     final online = _isOnline;
+    final todayCompletedOrders = orders
+        .where(
+          (order) =>
+              completionDates[order.id] != null &&
+              _sameDay(completionDates[order.id]!, now),
+        )
+        .toList();
+    final earningsKnown =
+        widget.orders != null &&
+        completedIdsWithoutDate.isEmpty &&
+        todayCompletedOrders.every((order) => order.compensationRupees != null);
+    final todayEarnings = earningsKnown
+        ? todayCompletedOrders.fold<int>(
+            0,
+            (total, order) => total + order.compensationRupees! * 100,
+          )
+        : null;
     return Scaffold(
-      backgroundColor: _cream,
-      body: widget.demoMode && (_storeLoading || _storeError != null)
-          ? SafeArea(
-              child: Center(
-                child: _storeLoading
-                    ? const CircularProgressIndicator(color: _pink)
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('Could not load saved demo bookings.'),
-                          const SizedBox(height: 8),
-                          Text('$_storeError', textAlign: TextAlign.center),
-                          TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _storeLoading = true;
-                                _storeError = null;
-                              });
-                              _loadDemoStore();
-                            },
-                            child: const Text('Retry loading'),
+      backgroundColor: const Color(0xFFFFFBFD),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: widget.demoMode && (_storeLoading || _storeError != null)
+                ? Center(
+                    child: _storeLoading
+                        ? const CircularProgressIndicator(color: workerPink)
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Could not load saved demo bookings.'),
+                              TextButton(
+                                onPressed: _loadDemoStore,
+                                child: const Text('Retry loading'),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-              ),
-            )
-          : SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: SingleChildScrollView(
+                  )
+                : SingleChildScrollView(
                     child: Column(
                       children: [
                         _hero(online, pendingCount),
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 4, 14, 12),
+                          padding: const EdgeInsets.fromLTRB(14, 0, 14, 18),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              _sectionTitle("Today's Overview"),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  _overviewStat(
-                                    icon: Icons.calendar_month_outlined,
-                                    label: "Today's Bookings",
-                                    value: '$todayCount',
-                                    color: _pink,
-                                  ),
-                                  const SizedBox(
-                                    height: 34,
-                                    child: VerticalDivider(
-                                      width: 16,
-                                      thickness: 1,
-                                      color: _border,
+                              _earningsCard(todayEarnings),
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                  horizontal: 8,
+                                ),
+                                decoration: workerReferenceSurface(),
+                                child: Row(
+                                  children: [
+                                    _overviewStat(
+                                      icon: Icons.calendar_month_outlined,
+                                      label: "Today's Bookings",
+                                      value: '$todayCount',
+                                      color: workerPink,
                                     ),
-                                  ),
-                                  _overviewStat(
-                                    icon: Icons.account_balance_wallet_outlined,
-                                    label: 'Customer Payable',
-                                    value: formatCustomerPaise(
-                                      todayCustomerPayable,
+                                    _overviewStat(
+                                      icon: Icons.check_circle_outline,
+                                      label: 'Completed Today',
+                                      value:
+                                          completedToday?.toString() ??
+                                          'Unavailable',
+                                      color: const Color(0xFF00BE69),
                                     ),
-                                    color: _deep,
-                                  ),
-                                  const SizedBox(
-                                    height: 34,
-                                    child: VerticalDivider(
-                                      width: 16,
-                                      thickness: 1,
-                                      color: _border,
+                                    _overviewStat(
+                                      icon: Icons.payments_outlined,
+                                      label: 'Customer Payable',
+                                      value: formatCustomerPaise(
+                                        todayCustomerPayable,
+                                      ),
+                                      color: const Color(0xFFEF9B34),
                                     ),
-                                  ),
-                                  _overviewStat(
-                                    icon: Icons.star_outline_rounded,
-                                    label: 'Completed Today',
-                                    value: completedToday?.toString() ?? '—',
-                                    color: const Color(0xFFB7791F),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 12),
+                              if (activeOrder != null) ...[
+                                _activeServiceCard(activeOrder),
+                                const SizedBox(height: 12),
+                              ],
+                              _appointmentCard(next, now),
+                              const SizedBox(height: 14),
+                              _sectionTitle(
+                                "Today's Schedule",
+                                onSeeAll: _openScheduleLeave,
+                              ),
+                              const SizedBox(height: 8),
+                              if (todaySchedule.isEmpty)
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: workerReferenceSurface(),
+                                  child: const Text(
+                                    'No appointments scheduled for today.',
+                                    style: TextStyle(
+                                      color: workerMuted,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                )
+                              else
+                                for (final order in todaySchedule.take(3))
+                                  _scheduleRow(order),
+                              const SizedBox(height: 14),
                               _sectionTitle(
                                 'Manage Your Work',
                                 onSeeAll: _openBookings,
                               ),
                               const SizedBox(height: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 2,
-                                ),
-                                decoration: _surface(radius: 20),
-                                child: Column(
+                                decoration: workerReferenceSurface(),
+                                child: Wrap(
                                   children: [
                                     _dashboardAction(
                                       icon: Icons.event_available_outlined,
@@ -1452,24 +1246,12 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                           ? _previewIncomingOffer
                                           : _openBookings,
                                     ),
-                                    const Divider(
-                                      height: 1,
-                                      thickness: 1,
-                                      color: _border,
-                                      indent: 66,
-                                    ),
                                     _dashboardAction(
                                       icon: Icons.calendar_today_outlined,
                                       label: 'My Schedule',
                                       detail:
                                           'View your daily schedule and leave',
                                       onTap: _openScheduleLeave,
-                                    ),
-                                    const Divider(
-                                      height: 1,
-                                      thickness: 1,
-                                      color: _border,
-                                      indent: 66,
                                     ),
                                     _dashboardAction(
                                       icon:
@@ -1478,12 +1260,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                       detail: 'Track earnings and payouts',
                                       color: const Color(0xFF00A95C),
                                       onTap: _openPayouts,
-                                    ),
-                                    const Divider(
-                                      height: 1,
-                                      thickness: 1,
-                                      color: _border,
-                                      indent: 66,
                                     ),
                                     _dashboardAction(
                                       key: const Key('open-service-history'),
@@ -1496,152 +1272,21 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 6),
-                              if (activeOrder != null) ...[
-                                _activeServiceCard(activeOrder),
-                                const SizedBox(height: 8),
-                              ],
+                              const SizedBox(height: 14),
                               _offersSection(),
-                              const SizedBox(height: 6),
-                              _appointmentCard(next, now),
-                              const SizedBox(height: 12),
-                              _sectionTitle(
-                                "Today's Schedule",
-                                onSeeAll: _openScheduleLeave,
-                              ),
-                              const SizedBox(height: 8),
-                              if (todaySchedule.isEmpty)
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: _surface(radius: 18),
-                                  child: const Text(
-                                    'No appointments scheduled for today.',
-                                    style: TextStyle(
-                                      color: _muted,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                )
-                              else
-                                for (final order in todaySchedule.take(3))
-                                  _scheduleRow(order),
                             ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ),
-            ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: NavigationBarTheme(
-          data: NavigationBarThemeData(
-            height: 62,
-            backgroundColor: Colors.white,
-            indicatorColor: const Color(0xFFFFE2EC),
-            labelTextStyle: WidgetStateProperty.resolveWith(
-              (states) => TextStyle(
-                color: states.contains(WidgetState.selected) ? _pink : _muted,
-                fontSize: 10,
-                fontWeight: states.contains(WidgetState.selected)
-                    ? FontWeight.w700
-                    : FontWeight.w500,
-              ),
-            ),
-          ),
-          child: NavigationBar(
-            selectedIndex: _navIndex,
-            onDestinationSelected: _navigate,
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-            destinations: [
-              const NavigationDestination(
-                icon: Icon(Icons.home_outlined, color: _muted),
-                selectedIcon: Icon(Icons.home_rounded, color: _pink),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.calendar_today_outlined, color: _muted),
-                selectedIcon: Icon(Icons.calendar_today_rounded, color: _pink),
-                label: 'Bookings',
-              ),
-              NavigationDestination(
-                icon: Icon(
-                  Icons.account_balance_wallet_outlined,
-                  color: _muted,
-                ),
-                selectedIcon: Icon(
-                  Icons.account_balance_wallet_rounded,
-                  color: _pink,
-                ),
-                label: 'Payouts',
-              ),
-              NavigationDestination(
-                icon: (widget.notificationRepository?.unreadCount ?? 0) > 0
-                    ? Badge(
-                        backgroundColor: _pink,
-                        label: Text(
-                          '${widget.notificationRepository!.unreadCount}',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.white,
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.notifications_none_outlined,
-                          color: _muted,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.notifications_none_outlined,
-                        color: _muted,
-                      ),
-                selectedIcon:
-                    (widget.notificationRepository?.unreadCount ?? 0) > 0
-                    ? Badge(
-                        backgroundColor: _pink,
-                        label: Text(
-                          '${widget.notificationRepository!.unreadCount}',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.white,
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.notifications_rounded,
-                          color: _pink,
-                        ),
-                      )
-                    : const Icon(Icons.notifications_rounded, color: _pink),
-                label: 'Alerts',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline, color: _muted),
-                selectedIcon: Icon(Icons.person_rounded, color: _pink),
-                label: 'Profile',
-              ),
-            ],
           ),
         ),
+      ),
+      bottomNavigationBar: WorkerReferenceNav(
+        selected: 0,
+        onSelected: (index) => _navigate(index == 3 ? 4 : index),
       ),
     );
   }
 }
-
-String _weekday(int weekday) =>
-    const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][weekday - 1];
-String _month(int month) => const [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-][month - 1];

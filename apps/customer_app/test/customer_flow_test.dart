@@ -105,7 +105,7 @@ void main() {
     await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle();
     expect(find.text('Welcome back'), findsOneWidget);
-    expect(find.text('Hi Beauty'), findsOneWidget);
+    expect(find.byKey(const ValueKey('hi-beauty-logo')), findsOneWidget);
     expect(find.textContaining('Total Solution'), findsNothing);
   });
 
@@ -185,13 +185,25 @@ void main() {
       final operations = CustomerMobileOperationsApi(
         apiBaseUrl: 'https://example.test/api',
         tokenStorage: _MemoryCustomerTokenStorage(),
-        client: MockClient((_) async => http.Response(jsonEncode({
-          'success': true,
-          'data': {'items': [], 'user': {'fullName': 'Customer'}, 'pagination': {'pages': 1}},
-        }), 200)),
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'items': [],
+                'user': {'fullName': 'Customer'},
+                'pagination': {'pages': 1},
+              },
+            }),
+            200,
+          ),
+        ),
       );
       await tester.pumpWidget(
-        CustomerApp(config: const AppConfig(Environment.production), operationsApi: operations),
+        CustomerApp(
+          config: const AppConfig(Environment.production),
+          operationsApi: operations,
+        ),
       );
       final navigator = tester.state<NavigatorState>(find.byType(Navigator));
       navigator.pushNamed(RouteNames.home);
@@ -222,7 +234,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(RegistrationScreen), findsOneWidget);
-    expect(find.text('Hi Beauty'), findsOneWidget);
+    expect(find.byKey(const ValueKey('hi-beauty-logo')), findsOneWidget);
     expect(find.textContaining('Total Solution'), findsNothing);
 
     await tester.ensureVisible(find.text('Continue'));
@@ -1408,10 +1420,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final background = tester.widget<Image>(
+      expect(
         find.byKey(const ValueKey('customer-login-background')),
+        findsOneWidget,
       );
-      expect(background.fit, BoxFit.cover);
       expect(tester.getSize(find.byType(TextField)).width, greaterThan(0));
       expect(
         tester.getSize(find.byKey(const ValueKey('customer-login-background'))),

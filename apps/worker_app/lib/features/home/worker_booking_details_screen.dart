@@ -1,3 +1,4 @@
+import '../widgets/worker_images.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -291,7 +292,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(message),
-            const SizedBox(height: 14),
+            const SizedBox(height: 8),
             TextField(
               autofocus: true,
               keyboardType: TextInputType.number,
@@ -657,7 +658,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
   }
 
   Widget _card(Widget child) => Container(
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.all(12),
     decoration: WorkerDesign.surface(radius: 18),
     child: child,
   );
@@ -853,7 +854,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 8),
         _card(
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -928,7 +929,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                 child: _storeLoading
                     ? const CircularProgressIndicator(color: _pink)
                     : Padding(
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(12),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -967,7 +968,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                               icon: Icons.spa_outlined,
                               photo: true,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 8),
                             if (widget.demoMode && !_isLiveMode)
                               const Padding(
                                 padding: EdgeInsets.only(bottom: 14),
@@ -988,7 +989,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                                           : 'C',
                                       style: const TextStyle(
                                         color: _pink,
-                                        fontSize: 23,
+                                        fontSize: 19,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -1030,7 +1031,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 8),
                             _card(
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1046,23 +1047,12 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                                             13,
                                           ),
                                         ),
-                                        child:
-                                            order.service
-                                                .toLowerCase()
-                                                .contains('bridal')
-                                            ? ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(13),
-                                                child: Image.asset(
-                                                  'assets/images/dashboard/bridal_portrait.jpg',
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              )
-                                            : const Icon(
-                                                Icons.spa_rounded,
-                                                color: _pink,
-                                                size: 32,
-                                              ),
+                                        child: WorkerServiceImage(
+                                          service: order.service, serviceId: order.serviceId,
+                                          demoMode: widget.demoMode,
+                                          width: 48,
+                                          height: 48,
+                                        ),
                                       ),
                                       const SizedBox(width: 13),
                                       Expanded(
@@ -1118,7 +1108,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 8),
                             _card(
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1191,7 +1181,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                                       ],
                                     ),
                                   ],
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: 8),
                                   const Text(
                                     'Customer Note',
                                     style: TextStyle(
@@ -1214,7 +1204,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                             if (_isLiveMode &&
                                 order.status.toLowerCase() ==
                                     'in progress') ...[
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 8),
                               if (_refreshError != null) ...[
                                 Text(
                                   _refreshError!,
@@ -1233,10 +1223,10 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                               _serviceTimingCard(),
                             ],
                             if (session != null) ...[
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 8),
                               _savedServiceSummary(context, session),
                             ],
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 8),
                             _card(
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,

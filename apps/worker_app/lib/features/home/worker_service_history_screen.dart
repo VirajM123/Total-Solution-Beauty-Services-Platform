@@ -1,3 +1,4 @@
+import '../widgets/worker_images.dart';
 import '../../integration/worker_api.dart';
 import '../../integration/worker_mobile_operations_api.dart';
 import 'package:flutter/material.dart';
@@ -6,10 +7,10 @@ import 'worker_demo_booking_store.dart';
 import 'worker_booking_details_screen.dart';
 import '../../app/slide_page_route.dart';
 
-const _pink = Color(0xFFF50070);
+const _pink = Color(0xFFF52D7A);
 const _deep = Color(0xFF111D3A);
 const _muted = Color(0xFF667085);
-const _cream = Color(0xFFFFF7FA);
+const _cream = Color(0xFFFFF8FB);
 const _border = Color(0xFFF4DDE6);
 
 /// A read-only view of terminal bookings. Does not change booking or payment state.
@@ -199,13 +200,13 @@ class _WorkerServiceHistoryScreenState
               child: _loading
                   ? const CircularProgressIndicator(color: _pink)
                   : Padding(
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(12),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(
                             Icons.error_outline_rounded,
-                            size: 38,
+                            size: 28,
                             color: _pink,
                           ),
                           const SizedBox(height: 10),
@@ -381,14 +382,14 @@ class _WorkerServiceHistoryScreenState
                         child: visible.isEmpty
                             ? Center(
                                 child: Padding(
-                                  padding: const EdgeInsets.all(20),
+                                  padding: const EdgeInsets.all(12),
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       const Icon(
                                         Icons.history_rounded,
                                         color: _pink,
-                                        size: 38,
+                                        size: 28,
                                       ),
                                       const SizedBox(height: 9),
                                       Text(
@@ -472,10 +473,9 @@ class _WorkerServiceHistoryScreenState
                                                   borderRadius:
                                                       BorderRadius.circular(10),
                                                 ),
-                                                child: const Icon(
-                                                  Icons.spa_rounded,
-                                                  color: _pink,
-                                                  size: 22,
+                                                child: WorkerServiceImage(
+                                                    service: order.service, serviceId: order.serviceId,
+                                                    demoMode: widget.demoMode,
                                                 ),
                                               ),
                                               const SizedBox(width: 9),

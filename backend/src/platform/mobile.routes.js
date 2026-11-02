@@ -27,14 +27,25 @@ function createMobileRouter({db,scheduling,serviceOtp,controlOtp:providedControl
    })
    reply(req,res,result)
   }))
+  if(app==='customer')area.post('/profile/photo',express.raw({type:['image/jpeg','image/png','image/webp'],limit:'5mb'}),handler(async(req,res)=>{
+   if(!storage?.upload)fail(503,'STORAGE_NOT_CONFIGURED','Profile photo storage is not configured.')
+   const wrapped=Object.assign(Object.create(req),req,{get(name){return name.toLowerCase()==='x-media-visibility'?'public':req.get(name)}})
+   reply(req,res,await storage.upload(wrapped),201)
+  }))
   area.get('/profile',handler(async(req,res)=>reply(req,res,{user:req.auth.user,profile:await db.collection(app==='customer'?'customers':'workers').findOne({userId:req.auth.user._id})})))
   area.patch('/profile',handler(async(req,res)=>{
-   const input=z.object({fullName:z.string().trim().min(2).max(120),email:z.email().optional()}).strict().parse(req.body)
+   const input=z.object({fullName:z.string().trim().min(2).max(120),email:z.email().optional(),...(app==='customer'?{profileImageId:idSchema.optional()}:{})}).strict().parse(req.body)
    const result=await atomic(db,req,app+'.profile','users',async session=>{
     const user=await requireRecord(db,'users',req.auth.user._id,session)
+    if(input.profileImageId){
+     const asset=await requireRecord(db,'media_assets',input.profileImageId,session,{uploadedBy:user._id,visibility:'public',uploadStatus:'ready',isActive:true})
+     if(!['image/jpeg','image/png','image/webp'].includes(asset.mimeType))fail(400,'INVALID_PROFILE_IMAGE','Select an image file.')
+     input.profileImageId=asset._id
+     input.profileImageUrl=asset.publicUrl
+    }
     const updated=await compareAndSet(db,'users',user,input,session)
     await db.collection(app==='customer'?'customers':'workers').updateOne({userId:user._id},{$set:{fullName:input.fullName,email:input.email,updatedAt:new Date()}},{session})
-    return {_id:updated._id,fullName:updated.fullName,email:updated.email}
+    return {_id:updated._id,fullName:updated.fullName,email:updated.email,...(updated.profileImageUrl?{profileImageUrl:updated.profileImageUrl}:{})}
    });reply(req,res,result)
   }))
   area.post('/logout',handler(async(req,res)=>{
@@ -64,8 +75,13 @@ function createMobileRouter({db,scheduling,serviceOtp,controlOtp:providedControl
    const productEvidence=await db.collection('media_assets').find({bookingId:booking._id,usage:'product_evidence',isActive:true,uploadStatus:'ready'},{projection:{storageKey:0,publicUrl:0,contentHash:0}}).sort({createdAt:1}).toArray()
    const result={...booking,extraServices,pendingExtraServices:extraServices.filter(extra=>extra.status==='pending'),productEvidence,durationExtension:booking.durationExtension||null}
    if(app==='customer'&&booking.workerUserId){
-    const worker=await db.collection('users').findOne({_id:booking.workerUserId},{projection:{fullName:1}})
-    if(worker)result.worker={fullName:worker.fullName}
+    const worker=await db.collection('users').findOne({_id:booking.workerUserId},{projection:{fullName:1,profileImageId:1,profileImageUrl:1,photoUrl:1,avatarUrl:1}})
+    if(worker){
+     const profile=await db.collection('workers').findOne({userId:booking.workerUserId})
+     const mediaId=worker.profileImageId||profile?.profileImageId
+     const photo=mediaId?await db.collection('media_assets').findOne({_id:id(mediaId),visibility:'public',uploadStatus:'ready',isActive:true}):null
+     result.worker={fullName:worker.fullName,photoUrl:photo?.publicUrl||worker.profileImageUrl||worker.photoUrl||worker.avatarUrl||profile?.profileImageUrl||profile?.photoUrl||profile?.avatarUrl||null}
+    }
    }
    if(app==='customer'&&serviceOtp?.availability)result.serviceOtp=await serviceOtp.availability(booking)
    reply(req,res,result)

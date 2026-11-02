@@ -27,6 +27,7 @@ class AllServicesScreen extends StatefulWidget {
     required this.subservicesByCategory,
     this.categoryNames = const [],
     this.categoryImages = const {},
+    this.categoryStartingPrices = const {},
   });
 
   final VoidCallback onBack;
@@ -35,6 +36,7 @@ class AllServicesScreen extends StatefulWidget {
   final Map<String, List<String>> subservicesByCategory;
   final List<String> categoryNames;
   final Map<String, String> categoryImages;
+  final Map<String, int> categoryStartingPrices;
 
   @override
   State<AllServicesScreen> createState() => _AllServicesScreenState();
@@ -42,7 +44,8 @@ class AllServicesScreen extends StatefulWidget {
 
 class _AllServicesScreenState extends State<AllServicesScreen> {
   final _search = TextEditingController();
-  bool _searchOpen = false;
+  String? _selectedCategory;
+  bool _filtersOpen = false;
 
   @override
   void dispose() {
@@ -59,7 +62,7 @@ class _AllServicesScreenState extends State<AllServicesScreen> {
               : widget.categoryNames)
         _ServiceCategory(
           name: name,
-          description: '',
+          description: _categoryDescription(name),
           image: widget.categoryImages[name] ?? '',
           icon: Icons.spa_outlined,
           homeCategory: name,
@@ -67,12 +70,21 @@ class _AllServicesScreenState extends State<AllServicesScreen> {
     ];
     final query = _search.text.trim().toLowerCase();
     final visibleCategories = categories
-        .where((category) => category.name.toLowerCase().contains(query))
+        .where(
+          (category) =>
+              (_selectedCategory == null ||
+                  category.name == _selectedCategory) &&
+              category.name.toLowerCase().contains(query),
+        )
         .toList();
     final matchingServices = query.isEmpty
         ? <({String category, String name})>[]
         : [
-            for (final category in categories)
+            for (final category in categories.where(
+              (category) =>
+                  _selectedCategory == null ||
+                  category.name == _selectedCategory,
+            ))
               for (final name
                   in widget.subservicesByCategory[category.homeCategory] ??
                       const <String>[])
@@ -101,61 +113,46 @@ class _AllServicesScreenState extends State<AllServicesScreen> {
                           onPressed: widget.onBack,
                         ),
                       ),
-                      const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'All Services',
-                            maxLines: 1,
-                            style: TextStyle(
-                              color: PinkoraBrand.charcoal,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          SizedBox(height: 1),
-                          Text(
-                            'Browse available services',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: PinkoraBrand.muted,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: _HeaderButton(
-                          icon: _searchOpen
-                              ? Icons.close_rounded
-                              : Icons.search_rounded,
-                          tooltip: _searchOpen ? 'Close search' : 'Search',
-                          onPressed: () {
-                            setState(() {
-                              _searchOpen = !_searchOpen;
-                              if (!_searchOpen) _search.clear();
-                            });
-                          },
+                      const Text(
+                        'All Services',
+                        style: TextStyle(
+                          color: PinkoraBrand.charcoal,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
                   ),
                 ),
-                if (_searchOpen) ...[
+                ...[
                   const SizedBox(height: 8),
                   SizedBox(
                     height: 42,
                     child: TextField(
                       key: const ValueKey('services-search'),
                       controller: _search,
-                      autofocus: true,
+                      autofocus: false,
                       onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
-                        hintText: 'Search categories and treatments',
-                        prefixIcon: const Icon(Icons.search, size: 19),
+                        hintText: 'Search services (eg. facial, makeup)',
+                        hintStyle: const TextStyle(fontSize: 11),
+                        suffixIcon: IconButton(
+                          key: const ValueKey('services-filter'),
+                          tooltip: 'Filter categories',
+                          onPressed: () =>
+                              setState(() => _filtersOpen = !_filtersOpen),
+                          icon: Icon(
+                            Icons.tune_rounded,
+                            size: 18,
+                            color: _filtersOpen || _selectedCategory != null
+                                ? PinkoraBrand.berry
+                                : PinkoraBrand.muted,
+                          ),
+                        ),
+                        prefixIcon: const Tooltip(
+                          message: 'Search',
+                          child: Icon(Icons.search, size: 19),
+                        ),
                         isDense: true,
                         filled: true,
                         fillColor: Colors.white,
@@ -174,6 +171,41 @@ class _AllServicesScreenState extends State<AllServicesScreen> {
               ],
             ),
           ),
+          if (_filtersOpen)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+              child: Wrap(
+                spacing: 7,
+                runSpacing: 7,
+                children: [
+                  for (final name in <String?>[
+                    null,
+                    ...categories.map((c) => c.name),
+                  ])
+                    SizedBox(
+                      height: 30,
+                      child: ChoiceChip(
+                        label: Text(name ?? 'All'),
+                        selected: _selectedCategory == name,
+                        showCheckmark: false,
+                        selectedColor: PinkoraBrand.berry,
+                        backgroundColor: const Color(0xFFFFE8EE),
+                        side: const BorderSide(color: Color(0xFFFFDCE6)),
+                        shape: const StadiumBorder(),
+                        labelStyle: TextStyle(
+                          fontSize: 10,
+                          color: _selectedCategory == name
+                              ? Colors.white
+                              : PinkoraBrand.berry,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        onSelected: (_) =>
+                            setState(() => _selectedCategory = name),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           Expanded(
             child: visibleCategories.isEmpty && matchingServices.isEmpty
                 ? const Center(
@@ -182,12 +214,21 @@ class _AllServicesScreenState extends State<AllServicesScreen> {
                       style: TextStyle(color: PinkoraBrand.muted),
                     ),
                   )
-                : ListView.separated(
+                : GridView.builder(
                     key: const ValueKey('service-categories'),
                     padding: const EdgeInsets.fromLTRB(14, 4, 14, 16),
                     itemCount:
                         visibleCategories.length + matchingServices.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: MediaQuery.sizeOf(context).width >= 600
+                          ? 3
+                          : 2,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      mainAxisExtent:
+                          218 +
+                          (MediaQuery.textScalerOf(context).scale(12) - 12) * 5,
+                    ),
                     itemBuilder: (context, index) {
                       if (index >= visibleCategories.length) {
                         final service =
@@ -217,6 +258,8 @@ class _AllServicesScreenState extends State<AllServicesScreen> {
                       final category = visibleCategories[index];
                       return _CategoryCard(
                         category: category,
+                        startingPrice:
+                            widget.categoryStartingPrices[category.name],
                         count:
                             widget
                                 .subservicesByCategory[category.homeCategory]
@@ -263,178 +306,142 @@ class _CategoryCard extends StatelessWidget {
   const _CategoryCard({
     required this.category,
     required this.count,
+    this.startingPrice,
     required this.onTap,
   });
 
   final _ServiceCategory category;
   final int count;
+  final int? startingPrice;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final imageWidth = constraints.maxWidth * 0.36;
-      final cardHeight = (constraints.maxWidth * 0.36).clamp(120.0, 150.0);
-      final badgeSize = (constraints.maxWidth * 0.12).clamp(44.0, 58.0);
-      return SizedBox(
-        height: cardHeight,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned.fill(
-              left: imageWidth * 0.92,
-              child: Material(
-                key: ValueKey('service-category-${category.name}'),
-                color: const Color(0xFFFFFBFC),
-                borderRadius: BorderRadius.circular(15),
-                child: InkWell(
-                  onTap: onTap,
-                  borderRadius: BorderRadius.circular(15),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: const Color(0xFFF6E5E9)),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x0D8D214D),
-                          blurRadius: 12,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    padding: EdgeInsets.only(
-                      left: imageWidth * 0.30,
-                      right: 10,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                category.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: PinkoraBrand.charcoal,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.15,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                category.description,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: PinkoraBrand.muted,
-                                  fontSize: 11,
-                                  height: 1.2,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFE8EE),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 9,
-                                    vertical: 4,
-                                  ),
-                                  child: Text(
-                                    '$count ${count == 1 ? 'service' : 'services'}',
-                                    maxLines: 1,
-                                    style: const TextStyle(
-                                      color: PinkoraBrand.berry,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 3),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 21,
-                          color: PinkoraBrand.rose,
-                        ),
-                      ],
+  Widget build(BuildContext context) => Material(
+    key: ValueKey('service-category-${category.name}'),
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(10),
+      side: const BorderSide(color: Color(0xFFF3DAE3)),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 92,
+            child: category.image.trim().isEmpty
+                ? const ColoredBox(
+                    color: Color(0xFFFFE8EE),
+                    child: Icon(Icons.spa_outlined, color: PinkoraBrand.rose),
+                  )
+                : Image(
+                    image: Uri.tryParse(category.image)?.hasAuthority == true
+                        ? NetworkImage(category.image)
+                        : AssetImage(category.image) as ImageProvider,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const ColoredBox(
+                      color: Color(0xFFFFE8EE),
+                      child: Icon(Icons.spa_outlined, color: PinkoraBrand.rose),
                     ),
                   ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: imageWidth,
-              child: IgnorePointer(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(13),
-                  child: category.image.trim().isEmpty
-                      ? const ColoredBox(
-                          color: Color(0xFFFFE8EE),
-                          child: Icon(
-                            Icons.spa_outlined,
-                            color: PinkoraBrand.rose,
-                          ),
-                        )
-                      : Image(
-                          image:
-                              Uri.tryParse(category.image)?.hasAuthority == true
-                              ? NetworkImage(category.image)
-                              : AssetImage(category.image) as ImageProvider,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, _, _) => const ColoredBox(
-                            color: Color(0xFFFFE8EE),
-                            child: Icon(
-                              Icons.spa_outlined,
-                              color: PinkoraBrand.rose,
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 5, 8, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    category.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: PinkoraBrand.charcoal,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    startingPrice == null
+                        ? '$count ${count == 1 ? "service" : "services"}'
+                        : 'Starting at ₹$startingPrice',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                    ),
+                  ),
+                  Text(
+                    category.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: PinkoraBrand.muted,
+                      fontSize: 11,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    height: 27,
+                    decoration: BoxDecoration(
+                      color: PinkoraBrand.berry,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'View Services',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
-                ),
+                        SizedBox(width: 8),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            Positioned(
-              left: imageWidth - badgeSize / 2,
-              top: (cardHeight - badgeSize) / 2,
-              child: IgnorePointer(
-                child: Container(
-                  width: badgeSize,
-                  height: badgeSize,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8FA),
-                    borderRadius: BorderRadius.circular(badgeSize * 0.30),
-                    border: Border.all(color: Colors.white, width: 2.5),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x148D214D),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    category.icon,
-                    color: PinkoraBrand.rose,
-                    size: badgeSize * 0.44,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    },
+          ),
+        ],
+      ),
+    ),
   );
+}
+
+String _categoryDescription(String name) {
+  final label = name.toLowerCase();
+  if (label.contains('facial')) {
+    return 'Cleansing, brightening and rejuvenation';
+  }
+  if (label.contains('spa') || label.contains('hair care')) {
+    return 'Nourishment for healthier, shinier hair';
+  }
+  if (label.contains('makeup')) {
+    return 'Party, bridal and special occasion makeup';
+  }
+  if (label.contains('wax')) return 'Smooth and long-lasting results';
+  if (label.contains('manicure') || label.contains('pedicure')) {
+    return 'Beautiful nails and relaxing care';
+  }
+  if (label.contains('bridal')) return 'Beauty care for your special day';
+  if (label.contains('thread')) return 'Precise shaping and a smooth finish';
+  return 'Professional beauty care at home';
 }

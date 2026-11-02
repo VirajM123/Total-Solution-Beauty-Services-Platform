@@ -186,11 +186,11 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: ListView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(12),
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   border: Border.all(color: WorkerDesign.border),
@@ -203,7 +203,7 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
                           ? Icons.check_circle_rounded
                           : Icons.qr_code_2_rounded,
                       color: WorkerDesign.pink,
-                      size: 44,
+                      size: 28,
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -233,13 +233,13 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
                         '₹${(_amountPaise! / 100).toStringAsFixed(2)}',
                         style: const TextStyle(
                           color: WorkerDesign.pink,
-                          fontSize: 25,
+                          fontSize: 19,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                     ],
                     if (_imageUrl != null && !_paymentVerified) ...[
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 8),
                       Image.network(
                         _imageUrl!,
                         width: 250,
@@ -269,7 +269,7 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
                       textAlign: TextAlign.center,
                     ),
                     if (_paymentVerified && !_paid) ...[
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
                       TextField(
                         controller: _completionOtp,
                         keyboardType: TextInputType.number,
@@ -289,14 +289,14 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
                         child: const Text('Check payment status'),
                       ),
                     if (_error != null) ...[
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
                       Text(
                         _error!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.red),
                       ),
                     ],
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(

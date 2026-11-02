@@ -7,9 +7,15 @@ import '../integration/customer_mobile_operations_api.dart';
 import 'app_router.dart';
 import 'route_names.dart';
 import '../core/constants/pinkora_brand.dart';
+import '../features/shared/customer_visuals.dart';
 
 class CustomerApp extends StatelessWidget {
-  const CustomerApp({super.key, required this.config, this.auth, this.operationsApi});
+  const CustomerApp({
+    super.key,
+    required this.config,
+    this.auth,
+    this.operationsApi,
+  });
   final AppConfig config;
   final CustomerAuthApi? auth;
   final CustomerMobileOperationsApi? operationsApi;
@@ -17,12 +23,14 @@ class CustomerApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     title: PinkoraBrand.name,
     debugShowCheckedModeBanner: false,
-    theme: BeautyTheme.data.copyWith(
-      textTheme: BeautyTheme.data.textTheme.apply(fontFamily: 'Montserrat'),
-      primaryTextTheme: BeautyTheme.data.primaryTextTheme.apply(
-        fontFamily: 'Montserrat',
+    theme: CustomerVisuals.theme(
+      BeautyTheme.data.copyWith(
+        textTheme: BeautyTheme.data.textTheme.apply(fontFamily: 'Montserrat'),
+        primaryTextTheme: BeautyTheme.data.primaryTextTheme.apply(
+          fontFamily: 'Montserrat',
+        ),
+        inputDecorationTheme: BeautyTheme.data.inputDecorationTheme,
       ),
-      inputDecorationTheme: BeautyTheme.data.inputDecorationTheme,
     ),
     initialRoute: RouteNames.splash,
     onGenerateRoute: AppRouter(

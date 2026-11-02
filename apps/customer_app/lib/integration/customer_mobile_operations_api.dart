@@ -131,6 +131,7 @@ class CustomerMobileOperationsApi {
   }
 
   Future<Map<String, dynamic>> saveAddress({
+    String? id,
     required String label,
     required String line1,
     String? line2,
@@ -139,16 +140,25 @@ class CustomerMobileOperationsApi {
     required String serviceAreaId,
   }) async {
     return _request(
-      'POST',
-      '/api/mobile/customer/addresses',
+      id == null ? 'POST' : 'PATCH',
+      id == null
+          ? '/api/mobile/customer/addresses'
+          : '/api/mobile/customer/addresses/${Uri.encodeComponent(id)}',
       body: {
         'label': label,
         'line1': line1,
-        if (line2 != null && line2.isNotEmpty) 'line2': line2,
+        if (line2 != null) 'line2': line2,
         'city': city,
         'postalCode': postalCode,
         'serviceAreaId': serviceAreaId,
       },
+    );
+  }
+
+  Future<void> setServiceFavorite(String serviceId, bool saved) async {
+    await _request(
+      saved ? 'PUT' : 'DELETE',
+      '/api/mobile/customer/favorites/${Uri.encodeComponent(serviceId)}',
     );
   }
 
@@ -177,11 +187,56 @@ class CustomerMobileOperationsApi {
   Future<Map<String, dynamic>> getProfile() =>
       _request('GET', '/api/mobile/customer/profile');
 
-  Future<Map<String, dynamic>> updateProfile(String fullName) => _request(
+  Future<Map<String, dynamic>> updateProfile(
+    String fullName, {
+    String? profileImageId,
+  }) => _request(
     'PATCH',
     '/api/mobile/customer/profile',
-    body: {'fullName': fullName},
+    body: {
+      'fullName': fullName,
+      if (profileImageId != null) 'profileImageId': profileImageId,
+    },
   );
+
+  Future<String> uploadProfilePhoto(Uint8List bytes) async {
+    if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
+      throw const FormatException('Choose a photo smaller than 5 MB.');
+    }
+    final mime = bytes.length >= 8 && bytes[0] == 137 && bytes[1] == 80
+        ? 'image/png'
+        : bytes.length >= 12 && bytes[0] == 82 && bytes[1] == 73
+        ? 'image/webp'
+        : 'image/jpeg';
+    final token = await _token();
+    final response = await _transport.request(
+      'POST',
+      _uri('/api/mobile/customer/profile/photo'),
+      headers: {
+        'Content-Type': mime,
+        'Accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+        'x-idempotency-key': 'profile_${DateTime.now().microsecondsSinceEpoch}',
+        'x-file-name': 'profile.${mime.split('/').last}',
+      },
+      bodyBytes: bytes,
+      timeout: const Duration(seconds: 30),
+    );
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final error = decoded is Map ? decoded['error'] : null;
+      throw Exception(
+        error is Map
+            ? error['message'] ?? 'Photo upload failed'
+            : 'Photo upload failed',
+      );
+    }
+    final data = decoded['data'] ?? decoded;
+    final id = data['_id'];
+    if (id is! String || id.isEmpty)
+      throw const FormatException('Photo upload was not confirmed.');
+    return id;
+  }
 
   Future<void> submitReview(
     String bookingId,

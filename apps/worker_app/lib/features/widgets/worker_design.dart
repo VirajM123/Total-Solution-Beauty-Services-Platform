@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 
 /// Visual primitives shared by the worker's primary screens.
 abstract final class WorkerDesign {
-  static const pink = Color(0xFFF50070);
+  static const pink = Color(0xFFF52D7A);
   static const deep = Color(0xFF111D3A);
   static const muted = Color(0xFF667085);
   static const cream = Color(0xFFFFF7FA);
   static const border = Color(0xFFF4DDE6);
 
-  static BoxDecoration surface({double radius = 22}) => BoxDecoration(
+  static BoxDecoration surface({double radius = 16}) => BoxDecoration(
     color: Colors.white,
     borderRadius: BorderRadius.circular(radius),
     border: Border.all(color: border),
     boxShadow: const [
-      BoxShadow(color: Color(0x14C74776), blurRadius: 18, offset: Offset(0, 7)),
+      BoxShadow(color: Color(0x14C74776), blurRadius: 10, offset: Offset(0, 3)),
     ],
   );
 }
@@ -36,10 +36,10 @@ class WorkerPageBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 150,
+    constraints: const BoxConstraints(minHeight: 76),
     clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(26),
+      borderRadius: BorderRadius.circular(16),
       gradient: const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
@@ -53,7 +53,7 @@ class WorkerPageBanner extends StatelessWidget {
             child: Opacity(
               opacity: .38,
               child: Image.asset(
-                'assets/images/dashboard/makeup_brushes.jpg',
+                'assets/images/backgrounds/worker_soft_canvas.png',
                 fit: BoxFit.cover,
                 alignment: Alignment.centerRight,
               ),
@@ -63,8 +63,8 @@ class WorkerPageBanner extends StatelessWidget {
           right: -20,
           top: -20,
           child: Container(
-            width: 132,
-            height: 132,
+            width: 64,
+            height: 64,
             decoration: const BoxDecoration(
               color: Color(0x48FFFFFF),
               shape: BoxShape.circle,
@@ -73,12 +73,13 @@ class WorkerPageBanner extends StatelessWidget {
         ),
         Positioned(
           right: 20,
-          top: 36,
-          child: Icon(icon, size: 72, color: const Color(0x66E91368)),
+          top: 22,
+          child: Icon(icon, size: 28, color: const Color(0x66E91368)),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 17, 104, 17),
+          padding: const EdgeInsets.fromLTRB(12, 8, 58, 8),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -93,19 +94,19 @@ class WorkerPageBanner extends StatelessWidget {
                   letterSpacing: 1.2,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 3),
               Text(
                 title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: WorkerDesign.deep,
-                  fontSize: 22,
+                  fontSize: 17,
                   fontWeight: FontWeight.w800,
                   height: 1.08,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 3),
               Text(
                 subtitle,
                 maxLines: 2,

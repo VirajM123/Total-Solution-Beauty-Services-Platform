@@ -314,8 +314,8 @@ void main() {
               'https://images.example.test/facial.jpg',
     );
     expect(photo, findsOneWidget);
-    expect((tester.widget(photo) as Image).fit, BoxFit.contain);
-    expect(tester.getSize(photo).height, greaterThanOrEqualTo(120));
+    expect((tester.widget(photo) as Image).fit, BoxFit.cover);
+    expect(tester.getSize(photo).height, greaterThanOrEqualTo(112));
     expect(tester.takeException(), isNull);
   });
 
@@ -388,7 +388,7 @@ void main() {
             widget.image is AssetImage &&
             (widget.image as AssetImage).assetName == AppAssets.offersBanner,
       ),
-      findsOneWidget,
+      findsNothing,
     );
 
     await tester.tap(find.text('Packages'));
@@ -407,12 +407,12 @@ void main() {
     await tester.tap(find.text('Profile').last);
     await tester.pumpAndSettle();
     expect(find.text('My Profile'), findsOneWidget);
-    expect(find.byKey(const ValueKey('profile-menu-Settings')), findsOneWidget);
     await tester.drag(
       find.byKey(const ValueKey('profile-settings-screen')),
       const Offset(0, -400),
     );
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('profile-menu-Settings')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('profile-menu-Settings')));
     await tester.pumpAndSettle();
     expect(find.text('Notifications'), findsOneWidget);

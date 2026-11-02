@@ -469,6 +469,7 @@ void main() {
                   'fullName': 'Rushi Mane',
                   'mobileNumber': '+919850905140',
                   'email': 'rushi@hiibeauty.test',
+                  'profileImageUrl': 'https://media.example.test/workers/rushi.jpg',
                 },
                 'profile': {
                   '_id': 'worker-101',
@@ -525,6 +526,7 @@ void main() {
       expect(profile?.cityOrArea, 'Latur Central');
       expect(profile?.primaryCategory, 'Hair');
       expect(profile?.services, ['Haircut', 'Hair Spa']);
+      expect(profile?.profilePhotoPath, 'https://media.example.test/workers/rushi.jpg');
 
       // Save changes
       final updated = profile!.copyWith(

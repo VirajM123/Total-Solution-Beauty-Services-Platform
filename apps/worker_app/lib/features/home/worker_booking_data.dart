@@ -25,6 +25,10 @@ class WorkerDashboardOrder {
     this.serviceFinishedAt,
     this.cashCollectionReportedAt,
     this.durationExtension,
+    this.serviceId,
+    this.serviceImageUrl,
+    this.customerPhotoUrl,
+    this.customerNote,
   });
 
   final String id;
@@ -59,6 +63,12 @@ class WorkerDashboardOrder {
   final DateTime? serviceFinishedAt;
   final DateTime? cashCollectionReportedAt;
   final Map<String, dynamic>? durationExtension;
+
+  /// Catalog identity used only to select the correct service thumbnail.
+  final String? serviceId;
+  final String? serviceImageUrl;
+  final String? customerPhotoUrl;
+  final String? customerNote;
 
   WorkerDashboardOrder copyWith({
     String? status,
@@ -98,6 +108,10 @@ class WorkerDashboardOrder {
     cashCollectionReportedAt:
         cashCollectionReportedAt ?? this.cashCollectionReportedAt,
     durationExtension: durationExtension ?? this.durationExtension,
+    serviceId: serviceId,
+    serviceImageUrl: serviceImageUrl,
+    customerPhotoUrl: customerPhotoUrl,
+    customerNote: customerNote,
   );
 }
 

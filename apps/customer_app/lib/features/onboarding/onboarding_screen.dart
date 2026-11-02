@@ -1,4 +1,3 @@
-import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import '../../app/route_names.dart';
 import '../../core/constants/app_assets.dart';
@@ -25,39 +24,63 @@ class OnboardingScreen extends StatelessWidget {
                 constraints: BoxConstraints(minHeight: height),
                 child: IntrinsicHeight(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      SizedBox(height: height * (compact ? .42 : .45)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: TextButton(
+                            onPressed: () => _continue(context),
+                            child: const Text('Skip'),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: height * (compact ? .34 : .39)),
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0x00FFFAF9),
+                              Color(0xE6FFFAF9),
+                              Color(0x00FFFAF9),
+                            ],
+                          ),
+                        ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
                               PinkoraBrand.name,
                               style: TextStyle(
                                 color: PinkoraBrand.berry,
-                                fontFamily: 'Montserrat',
-                                fontSize: 20,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
+                                letterSpacing: 1.2,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 10),
                             Text(
                               'Beauty that fits\nyour life.',
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(
-                                    color: PinkoraBrand.charcoal,
-                                    fontSize: compact ? 27 : 31,
-                                  ),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: PinkoraBrand.berry,
+                                fontSize: compact ? 29 : 33,
+                                fontWeight: FontWeight.w700,
+                                height: 1.1,
+                                letterSpacing: -.8,
+                              ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 12),
                             const Text(
                               'A little time for you, wherever you are.\nExplore beauty services on your terms.',
+                              textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: PinkoraBrand.charcoal,
-                                height: 1.25,
-                                fontSize: 14,
+                                color: PinkoraBrand.muted,
+                                fontSize: 13,
+                                height: 1.5,
                               ),
                             ),
                           ],
@@ -65,25 +88,17 @@ class OnboardingScreen extends StatelessWidget {
                       ),
                       const Spacer(),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-                        child: Column(
-                          children: [
-                            BeautyButton(
-                              label: 'Get Started',
-                              onPressed: () => _continue(context),
-                            ),
-                            const SizedBox(height: 17),
-                            TextButton(
-                              onPressed: () => _continue(context),
-                              child: const Text(
-                                'Skip',
-                                style: TextStyle(
-                                  color: PinkoraBrand.charcoal,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                        child: FilledButton(
+                          onPressed: () => _continue(context),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('Get Started'),
+                              SizedBox(width: 12),
+                              Icon(Icons.arrow_forward_rounded, size: 20),
+                            ],
+                          ),
                         ),
                       ),
                     ],

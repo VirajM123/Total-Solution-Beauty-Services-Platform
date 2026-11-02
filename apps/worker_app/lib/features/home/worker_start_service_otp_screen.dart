@@ -1,3 +1,4 @@
+import '../widgets/worker_images.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,10 +7,10 @@ import 'package:image_picker/image_picker.dart';
 import 'worker_booking_data.dart';
 import '../../integration/worker_mobile_operations_api.dart';
 
-const _pink = Color(0xFFE91368);
+const _pink = Color(0xFFF52D7A);
 const _deep = Color(0xFF460621);
 const _muted = Color(0xFF735866);
-const _cream = Color(0xFFFFF9F7);
+const _cream = Color(0xFFFFF8FB);
 const _border = Color(0xFFF0D6DF);
 
 class WorkerStartServiceInput {
@@ -134,7 +135,7 @@ class _WorkerStartServiceOtpScreenState
   }
 
   Widget _panel(Widget child) => Container(
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(18),
@@ -209,7 +210,7 @@ class _WorkerStartServiceOtpScreenState
                           ],
                         ),
                       ),
-                      const SizedBox(height: 17),
+                      const SizedBox(height: 8),
                       _panel(
                         Row(
                           children: [
@@ -222,7 +223,7 @@ class _WorkerStartServiceOtpScreenState
                                     : order.customer[0],
                                 style: const TextStyle(
                                   color: _pink,
-                                  fontSize: 23,
+                                  fontSize: 19,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
@@ -269,10 +270,9 @@ class _WorkerStartServiceOtpScreenState
                                     color: const Color(0xFFFFE8EF),
                                     borderRadius: BorderRadius.circular(13),
                                   ),
-                                  child: const Icon(
-                                    Icons.spa_rounded,
-                                    color: _pink,
-                                    size: 31,
+                                  child: WorkerServiceImage(
+                                    service: order.service, serviceId: order.serviceId,
+                                    demoMode: widget.demoMode,
                                   ),
                                 ),
                                 const SizedBox(width: 13),
@@ -299,7 +299,7 @@ class _WorkerStartServiceOtpScreenState
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 15),
+                            const SizedBox(height: 8),
                             const Divider(color: _border),
                             const SizedBox(height: 11),
                             _line(
@@ -315,7 +315,7 @@ class _WorkerStartServiceOtpScreenState
                         ),
                       ),
                       if (!_previewAllowed) ...[
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 8),
                         _panel(
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -382,7 +382,7 @@ class _WorkerStartServiceOtpScreenState
                         ),
                       ],
                       if (!_previewAllowed && _evidenceIds.isEmpty) ...[
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 8),
                         _panel(
                           const Text(
                             'OTP entry unlocks after a product photo has uploaded successfully.',
@@ -391,9 +391,9 @@ class _WorkerStartServiceOtpScreenState
                         ),
                       ],
                       if (_previewAllowed || _evidenceIds.isNotEmpty) ...[
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.all(18),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFF0F5),
                             borderRadius: BorderRadius.circular(19),
@@ -421,7 +421,7 @@ class _WorkerStartServiceOtpScreenState
                                     height: 1.4,
                                   ),
                                 ),
-                                const SizedBox(height: 17),
+                                const SizedBox(height: 8),
                                 TextFormField(
                                   key: const Key('start-service-otp'),
                                   controller: _code,
@@ -447,7 +447,7 @@ class _WorkerStartServiceOtpScreenState
                                   ],
                                   style: TextStyle(
                                     color: _deep,
-                                    fontSize: 27,
+                                    fontSize: 19,
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: _otpLength == 4 ? 13 : 8,
                                   ),
@@ -457,7 +457,7 @@ class _WorkerStartServiceOtpScreenState
                                         ? '••••'
                                         : '••••••',
                                     hintStyle: const TextStyle(
-                                      fontSize: 25,
+                                      fontSize: 19,
                                       letterSpacing: 8,
                                     ),
                                     filled: true,

@@ -509,6 +509,14 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
       completedAt: completedAt,
       customerPhone: customerPhone,
       itemsDescription: itemsDescription,
+      serviceImageUrl: items != null && items.isNotEmpty && items.first is Map
+          ? (items.first['imageUrl'] ?? items.first['thumbnail'])?.toString()
+          : null,
+      customerPhotoUrl:
+          (customerSnapshot?['profilePhotoUrl'] ??
+                  customerSnapshot?['profilePhoto'])
+              ?.toString(),
+      customerNote: doc['customerNote']?.toString(),
       paymentMethod: paymentMethod,
       paymentStatus: paymentStatus,
       customerPayablePaise: totalPaise,
@@ -518,6 +526,9 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
       serviceFinishedAt: serviceFinishedAt,
       cashCollectionReportedAt: cashCollectionReportedAt,
       durationExtension: extension,
+      serviceId: items != null && items.isNotEmpty && items.first is Map
+          ? items.first['serviceId']?.toString()
+          : null,
     );
   }
 

@@ -40,7 +40,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Every appointment, beautifully organized.'), findsOneWidget);
+    expect(
+      find.text('Manage and track all your appointments.'),
+      findsOneWidget,
+    );
     expect(find.text('Facial Service'), findsOneWidget);
     expect(find.text('Hair Styling'), findsOneWidget);
     expect(find.textContaining('₹2,100', findRichText: true), findsOneWidget);
@@ -57,6 +60,8 @@ void main() {
     expect(find.text('Payable  ₹900', findRichText: true), findsOneWidget);
     expect(tester.takeException(), isNull);
 
+    await tester.tap(find.byTooltip('Search bookings'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Second Customer');
     await tester.pumpAndSettle();
     expect(find.text('Hair Styling'), findsOneWidget);

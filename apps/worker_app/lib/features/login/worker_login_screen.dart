@@ -1,3 +1,4 @@
+import '../widgets/worker_auth_visuals.dart';
 import '../../integration/worker_api.dart';
 import '../../integration/worker_mobile_auth_api.dart';
 import 'dart:math' as math;
@@ -11,11 +12,11 @@ import '../registration/screens/worker_account_registration_screen.dart';
 import '../otp/worker_otp_screen.dart';
 import '../widgets/worker_login_footer.dart';
 
-const _plum = Color(0xFF460621);
-const _berry = Color(0xFFB20A50);
-const _muted = Color(0xFF624352);
-const _line = Color(0xFFE8C9CE);
-const _ivory = Color(0xFFFFF9F5);
+const _plum = Color(0xFF210B35);
+const _berry = Color(0xFFF52D7A);
+const _muted = Color(0xFF686080);
+const _line = Color(0xFFFFCEE0);
+const _ivory = Color(0xFFFFF8FB);
 
 class WorkerLoginScreen extends StatefulWidget {
   const WorkerLoginScreen({super.key, required this.demoEnabled, this.authApi});
@@ -122,14 +123,7 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // The picture is OUTSIDE the scroll view, so it stays stationary.
-          Image.asset(
-            'assets/images/backgrounds/worker_login_background.png',
-            fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
-            excludeFromSemantics: true,
-            errorBuilder: (_, __, ___) => const ColoredBox(color: _ivory),
-          ),
+          const ColoredBox(color: Colors.white),
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -137,11 +131,11 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
                 end: Alignment.bottomCenter,
                 stops: [0.0, 0.30, 0.48, 0.66, 1.0],
                 colors: [
-                  Color(0x18FFF9F5),
-                  Color(0x35FFF9F5),
-                  Color(0xD9FFF9F5),
-                  Color(0xFAFFF9F5),
-                  Color(0xF5FFF9F5),
+                  Color(0x00FFFFFF),
+                  Color(0x00FFFFFF),
+                  Color(0x22FFFFFF),
+                  Color(0xF2FFF9FC),
+                  Color(0xFFFFFAFC),
                 ],
               ),
             ),
@@ -152,12 +146,12 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
                 // All children have natural heights; none is cut off by a
                 // fixed-size Stack or a disabled scroll view.
                 final width = math.min(constraints.maxWidth, 420.0);
-                final compact = constraints.maxHeight < 740;
+
                 final horizontalPadding = width < 340 ? 18.0 : 22.0;
                 final heroHeight = keyboardOpen
-                    ? 145.0
-                    : (constraints.maxHeight * (compact ? 0.23 : 0.25))
-                          .clamp(165.0, 225.0)
+                    ? 100.0
+                    : (constraints.maxHeight * .34)
+                          .clamp(190.0, 270.0)
                           .toDouble();
 
                 return SingleChildScrollView(
@@ -181,229 +175,226 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            SizedBox(
-                              height: heroHeight,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: [
-                                  Image.asset(
-                                    'assets/images/logo/logo.png',
-                                    width: keyboardOpen ? 88 : 108,
-                                    height: keyboardOpen ? 88 : 108,
-                                    fit: BoxFit.contain,
-                                    semanticLabel: 'Hi Beauty',
-                                    errorBuilder: (_, _, _) => const Icon(
-                                      Icons.spa_rounded,
-                                      color: _berry,
-                                      size: 43,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  const Text(
-                                    'BEAUTY PROFESSIONALS',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: _muted,
-                                      fontSize: 11,
-                                      letterSpacing: 1.3,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 9),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 5,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.9,
-                                      ),
-                                      border: Border.all(color: _line),
-                                      borderRadius: BorderRadius.circular(18),
-                                    ),
-                                    child: const Text(
-                                      'PARTNER ACCESS',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        letterSpacing: 1.2,
-                                        fontWeight: FontWeight.bold,
-                                        color: _berry,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            const Center(child: WorkerAuthBrand()),
+                            const SizedBox(height: 12),
+                            WorkerAuthHero(height: heroHeight, phone: true),
+                            const SizedBox(height: 18),
                             const Text(
-                              'Welcome, Partner',
-                              textAlign: TextAlign.center,
+                              'Welcome Back',
+                              textAlign: TextAlign.left,
                               style: TextStyle(
-                                fontFamily: 'Georgia',
-                                fontSize: 31,
+                                fontFamily: 'Montserrat',
+                                fontSize: 29,
                                 fontWeight: FontWeight.bold,
                                 color: _plum,
                               ),
                             ),
                             const SizedBox(height: 5),
                             const Text(
-                              'Your services. Your schedule. Your success.',
-                              textAlign: TextAlign.center,
+                              'Beauty Professional',
+                              textAlign: TextAlign.left,
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 18,
                                 color: _muted,
                                 fontWeight: FontWeight.w500,
                                 height: 1.4,
                               ),
                             ),
-                            SizedBox(height: compact ? 18 : 23),
+                            const SizedBox(height: 8),
                             const Text(
-                              'REGISTERED MOBILE NUMBER',
+                              'Sign in to manage your bookings,\nearnings and grow with Hi Beauty.',
                               style: TextStyle(
-                                color: _plum,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.6,
-                                fontSize: 10,
+                                color: _muted,
+                                fontSize: 12,
+                                height: 1.6,
                               ),
                             ),
-                            const SizedBox(height: 7),
-                            SizedBox(
-                              height: 50,
-                              child: TextField(
-                                key: const Key('worker-phone'),
-                                controller: _phone,
-                                keyboardType: TextInputType.phone,
-                                textInputAction: TextInputAction.done,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  LengthLimitingTextInputFormatter(10),
-                                ],
-                                style: const TextStyle(
-                                  color: _plum,
-                                  fontSize: 15,
+                            SizedBox(height: keyboardOpen ? 16 : 20),
+                            Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: const Color(0xEDFFF0F6),
+                                borderRadius: BorderRadius.circular(22),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.5,
                                 ),
-                                onChanged: (_) {
-                                  if (_error != null)
-                                    setState(() => _error = null);
-                                },
-                                onSubmitted: (_) => _continue(),
-                                decoration: InputDecoration(
-                                  hintText: 'Enter mobile number',
-                                  hintStyle: const TextStyle(fontSize: 13),
-                                  prefixIconConstraints: const BoxConstraints(
-                                    minWidth: 100,
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x14F52D7A),
+                                    blurRadius: 20,
+                                    offset: Offset(0, 7),
                                   ),
-                                  prefixIcon: const Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 10,
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  const Text(
+                                    'Mobile number',
+                                    style: TextStyle(
+                                      color: _plum,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.6,
+                                      fontSize: 13,
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          '🇮🇳',
-                                          style: TextStyle(fontSize: 18),
+                                  ),
+                                  const SizedBox(height: 7),
+                                  SizedBox(
+                                    height: 64,
+                                    child: TextField(
+                                      key: const Key('worker-phone'),
+                                      controller: _phone,
+                                      textAlignVertical:
+                                          TextAlignVertical.center,
+                                      keyboardType: TextInputType.phone,
+                                      textInputAction: TextInputAction.done,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                        LengthLimitingTextInputFormatter(10),
+                                      ],
+                                      style: const TextStyle(
+                                        color: _plum,
+                                        fontSize: 16,
+                                      ),
+                                      onChanged: (_) {
+                                        if (_error != null)
+                                          setState(() => _error = null);
+                                      },
+                                      onSubmitted: (_) => _continue(),
+                                      decoration: InputDecoration(
+                                        hintText: 'Enter mobile number',
+                                        hintStyle: const TextStyle(
+                                          fontSize: 13,
                                         ),
-                                        SizedBox(width: 7),
-                                        Text(
-                                          '+91',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: _plum,
+                                        prefixIconConstraints:
+                                            const BoxConstraints(minWidth: 100),
+                                        prefixIcon: const Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                'IN',
+                                                style: TextStyle(fontSize: 18),
+                                              ),
+                                              SizedBox(width: 7),
+                                              Text(
+                                                '+91',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: _plum,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ],
+                                        filled: true,
+                                        fillColor: Colors.white.withValues(
+                                          alpha: 0.94,
+                                        ),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 20,
+                                            ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: _line,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: _berry,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  filled: true,
-                                  fillColor: Colors.white.withValues(
-                                    alpha: 0.94,
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: _line),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(
-                                      color: _berry,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            if (_error != null) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                _error!,
-                                style: const TextStyle(
-                                  color: Color(0xFFB3261E),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 15),
-                            SizedBox(
-                              height: 49,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFFD41361),
-                                      Color(0xFF750034),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(30),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x268B174A),
-                                      blurRadius: 12,
-                                      offset: Offset(0, 5),
+                                  if (_error != null) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _error!,
+                                      style: const TextStyle(
+                                        color: Color(0xFFB3261E),
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ],
-                                ),
-                                child: FilledButton(
-                                  key: const Key('worker-continue'),
-                                  onPressed: _loading ? null : _continue,
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    disabledBackgroundColor: Colors.transparent,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                  ),
-                                  child: _loading
-                                      ? const SizedBox.square(
-                                          dimension: 19,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              'Continue',
-                                              style: TextStyle(
-                                                fontFamily: 'Georgia',
-                                                fontSize: 18,
-                                              ),
-                                            ),
-                                            SizedBox(width: 10),
-                                            Icon(
-                                              Icons.arrow_forward_rounded,
-                                              size: 20,
-                                            ),
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    height: 52,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFFFF4B91),
+                                            Color(0xFFF52D7A),
                                           ],
                                         ),
-                                ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            color: Color(0x268B174A),
+                                            blurRadius: 12,
+                                            offset: Offset(0, 5),
+                                          ),
+                                        ],
+                                      ),
+                                      child: FilledButton(
+                                        key: const Key('worker-continue'),
+                                        onPressed: _loading ? null : _continue,
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: Colors.transparent,
+                                          disabledBackgroundColor:
+                                              Colors.transparent,
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                          ),
+                                        ),
+                                        child: _loading
+                                            ? const SizedBox.square(
+                                                dimension: 19,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      color: Colors.white,
+                                                      strokeWidth: 2,
+                                                    ),
+                                              )
+                                            : const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    'Send OTP',
+                                                    style: TextStyle(
+                                                      fontFamily: 'Montserrat',
+                                                      fontSize: 18,
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: 10),
+                                                  Icon(
+                                                    Icons.arrow_forward_rounded,
+                                                    size: 20,
+                                                  ),
+                                                ],
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             if (kDebugMode) ...[
@@ -411,7 +402,11 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
                               Center(
                                 child: TextButton.icon(
                                   key: const Key('dev-bypass-login'),
-                                  icon: const Icon(Icons.bolt, color: _berry, size: 18),
+                                  icon: const Icon(
+                                    Icons.bolt,
+                                    color: _berry,
+                                    size: 18,
+                                  ),
                                   label: const Text(
                                     'Dev Quick Login (Bypass OTP)',
                                     style: TextStyle(
@@ -421,7 +416,10 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
                                     ),
                                   ),
                                   style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
                                     backgroundColor: const Color(0x12B20A50),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(20),
@@ -431,7 +429,7 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
                                 ),
                               ),
                             ],
-                            const SizedBox(height: 17),
+                            const SizedBox(height: 8),
                             WorkerLoginFooter(
                               onGoogle: () => _comingSoon('Google sign-in'),
                               onApple: () => _comingSoon('Apple sign-in'),
@@ -455,7 +453,7 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
                                 'DEVELOPMENT PREVIEW • NO SMS IS SENT',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 13,
                                   letterSpacing: 0.2,
                                   color: _berry,
                                 ),

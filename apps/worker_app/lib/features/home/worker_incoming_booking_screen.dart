@@ -1,14 +1,10 @@
+import '../widgets/worker_reference_widgets.dart';
+import '../widgets/worker_images.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'worker_booking_data.dart';
 import 'worker_rejection_reason_screen.dart';
-
-const _pink = Color(0xFFE91368);
-const _deep = Color(0xFF460621);
-const _muted = Color(0xFF735866);
-const _cream = Color(0xFFFFF9F7);
-const _border = Color(0xFFF0D6DF);
 
 enum WorkerOfferDecisionType { accepted, rejected, expired }
 
@@ -109,33 +105,6 @@ class _WorkerIncomingBookingScreenState
     }
   }
 
-  Widget _item(IconData icon, String label, String text) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 10),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: _pink, size: 20),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(color: _muted, fontSize: 11)),
-              const SizedBox(height: 3),
-              Text(
-                text,
-                style: const TextStyle(
-                  color: _deep,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-
   @override
   Widget build(BuildContext context) => PopScope(
     canPop: false,
@@ -143,388 +112,368 @@ class _WorkerIncomingBookingScreenState
       if (!didPop && !_deciding) _reject();
     },
     child: Scaffold(
-      backgroundColor: _cream,
-      appBar: AppBar(
-        backgroundColor: _cream,
-        foregroundColor: _deep,
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'New Booking Request',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Reject with reason',
-            onPressed: _deciding ? null : _reject,
-            icon: const Icon(Icons.close_rounded),
-          ),
-        ],
-      ),
+      backgroundColor: const Color(0xFFFFFBFD),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
+            constraints: const BoxConstraints(maxWidth: 440),
             child: Column(
               children: [
+                WorkerReferenceHeader(location: widget.order.location),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
+                    padding: const EdgeInsets.fromLTRB(14, 6, 14, 16),
                     children: [
-                      if (widget.isLiveOffer)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF0FDF4),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFBBF7D0)),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(
-                                Icons.flash_on_rounded,
-                                color: Color(0xFF16A34A),
-                                size: 22,
-                              ),
-                              SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'LIVE BOOKING DISPATCH',
-                                      style: TextStyle(
-                                        color: Color(0xFF15803D),
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 12,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                    SizedBox(height: 2),
-                                    Text(
-                                      'New customer booking matched to your skills. Tap Accept before the timer runs out.',
-                                      style: TextStyle(
-                                        color: Color(0xFF166534),
-                                        fontSize: 11,
-                                        height: 1.3,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        Container(
-                          padding: const EdgeInsets.all(13),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFE8F0),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Text(
-                            'DEVELOPMENT PREVIEW ONLY · No real order is offered or accepted. No notification sound or backend request.',
-                            style: TextStyle(
-                              color: _deep,
-                              fontSize: 11,
-                              height: 1.45,
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 17),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.order.id.length > 8
-                                      ? 'Order #${widget.order.id.substring(widget.order.id.length - 6).toUpperCase()}'
-                                      : 'Order #${widget.order.id}',
-                                  style: const TextStyle(
-                                    color: _deep,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 17,
-                                  ),
-                                ),
-                                if (widget.order.id.length > 8)
-                                  Text(
-                                    'ID: ${widget.order.id}',
-                                    style: const TextStyle(
-                                      color: _muted,
-                                      fontSize: 10,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(color: _border),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.timer_outlined,
-                                  size: 15,
-                                  color: _pink,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${_secondsRemaining}s left',
-                                  style: const TextStyle(
-                                    color: _pink,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 15),
                       Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: _border),
-                          borderRadius: BorderRadius.circular(19),
-                        ),
+                        padding: const EdgeInsets.all(12),
+                        decoration: workerReferenceSurface(tinted: true),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFE9F0),
-                                    borderRadius: BorderRadius.circular(14),
+                                  width: 40,
+                                  height: 40,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Color(0xFFFFE0ED),
                                   ),
                                   child: const Icon(
-                                    Icons.spa_outlined,
-                                    color: _pink,
-                                    size: 28,
+                                    Icons.bolt,
+                                    color: workerPink,
+                                    size: 30,
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
+                                const SizedBox(width: 10),
+                                const Expanded(
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        widget.order.service,
-                                        style: const TextStyle(
-                                          color: _deep,
+                                        'New Booking Request',
+                                        style: TextStyle(
+                                          color: workerInk,
+                                          fontSize: 18,
                                           fontWeight: FontWeight.w800,
-                                          fontSize: 17,
+                                          height: 1.2,
                                         ),
                                       ),
-                                      const SizedBox(height: 5),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 4,
-                                        crossAxisAlignment:
-                                            WrapCrossAlignment.center,
-                                        children: [
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(
-                                                Icons.schedule,
-                                                size: 13,
-                                                color: _muted,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Flexible(
-                                                child: Text(
-                                                  widget.order.duration,
-                                                  style: const TextStyle(
-                                                    color: _muted,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFEFF6FF),
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                              border: Border.all(
-                                                color: const Color(0xFFBFDBFE),
-                                              ),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(
-                                                  Icons.near_me_rounded,
-                                                  size: 10,
-                                                  color: Color(0xFF2563EB),
-                                                ),
-                                                const SizedBox(width: 3),
-                                                Text(
-                                                  widget.distanceKm ??
-                                                      'Distance unavailable',
-                                                  style: const TextStyle(
-                                                    color: Color(0xFF1D4ED8),
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'Respond before the timer ends',
+                                        style: TextStyle(
+                                          color: workerMuted,
+                                          fontSize: 12,
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      widget.order.customerPayable > 0
-                                          ? widget
-                                                .order
-                                                .formattedCustomerPayable
-                                          : '₹15,600',
-                                      style: const TextStyle(
-                                        color: _deep,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 18,
+                                const SizedBox(width: 8),
+                                SizedBox.square(
+                                  dimension: 66,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      SizedBox.expand(
+                                        child: CircularProgressIndicator(
+                                          value:
+                                              widget.expiresAfter.inSeconds <= 0
+                                              ? 0
+                                              : (_secondsRemaining /
+                                                        widget
+                                                            .expiresAfter
+                                                            .inSeconds)
+                                                    .clamp(0.0, 1.0),
+                                          strokeWidth: 5,
+                                          strokeCap: StrokeCap.round,
+                                          color: workerPink,
+                                          backgroundColor: const Color(
+                                            0xFFFFC7DD,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    const Text(
-                                      'Customer Payable',
-                                      style: TextStyle(
-                                        color: _muted,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
+                                      Text(
+                                        '${_secondsRemaining ~/ 60}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}',
+                                        style: const TextStyle(
+                                          fontSize: 19,
+                                          color: workerPink,
+                                          fontWeight: FontWeight.w800,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
-                            const Divider(height: 24, color: _border),
-                            _item(
-                              Icons.person_outline,
-                              'Customer',
-                              widget.order.customer.isEmpty
-                                  ? 'Customer details unavailable'
-                                  : widget.order.customer,
-                            ),
-                            _item(
-                              Icons.calendar_today_outlined,
-                              'Scheduled Slot',
-                              widget.order.time,
-                            ),
-                            _item(
-                              Icons.near_me_outlined,
-                              'Distance & Travel',
-                              '${widget.distanceKm ?? 'Distance unavailable'} · ${widget.travelEstimate ?? 'Travel estimate unavailable'}',
-                            ),
-                            _item(
-                              Icons.location_on_outlined,
-                              'Service Area',
-                              widget.order.location.isEmpty
-                                  ? 'Address unavailable'
-                                  : widget.order.location,
-                            ),
-                            _item(
-                              Icons.shield_outlined,
-                              'Address & Contact',
-                              'Complete customer address and phone number unlocked on Accept',
+                            const SizedBox(height: 18),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: workerReferenceSurface(),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  WorkerProfilePhoto(
+                                    path: widget.order.customerPhotoUrl,
+                                    size: MediaQuery.sizeOf(context).width < 350
+                                        ? 74
+                                        : 104,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          widget.order.customer,
+                                          style: const TextStyle(
+                                            fontSize: 22,
+                                            height: 1.2,
+                                            fontWeight: FontWeight.w800,
+                                            color: workerInk,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        if (widget.order.appointmentDate !=
+                                            null)
+                                          WorkerReferenceLine(
+                                            icon: Icons.calendar_month_outlined,
+                                            text:
+                                                MaterialLocalizations.of(
+                                                  context,
+                                                ).formatMediumDate(
+                                                  widget.order.appointmentDate!
+                                                      .toLocal(),
+                                                ),
+                                          ),
+                                        WorkerReferenceLine(
+                                          icon: Icons.access_time,
+                                          text: widget.order.time,
+                                        ),
+                                        WorkerReferenceLine(
+                                          icon: Icons.location_on_outlined,
+                                          text: widget.order.location.isEmpty
+                                              ? 'Service area unavailable'
+                                              : widget.order.location,
+                                        ),
+                                        if (widget.distanceKm != null &&
+                                            widget.distanceKm !=
+                                                'Distance unavailable')
+                                          WorkerReferenceLine(
+                                            icon: Icons.near_me_outlined,
+                                            text: widget.distanceKm!,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 17),
-                      if (widget.ongoingService)
-                        Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF1DC),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: Color(0xFFAC6716),
-                              ),
-                              SizedBox(width: 9),
-                              Expanded(
-                                child: Text(
-                                  'You are currently performing a service. A future booking should only be offered if the schedule and travel time are feasible.',
-                                  style: TextStyle(
-                                    color: _deep,
-                                    fontSize: 12,
-                                    height: 1.4,
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: workerReferenceSurface(tinted: true),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            WorkerServiceImage(
+                              service: widget.order.service,
+                              serviceId: widget.order.serviceId,
+                              imageUrl: widget.order.serviceImageUrl,
+                              demoMode: !widget.isLiveOffer,
+                              width: MediaQuery.sizeOf(context).width < 350
+                                  ? 90
+                                  : 126,
+                              height: 132,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.order.service,
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      height: 1.2,
+                                      fontWeight: FontWeight.w800,
+                                      color: workerInk,
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(height: 10),
+                                  WorkerReferenceLine(
+                                    icon: Icons.access_time,
+                                    text: widget.order.duration,
+                                  ),
+                                  WorkerReferenceLine(
+                                    icon: Icons.currency_rupee,
+                                    text: widget.order.formattedCustomerPayable
+                                        .replaceFirst('\u20b9', ''),
+                                    strong: true,
+                                  ),
+                                  const Text(
+                                    'Customer payable',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: workerMuted,
+                                    ),
+                                  ),
+                                  if (widget
+                                          .order
+                                          .itemsDescription
+                                          ?.isNotEmpty ==
+                                      true) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      widget.order.itemsDescription!,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: workerMuted,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: workerReferenceSurface(),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.description_outlined,
+                              color: workerPink,
+                              size: 25,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Customer Note',
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      color: workerInk,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(13),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFF1F7),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Text(
+                                      widget.order.customerNote
+                                                  ?.trim()
+                                                  .isNotEmpty ==
+                                              true
+                                          ? widget.order.customerNote!
+                                          : 'No special instructions provided.',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        height: 1.55,
+                                        color: workerMuted,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6),
+                        child: Text(
+                          'Complete customer address and phone number unlocked on Accept',
+                          style: TextStyle(
+                            fontSize: 11,
+                            height: 1.4,
+                            color: workerMuted,
                           ),
                         ),
+                      ),
+                      if (widget.ongoingService)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: workerReferenceSurface(tinted: true),
+                            child: const Text(
+                              'You are currently performing a service. A future booking should only be offered if the schedule and travel time are feasible.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: workerInk,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Text(
+                          'Order #${widget.order.id}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: workerMuted,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 10, 18, 17),
+                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 18),
                   child: Row(
                     children: [
                       Expanded(
-                        child: SizedBox(
-                          height: 52,
-                          child: OutlinedButton(
-                            onPressed: _deciding ? null : _reject,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: _pink,
-                              side: const BorderSide(color: _pink),
+                        child: OutlinedButton.icon(
+                          onPressed: _deciding ? null : _reject,
+                          icon: const Icon(Icons.close, size: 23),
+                          label: const Text('Reject'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: workerPink,
+                            minimumSize: const Size.fromHeight(54),
+                            side: const BorderSide(color: workerPink),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            child: const Text('Reject'),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: SizedBox(
-                          height: 52,
-                          child: FilledButton(
-                            onPressed: _deciding ? null : _accept,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: _pink,
-                              foregroundColor: Colors.white,
+                        child: FilledButton.icon(
+                          onPressed: _deciding ? null : _accept,
+                          icon: const Icon(Icons.check, size: 23),
+                          label: const Text(
+                            'Accept Booking',
+                            textAlign: TextAlign.center,
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: workerPink,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(54),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            child: const Text('Accept'),
                           ),
                         ),
                       ),

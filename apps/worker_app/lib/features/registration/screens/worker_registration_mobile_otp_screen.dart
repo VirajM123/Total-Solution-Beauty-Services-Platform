@@ -35,15 +35,17 @@ class _WorkerRegistrationMobileOtpScreenState
       setState(() => _error = 'Enter all six digits.');
       return;
     }
-    setState(() => _error = 'No server-issued registration challenge is active.');
+    setState(
+      () => _error = 'No server-issued registration challenge is active.',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     const plum = Color(0xFF460621);
-    const berry = Color(0xFFB20A50);
+    const berry = Color(0xFFF52D7A);
     const muted = Color(0xFF624352);
-    const ivory = Color(0xFFFFF9F5);
+    const ivory = Color(0xFFFFF8FB);
     return Scaffold(
       backgroundColor: ivory,
       appBar: AppBar(
@@ -51,7 +53,10 @@ class _WorkerRegistrationMobileOtpScreenState
         foregroundColor: plum,
         title: const Text(
           'Mobile verification',
-          style: TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: SafeArea(
@@ -66,15 +71,15 @@ class _WorkerRegistrationMobileOtpScreenState
                   const Icon(
                     Icons.phonelink_lock_rounded,
                     color: berry,
-                    size: 48,
+                    size: 28,
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
                   const Text(
                     'Verify your mobile',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 23,
+                      fontFamily: 'Montserrat',
+                      fontSize: 19,
                       fontWeight: FontWeight.bold,
                       color: plum,
                     ),
@@ -85,7 +90,7 @@ class _WorkerRegistrationMobileOtpScreenState
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 12, color: muted),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 14),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -99,7 +104,7 @@ class _WorkerRegistrationMobileOtpScreenState
                       style: TextStyle(color: plum, fontSize: 12, height: 1.5),
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 14),
                   TextField(
                     key: const Key('registration-mobile-demo-otp'),
                     controller: _controller,
@@ -110,7 +115,7 @@ class _WorkerRegistrationMobileOtpScreenState
                     textInputAction: TextInputAction.done,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 26,
+                      fontSize: 19,
                       letterSpacing: 14,
                       color: plum,
                     ),
@@ -149,18 +154,21 @@ class _WorkerRegistrationMobileOtpScreenState
                     },
                     onSubmitted: (_) => _verify(),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 14),
                   SizedBox(
                     height: 46,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFD41361), Color(0xFF750034)],
+                          colors: [Color(0xFFFF4B91), Color(0xFFF52D7A)],
                         ),
                         borderRadius: BorderRadius.circular(28),
                       ),
                       child: FilledButton(
-                        onPressed: _busy || !WorkerEnvironment.developmentPreview ? null : _verify,
+                        onPressed:
+                            _busy || !WorkerEnvironment.developmentPreview
+                            ? null
+                            : _verify,
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           disabledBackgroundColor: Colors.transparent,
@@ -184,7 +192,7 @@ class _WorkerRegistrationMobileOtpScreenState
                       ),
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
                   const Text(
                     'Real SMS verification will be implemented later.',
                     textAlign: TextAlign.center,

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-const _plum = Color(0xFF460621);
-const _berry = Color(0xFFB20A50);
-const _muted = Color(0xFF624352);
-const _line = Color(0xFFE8C9CE);
+const _plum = Color(0xFF210B35);
+const _berry = Color(0xFFFF1680);
+const _muted = Color(0xFF686080);
+const _line = Color(0xFFFFCEE0);
 
 /// UI-only footer. Social sign-in, policies and applications are placeholders
 /// until real backend flows and published policy pages are available.
@@ -37,7 +37,7 @@ class WorkerLoginFooter extends StatelessWidget {
                 'or continue with',
                 style: TextStyle(
                   color: _muted,
-                  fontFamily: 'Georgia',
+                  fontFamily: 'Montserrat',
                   fontSize: 12,
                 ),
               ),
@@ -46,33 +46,51 @@ class WorkerLoginFooter extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        _SocialButton(
-          label: 'Continue with Google',
-          icon: const Text(
-            'G',
-            style: TextStyle(
-              color: Color(0xFF4285F4),
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          onPressed: onGoogle,
-        ),
-        const SizedBox(height: 9),
-        _SocialButton(
-          label: 'Continue with Apple',
-          icon: const Icon(Icons.apple, color: _plum, size: 24),
-          onPressed: onApple,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final buttons = <Widget>[
+              _SocialButton(
+                label: 'Continue with Google',
+                icon: const Text(
+                  'G',
+                  style: TextStyle(
+                    color: Color(0xFF4285F4),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                onPressed: onGoogle,
+              ),
+              _SocialButton(
+                label: 'Continue with Apple',
+                icon: const Icon(Icons.apple, color: _plum, size: 24),
+                onPressed: onApple,
+              ),
+            ];
+            if (constraints.maxWidth < 340 ||
+                MediaQuery.textScalerOf(context).scale(12) > 15) {
+              return Column(
+                children: [buttons[0], const SizedBox(height: 9), buttons[1]],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: buttons[0]),
+                const SizedBox(width: 8),
+                Expanded(child: buttons[1]),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 13),
         const Text(
-        'By continuing, you agree to our',
-textAlign: TextAlign.center,
-style: TextStyle(
-  color: _muted,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-),
+          'By continuing, you agree to our',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: _muted,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         Wrap(
           alignment: WrapAlignment.center,
@@ -86,8 +104,13 @@ style: TextStyle(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 foregroundColor: _plum,
               ),
-              child: const Text('Terms', style: TextStyle(
-                fontSize: 11, decoration: TextDecoration.underline)),
+              child: const Text(
+                'Terms',
+                style: TextStyle(
+                  fontSize: 11,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
             ),
             const Text('&', style: TextStyle(color: _muted, fontSize: 11)),
             TextButton(
@@ -97,53 +120,50 @@ style: TextStyle(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 foregroundColor: _plum,
               ),
-              child: const Text('Privacy Policy', style: TextStyle(
-                fontSize: 11, decoration: TextDecoration.underline)),
+              child: const Text(
+                'Privacy Policy',
+                style: TextStyle(
+                  fontSize: 11,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
             ),
           ],
         ),
         const Divider(color: _line),
 
-TextButton(
-  onPressed: onRegister,
-  style: TextButton.styleFrom(
-    foregroundColor: _berry,
-    minimumSize: const Size(0, 48),
-    padding: const EdgeInsets.symmetric(
-      horizontal: 8,
-      vertical: 10,
-    ),
-  ),
-  child: Wrap(
-    alignment: WrapAlignment.center,
-    crossAxisAlignment: WrapCrossAlignment.center,
-    spacing: 5,
-    children: const [
-      Text(
-        'New professional?',
-        style: TextStyle(
-          color: _muted,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
+        TextButton(
+          onPressed: onRegister,
+          style: TextButton.styleFrom(
+            foregroundColor: _berry,
+            minimumSize: const Size(0, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          ),
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 5,
+            children: const [
+              Text(
+                'Don’t have an account?',
+                style: TextStyle(
+                  color: _muted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                'Create account',
+                style: TextStyle(
+                  color: _berry,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Icon(Icons.arrow_forward_rounded, color: _berry, size: 19),
+            ],
+          ),
         ),
-      ),
-      Text(
-        'Apply to join',
-        style: TextStyle(
-          color: _berry,
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      Icon(
-        Icons.arrow_forward_rounded,
-        color: _berry,
-        size: 19,
-      ),
-    ],
-  ),
-),
-
       ],
     );
   }
@@ -172,7 +192,7 @@ class _SocialButton extends StatelessWidget {
           foregroundColor: _plum,
           side: const BorderSide(color: _line),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
         child: Row(
@@ -180,14 +200,14 @@ class _SocialButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             icon,
-            const SizedBox(width: 12),
+            const SizedBox(width: 7),
             Flexible(
               child: Text(
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontFamily: 'Georgia',
-                  fontSize: 15,
+                  fontFamily: 'Montserrat',
+                  fontSize: 12,
                   color: _plum,
                 ),
               ),

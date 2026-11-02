@@ -249,7 +249,18 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen>
         location: areaName,
         customerPayable: customerPayable is num ? customerPayable.toInt() : 0,
         status: 'Offered',
+        appointmentDate: rawStartsAt == null
+            ? null
+            : DateTime.tryParse('$rawStartsAt'),
+        customerPhotoUrl: offer['customerPhotoUrl']?.toString(),
+        customerNote: offer['customerNote']?.toString(),
+        serviceImageUrl: items != null && items.isNotEmpty && items.first is Map
+            ? (items.first['imageUrl'] ?? items.first['thumbnail'])?.toString()
+            : null,
         duration: '$durationMinutes min',
+        serviceId: items != null && items.isNotEmpty && items.first is Map
+            ? items.first['serviceId']?.toString()
+            : null,
       );
 
       _showingOffer = true;

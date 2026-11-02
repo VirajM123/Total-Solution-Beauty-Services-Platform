@@ -10,10 +10,10 @@ import 'worker_extra_service_item.dart';
 import 'worker_waiting_customer_payment_screen.dart';
 import '../../app/slide_page_route.dart';
 
-const _pink = Color(0xFFE91368);
+const _pink = Color(0xFFF52D7A);
 const _deep = Color(0xFF460621);
 const _muted = Color(0xFF735866);
-const _cream = Color(0xFFFFF9F7);
+const _cream = Color(0xFFFFF8FB);
 const _border = Color(0xFFF0D6DF);
 
 /// A read-only review and simulated finish action.
@@ -70,7 +70,7 @@ class _WorkerFinishServiceScreenState extends State<WorkerFinishServiceScreen> {
 
   Widget _panel(Widget child, {Color color = Colors.white}) => Container(
     width: double.infinity,
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: color,
       borderRadius: BorderRadius.circular(18),
@@ -251,7 +251,7 @@ class _WorkerFinishServiceScreenState extends State<WorkerFinishServiceScreen> {
                         ),
                         color: const Color(0xFFFFEDF3),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
                       if (_previewAllowed) ...[
                         const Text(
                           'DEVELOPMENT PREVIEW · No live service or payment changes',
@@ -300,7 +300,7 @@ class _WorkerFinishServiceScreenState extends State<WorkerFinishServiceScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
                       _panel(
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,7 +338,7 @@ class _WorkerFinishServiceScreenState extends State<WorkerFinishServiceScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
                       _panel(
                         const Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,7 +360,7 @@ class _WorkerFinishServiceScreenState extends State<WorkerFinishServiceScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
                       _panel(
                         const Row(
                           crossAxisAlignment: CrossAxisAlignment.start,

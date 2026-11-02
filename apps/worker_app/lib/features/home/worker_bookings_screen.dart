@@ -1,3 +1,5 @@
+import '../widgets/worker_reference_widgets.dart';
+import '../widgets/worker_images.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../integration/worker_api.dart';
@@ -9,9 +11,6 @@ import '../../app/slide_page_route.dart';
 import '../widgets/worker_design.dart';
 
 const _pink = WorkerDesign.pink;
-const _deep = WorkerDesign.deep;
-const _muted = WorkerDesign.muted;
-const _cream = WorkerDesign.cream;
 const _border = WorkerDesign.border;
 
 /// Frontend-only bookings view. No booking state transition or payment is made.
@@ -22,12 +21,20 @@ class WorkerBookingsScreen extends StatefulWidget {
     this.demoMode = true,
     this.onOrderTap,
     this.operationsApi,
+    this.location,
+    this.onNotificationsTap,
+    this.unreadNotifications = 0,
+    this.onNavigationSelected,
   });
 
   final List<WorkerDashboardOrder> orders;
   final bool demoMode;
   final ValueChanged<WorkerDashboardOrder>? onOrderTap;
   final WorkerOperationsApi? operationsApi;
+  final String? location;
+  final VoidCallback? onNotificationsTap;
+  final int unreadNotifications;
+  final ValueChanged<int>? onNavigationSelected;
 
   @override
   State<WorkerBookingsScreen> createState() => _WorkerBookingsScreenState();
@@ -36,13 +43,8 @@ class WorkerBookingsScreen extends StatefulWidget {
 class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
   final TextEditingController _search = TextEditingController();
   String _filter = 'All';
-  static const _filters = [
-    'All',
-    'Upcoming',
-    'Ongoing',
-    'Completed',
-    'Cancelled',
-  ];
+  DateTime? _selectedDate;
+  bool _searchOpen = false;
   bool _loading = true;
   Object? _storeError;
 
@@ -94,9 +96,13 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
     super.dispose();
   }
 
-  bool _matches(WorkerDashboardOrder order) {
+  bool _matches(
+    WorkerDashboardOrder order, {
+    String? filter,
+    bool includeSearch = true,
+  }) {
     final s = order.status.toLowerCase().trim();
-    final statusMatches = switch (_filter) {
+    final statusMatches = switch (filter ?? _filter) {
       'Upcoming' => [
         'scheduled',
         'accepted',
@@ -123,7 +129,7 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
       'Cancelled' => ['cancelled', 'canceled'].contains(s),
       _ => true,
     };
-    final q = _search.text.trim().toLowerCase();
+    final q = includeSearch ? _search.text.trim().toLowerCase() : '';
     return statusMatches &&
         (q.isEmpty ||
             [
@@ -176,502 +182,481 @@ class _WorkerBookingsScreenState extends State<WorkerBookingsScreen> {
     );
   }
 
+  bool _onDate(WorkerDashboardOrder order) {
+    final date = order.appointmentDate?.toLocal();
+    return _selectedDate == null ||
+        (date != null && DateUtils.isSameDay(date, _selectedDate));
+  }
+
+  Widget _calendar() {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final monday = today.subtract(Duration(days: today.weekday - 1));
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (var i = 0; i < 7; i++) ...[
+            Builder(
+              builder: (context) {
+                final date = monday.add(Duration(days: i));
+                final selected = DateUtils.isSameDay(date, _selectedDate);
+                return InkWell(
+                  onTap: () =>
+                      setState(() => _selectedDate = selected ? null : date),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: 44,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: workerReferenceSurface(
+                      tinted: selected,
+                      radius: 12,
+                    ).copyWith(color: selected ? workerPink : Colors.white),
+                    child: Column(
+                      children: [
+                        Text(
+                          weekdays[i],
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: selected ? Colors.white : workerMuted,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${date.day}'.padLeft(2, '0'),
+                          style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w700,
+                            color: selected ? Colors.white : workerInk,
+                          ),
+                        ),
+                        Text(
+                          months[date.month - 1],
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: selected ? Colors.white : workerMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            if (i < 6) const SizedBox(width: 6),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _bookingCard(WorkerDashboardOrder order) {
+    final statusColor = _statusColor(order.status);
+    final running =
+        widget.demoMode &&
+        WorkerDemoBookingStore.session(order.id)?.serviceStage ==
+            WorkerServiceStage.inProgress;
+    return Container(
+      decoration: workerReferenceSurface(),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _open(order),
+          child: Padding(
+            padding: const EdgeInsets.all(9),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                WorkerServiceImage(
+                  service: order.service,
+                  serviceId: order.serviceId,
+                  imageUrl: order.serviceImageUrl,
+                  demoMode: widget.demoMode,
+                  width: MediaQuery.sizeOf(context).width < 350 ? 76 : 102,
+                  height: 112,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              order.service,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                height: 1.2,
+                                fontWeight: FontWeight.w800,
+                                color: workerInk,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: .08),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              running ? 'In progress' : order.status,
+                              style: TextStyle(
+                                fontSize: 8,
+                                color: statusColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      WorkerReferenceLine(
+                        icon: Icons.person_outline,
+                        text: order.customer,
+                      ),
+                      WorkerReferenceLine(
+                        icon: Icons.access_time,
+                        text: order.time,
+                      ),
+                      WorkerReferenceLine(
+                        icon: Icons.location_on_outlined,
+                        text: order.location.isEmpty
+                            ? 'Address unavailable'
+                            : order.location,
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: WorkerReferenceLine(
+                              icon: Icons.currency_rupee,
+                              text: order.formattedCustomerPayable.replaceFirst(
+                                '\u20b9',
+                                '',
+                              ),
+                              strong: true,
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => _open(order),
+                            icon: const Icon(Icons.chevron_right, size: 14),
+                            label: const Text(
+                              'Details',
+                              style: TextStyle(fontSize: 10),
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: workerPink,
+                              minimumSize: const Size(0, 27),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 3,
+                              ),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentOrders = widget.demoMode && !_loading && _storeError == null
         ? WorkerDemoBookingStore.resolveAll(widget.orders)
         : widget.orders;
-    final visible = currentOrders.where(_matches).toList();
+    final visible = currentOrders
+        .where((order) => _matches(order) && _onDate(order))
+        .toList();
     final totalPaise = visible.fold<int>(
       0,
       (sum, order) => sum + order.exactCustomerPayablePaise,
     );
     return Scaffold(
-      backgroundColor: _cream,
-      appBar: AppBar(
-        title: const Text(
-          'Bookings',
-          style: TextStyle(
-            color: _deep,
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        backgroundColor: _cream,
-        foregroundColor: _deep,
-        surfaceTintColor: _cream,
-        centerTitle: true,
-      ),
-      body: widget.demoMode && (_loading || _storeError != null)
-          ? SafeArea(
-              child: Center(
-                child: _loading
-                    ? const CircularProgressIndicator(color: _pink)
-                    : Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('Could not load saved demo bookings'),
-                            Text('$_storeError', textAlign: TextAlign.center),
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _loading = true;
-                                  _storeError = null;
-                                });
-                                _loadStore();
-                              },
-                              child: const Text('Retry loading'),
-                            ),
-                          ],
-                        ),
-                      ),
-              ),
-            )
-          : SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: Column(
+      backgroundColor: const Color(0xFFFFFBFD),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: widget.demoMode && (_loading || _storeError != null)
+                ? Center(
+                    child: _loading
+                        ? const CircularProgressIndicator(color: workerPink)
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Could not load saved demo bookings'),
+                              TextButton(
+                                onPressed: _loadStore,
+                                child: const Text('Retry loading'),
+                              ),
+                            ],
+                          ),
+                  )
+                : Column(
                     children: [
+                      WorkerReferenceHeader(
+                        location: widget.location,
+                        onNotifications: widget.onNotificationsTap,
+                        unread: widget.unreadNotifications,
+                      ),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 6, 14, 2),
+                        padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const WorkerPageBanner(
-                              eyebrow: 'Your workday',
-                              title: 'My Bookings',
-                              subtitle:
-                                  'Every appointment, beautifully organized.',
-                              icon: Icons.calendar_month_outlined,
-                              photo: true,
-                            ),
-                            const SizedBox(height: 8),
-                            if (widget.demoMode) ...[
-                              const Padding(
-                                padding: EdgeInsets.only(bottom: 6),
-                                child: Text(
-                                  'DEVELOPMENT PREVIEW · Sample bookings · No live dispatch or payments',
-                                  style: TextStyle(color: _muted, fontSize: 9),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                            TextField(
-                              controller: _search,
-                              textInputAction: TextInputAction.search,
-                              decoration: InputDecoration(
-                                hintText:
-                                    'Search customer, service or booking ID',
-                                prefixIcon: const Icon(
-                                  Icons.search_rounded,
-                                  color: _muted,
-                                ),
-                                suffixIcon: _search.text.isEmpty
-                                    ? null
-                                    : IconButton(
-                                        tooltip: 'Clear search',
-                                        onPressed: _search.clear,
-                                        icon: const Icon(
-                                          Icons.close_rounded,
-                                          size: 19,
-                                        ),
-                                      ),
-                                filled: true,
-                                fillColor: Colors.white,
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 9,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(13),
-                                  borderSide: const BorderSide(color: _border),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(13),
-                                  borderSide: const BorderSide(color: _border),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  for (final name in _filters) ...[
-                                    ChoiceChip(
-                                      label: Text(name),
-                                      visualDensity: const VisualDensity(
-                                        horizontal: -3,
-                                        vertical: -3,
-                                      ),
-                                      selected: _filter == name,
-                                      selectedColor: const Color(0xFFFFDAE8),
-                                      backgroundColor: Colors.white,
-                                      labelStyle: TextStyle(
-                                        color: _filter == name ? _pink : _deep,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 10,
-                                      ),
-                                      side: BorderSide(
-                                        color: _filter == name
-                                            ? _pink
-                                            : _border,
-                                      ),
-                                      showCheckmark: false,
-                                      onSelected: (_) {
-                                        HapticFeedback.lightImpact();
-                                        setState(() => _filter = name);
-                                      },
-                                    ),
-                                    const SizedBox(width: 5),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 7),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Expanded(
+                                const Expanded(
                                   child: Text(
-                                    '${visible.length} booking${visible.length == 1 ? '' : 's'}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: _deep,
+                                    'My Bookings',
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      height: 1.2,
                                       fontWeight: FontWeight.w800,
-                                      fontSize: 13,
+                                      color: workerInk,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerRight,
-                                    child: Text.rich(
-                                      TextSpan(
-                                        style: const TextStyle(
-                                          color: _muted,
-                                          fontSize: 10,
-                                        ),
-                                        children: [
-                                          const TextSpan(text: 'Payable  '),
-                                          TextSpan(
-                                            text: formatCustomerPaise(
-                                              totalPaise,
-                                            ),
-                                            style: const TextStyle(
-                                              color: _deep,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                IconButton(
+                                  tooltip: 'Search bookings',
+                                  onPressed: () => setState(
+                                    () => _searchOpen = !_searchOpen,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.search,
+                                    size: 21,
+                                    color: workerMuted,
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 5),
+                            const Text(
+                              'Manage and track all your appointments.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: workerMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: workerReferenceSurface(tinted: true),
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    for (final name in [
+                                      'Upcoming',
+                                      'Ongoing',
+                                      'Completed',
+                                      'All',
+                                      'Cancelled',
+                                    ])
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 4,
+                                        ),
+                                        child: ChoiceChip(
+                                          label: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(name),
+                                              Text(
+                                                ' (${currentOrders.where((order) => _matches(order, filter: name, includeSearch: false)).length})',
+                                              ),
+                                            ],
+                                          ),
+                                          showCheckmark: false,
+                                          selected: _filter == name,
+                                          selectedColor: workerPink,
+                                          backgroundColor: Colors.transparent,
+                                          side: BorderSide.none,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              11,
+                                            ),
+                                          ),
+                                          labelStyle: TextStyle(
+                                            fontSize: 11,
+                                            color: _filter == name
+                                                ? Colors.white
+                                                : workerInk,
+                                          ),
+                                          onSelected: (_) {
+                                            HapticFeedback.lightImpact();
+                                            setState(() => _filter = name);
+                                          },
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _calendar(),
+                            const SizedBox(height: 10),
+                            if (_searchOpen || _search.text.isNotEmpty)
+                              TextField(
+                                controller: _search,
+                                textInputAction: TextInputAction.search,
+                                style: const TextStyle(fontSize: 12),
+                                decoration: InputDecoration(
+                                  hintText:
+                                      'Search customer, service or booking ID',
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.search,
+                                    size: 19,
+                                    color: workerMuted,
+                                  ),
+                                  suffixIcon: _search.text.isEmpty
+                                      ? null
+                                      : IconButton(
+                                          tooltip: 'Clear search',
+                                          onPressed: _search.clear,
+                                          icon: const Icon(
+                                            Icons.close,
+                                            size: 17,
+                                          ),
+                                        ),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: _border,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: _border,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${visible.length} booking${visible.length == 1 ? '' : 's'}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: workerMuted,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  'Payable  ${formatCustomerPaise(totalPaise)}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: workerInk,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (widget.demoMode)
+                              const Text(
+                                'DEVELOPMENT PREVIEW - Sample bookings',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: workerMuted,
+                                ),
+                              ),
                           ],
                         ),
                       ),
                       Expanded(
                         child: visible.isEmpty
                             ? Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(30),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.event_busy_outlined,
-                                        color: _pink,
-                                        size: 46,
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        _search.text.isNotEmpty
-                                            ? 'No matching bookings'
-                                            : 'No $_filter bookings',
-                                        style: const TextStyle(
-                                          color: _deep,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 17,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      const Text(
-                                        'Try a different search or booking status.',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: _muted,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      TextButton(
-                                        onPressed: () {
-                                          _search.clear();
-                                          setState(() => _filter = 'All');
-                                        },
-                                        child: const Text('Show all bookings'),
-                                      ),
-                                    ],
-                                  ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.event_busy_outlined,
+                                      color: workerPink,
+                                      size: 30,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _search.text.isNotEmpty
+                                          ? 'No matching bookings'
+                                          : 'No $_filter bookings',
+                                      style: const TextStyle(color: workerInk),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        _search.clear();
+                                        setState(() {
+                                          _filter = 'All';
+                                          _selectedDate = null;
+                                        });
+                                      },
+                                      child: const Text('Show all bookings'),
+                                    ),
+                                  ],
                                 ),
                               )
                             : ListView.separated(
-                                keyboardDismissBehavior:
-                                    ScrollViewKeyboardDismissBehavior.onDrag,
                                 padding: const EdgeInsets.fromLTRB(
                                   14,
-                                  3,
+                                  0,
                                   14,
-                                  16,
+                                  18,
                                 ),
                                 itemCount: visible.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 7),
-                                itemBuilder: (context, index) {
-                                  final o = visible[index];
-                                  final statusColor = _statusColor(o.status);
-                                  final running =
-                                      widget.demoMode &&
-                                      WorkerDemoBookingStore.session(
-                                            o.id,
-                                          )?.serviceStage ==
-                                          WorkerServiceStage.inProgress;
-                                  return Material(
-                                    color: Colors.white,
-                                    elevation: 1,
-                                    shadowColor: const Color(0x12C74776),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                      side: const BorderSide(color: _border),
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: InkWell(
-                                      onTap: () => _open(o),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(11),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    o.id,
-                                                    style: const TextStyle(
-                                                      color: _muted,
-                                                      fontSize: 11,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                    ),
-                                                  ),
-                                                ),
-                                                Container(
-                                                  decoration: BoxDecoration(
-                                                    color: statusColor
-                                                        .withValues(
-                                                          alpha: 0.10,
-                                                        ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          20,
-                                                        ),
-                                                  ),
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 3,
-                                                      ),
-                                                  child: Text(
-                                                    o.status,
-                                                    style: TextStyle(
-                                                      color: statusColor,
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                      fontSize: 11,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 7),
-                                            Row(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Container(
-                                                  width: 42,
-                                                  height: 44,
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(
-                                                      0xFFFFE4EE,
-                                                    ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          11,
-                                                        ),
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.spa_rounded,
-                                                    color: _pink,
-                                                    size: 22,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 10),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        o.service,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: const TextStyle(
-                                                          color: _deep,
-                                                          fontWeight:
-                                                              FontWeight.w800,
-                                                          fontSize: 14,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 1),
-                                                      Text(
-                                                        o.customer,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: const TextStyle(
-                                                          color: _muted,
-                                                          fontSize: 11,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 3),
-                                                      Row(
-                                                        children: [
-                                                          const Icon(
-                                                            Icons.access_time,
-                                                            size: 12,
-                                                            color: _pink,
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 3,
-                                                          ),
-                                                          Expanded(
-                                                            child: Text(
-                                                              '${o.time}  ·  ${o.duration}',
-                                                              maxLines: 1,
-                                                              overflow:
-                                                                  TextOverflow
-                                                                      .ellipsis,
-                                                              style:
-                                                                  const TextStyle(
-                                                                    color:
-                                                                        _muted,
-                                                                    fontSize:
-                                                                        10,
-                                                                  ),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Row(
-                                              children: [
-                                                const Icon(
-                                                  Icons.location_on_outlined,
-                                                  size: 13,
-                                                  color: _pink,
-                                                ),
-                                                const SizedBox(width: 3),
-                                                Expanded(
-                                                  child: Text(
-                                                    o.location,
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                      color: _muted,
-                                                      fontSize: 10,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 7),
-                                            const Divider(
-                                              height: 1,
-                                              color: _border,
-                                            ),
-                                            const SizedBox(height: 7),
-                                            Row(
-                                              children: [
-                                                const Text(
-                                                  'Payable',
-                                                  style: TextStyle(
-                                                    color: _muted,
-                                                    fontSize: 10,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 6),
-                                                Expanded(
-                                                  child: Text(
-                                                    o.formattedCustomerPayable,
-                                                    style: const TextStyle(
-                                                      color: _deep,
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                      fontSize: 15,
-                                                    ),
-                                                  ),
-                                                ),
-                                                Text(
-                                                  running
-                                                      ? 'Resume Service'
-                                                      : 'View details',
-                                                  style: const TextStyle(
-                                                    color: _pink,
-                                                    fontWeight: FontWeight.w700,
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 3),
-                                                const Icon(
-                                                  Icons.chevron_right_rounded,
-                                                  color: _pink,
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 12),
+                                itemBuilder: (context, index) =>
+                                    _bookingCard(visible[index]),
                               ),
                       ),
                     ],
                   ),
-                ),
-              ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: widget.onNavigationSelected == null
+          ? null
+          : WorkerReferenceNav(
+              selected: 1,
+              onSelected: (index) {
+                if (index != 1) widget.onNavigationSelected!(index);
+              },
             ),
     );
   }

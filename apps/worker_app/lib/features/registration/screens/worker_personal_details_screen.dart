@@ -1,3 +1,4 @@
+import '../../widgets/worker_auth_visuals.dart';
 import '../../../integration/worker_environment.dart';
 import '../../../integration/worker_api.dart';
 import 'dart:async';
@@ -18,11 +19,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/services.dart';
 
-const _plum = Color(0xFF460621);
-const _berry = Color(0xFFB20A50);
-const _muted = Color(0xFF624352);
-const _ivory = Color(0xFFFFF9F5);
-const _line = Color(0xFFE8C9CE);
+const _plum = Color(0xFF210B35);
+const _berry = Color(0xFFF52D7A);
+const _muted = Color(0xFF686080);
+const _ivory = Color(0xFFFFFCFD);
+const _line = Color(0xFFF4DDE6);
 
 /// Page 1 of worker registration. UI + local validation only.
 ///
@@ -79,6 +80,7 @@ class WorkerPersonalDetails {
   final String email;
   final DateTime dateOfBirth;
   final String cityOrArea;
+
   /// Selected photo, held in memory only until a backend upload is implemented.
   final Uint8List? profilePhotoBytes;
 }
@@ -129,8 +131,11 @@ class _WorkerPersonalDetailsScreenState
   });
 
   bool get _hasEnteredDraft =>
-      _name.text.trim().isNotEmpty || _mobile.text.trim().isNotEmpty ||
-      _email.text.trim().isNotEmpty || _city.text.trim().isNotEmpty || _dob != null;
+      _name.text.trim().isNotEmpty ||
+      _mobile.text.trim().isNotEmpty ||
+      _email.text.trim().isNotEmpty ||
+      _city.text.trim().isNotEmpty ||
+      _dob != null;
 
   Future<void> _saveDraft() async {
     if (_restoringDraft || _discarding) return;
@@ -154,7 +159,9 @@ class _WorkerPersonalDetailsScreenState
       }
     } catch (_) {
       if (mounted && !_discarding) {
-        setState(() => _draftStatus = 'Draft could not be saved on this device');
+        setState(
+          () => _draftStatus = 'Draft could not be saved on this device',
+        );
       }
     }
   }
@@ -169,7 +176,9 @@ class _WorkerPersonalDetailsScreenState
       final suppliedMobile = widget.initialMobile.trim();
       // Never populate one phone number's draft into a different login context.
       if (suppliedMobile.isNotEmpty &&
-          storedMobile.isNotEmpty && suppliedMobile != storedMobile) return;
+          storedMobile.isNotEmpty &&
+          suppliedMobile != storedMobile)
+        return;
       String read(String key) => data[key] is String ? data[key] as String : '';
       _name.text = read('fullName');
       _mobile.text = storedMobile.isEmpty ? suppliedMobile : storedMobile;
@@ -184,7 +193,8 @@ class _WorkerPersonalDetailsScreenState
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _draftStatus = 'Draft unavailable on this device');
+      if (mounted)
+        setState(() => _draftStatus = 'Draft unavailable on this device');
     } finally {
       _restoringDraft = false;
     }
@@ -196,17 +206,30 @@ class _WorkerPersonalDetailsScreenState
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Discard your draft?'),
-        content: const Text('This clears the saved personal details and the selected photo on this device. Your OTP demos will also reset.'),
+        content: const Text(
+          'This clears the saved personal details and the selected photo on this device. Your OTP demos will also reset.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep draft')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Discard')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep draft'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Discard'),
+          ),
         ],
       ),
     );
     if (confirm != true || !mounted) return;
-    setState(() { _draftBusy = true; _discarding = true; });
+    setState(() {
+      _draftBusy = true;
+      _discarding = true;
+    });
     _saveDebounce?.cancel();
-    _pendingWrite = _pendingWrite.catchError((Object _) {}).then((_) => _draftStorage.delete(key: _draftKey));
+    _pendingWrite = _pendingWrite
+        .catchError((Object _) {})
+        .then((_) => _draftStorage.delete(key: _draftKey));
     try {
       await _pendingWrite;
       if (!mounted) return;
@@ -223,12 +246,16 @@ class _WorkerPersonalDetailsScreenState
         _draftStatus = 'Draft discarded';
       });
     } catch (_) {
-      if (mounted) _notice('Could not remove the saved draft. Please try again.');
+      if (mounted)
+        _notice('Could not remove the saved draft. Please try again.');
     } finally {
-      if (mounted) setState(() { _draftBusy = false; _discarding = false; });
+      if (mounted)
+        setState(() {
+          _draftBusy = false;
+          _discarding = false;
+        });
     }
   }
-
 
   ImageProvider? get _photoPreview => _selectedPhoto != null
       ? MemoryImage(_selectedPhoto!)
@@ -292,20 +319,23 @@ class _WorkerPersonalDetailsScreenState
       if (!mounted) return;
       setState(() => _selectedPhoto = bytes);
     } catch (_) {
-      if (mounted) _notice('Could not access photos. Check permissions and try again.');
+      if (mounted)
+        _notice('Could not access photos. Check permissions and try again.');
     } finally {
       if (mounted) setState(() => _selectingPhoto = false);
     }
   }
 
-
   bool get _mobileVerified =>
-      (widget.verifiedMobile != null && widget.verifiedMobile == _mobile.text.trim()) ||
-      (widget.initialMobile.isNotEmpty && widget.initialMobile == _mobile.text.trim()) ||
+      (widget.verifiedMobile != null &&
+          widget.verifiedMobile == _mobile.text.trim()) ||
+      (widget.initialMobile.isNotEmpty &&
+          widget.initialMobile == _mobile.text.trim()) ||
       _demoMobileMatches;
 
   bool get _demoMobileMatches =>
-      WorkerEnvironment.developmentPreview && _demoVerifiedMobile == _mobile.text.trim();
+      WorkerEnvironment.developmentPreview &&
+      _demoVerifiedMobile == _mobile.text.trim();
 
   bool get _demoEmailMatches =>
       WorkerEnvironment.developmentPreview &&
@@ -314,8 +344,7 @@ class _WorkerPersonalDetailsScreenState
 
   bool get _emailVerified =>
       widget.verifiedEmail != null &&
-      widget.verifiedEmail!.toLowerCase() ==
-          _email.text.trim().toLowerCase();
+      widget.verifiedEmail!.toLowerCase() == _email.text.trim().toLowerCase();
 
   @override
   void initState() {
@@ -366,8 +395,8 @@ class _WorkerPersonalDetailsScreenState
     _onDraftChanged();
   }
 
-  void _notice(String text) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(text)));
+  void _notice(String text) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _verifyMobile() async {
     final value = _mobile.text.trim();
@@ -389,7 +418,9 @@ class _WorkerPersonalDetailsScreenState
       if (!mounted) return;
       if (result == true && _mobile.text.trim() == value) {
         setState(() => _demoVerifiedMobile = value);
-        _notice('Demo code accepted. Real mobile verification is still required.');
+        _notice(
+          'Demo code accepted. Real mobile verification is still required.',
+        );
       }
       return;
     }
@@ -424,7 +455,9 @@ class _WorkerPersonalDetailsScreenState
       if (result == true &&
           _email.text.trim().toLowerCase() == value.toLowerCase()) {
         setState(() => _demoVerifiedEmail = value);
-        _notice('Demo email code accepted. Real email verification is still required.');
+        _notice(
+          'Demo email code accepted. Real email verification is still required.',
+        );
       }
       return;
     }
@@ -480,7 +513,8 @@ class _WorkerPersonalDetailsScreenState
                           about: professional.about,
                           certificateDetails: professional.certificateDetails,
                           identityType: documents.identityType,
-                          identityFileFormat: documents.identityDocument.extension,
+                          identityFileFormat:
+                              documents.identityDocument.extension,
                           professionalCertificateFormat:
                               documents.professionalCertificate?.extension,
                         ),
@@ -536,8 +570,10 @@ class _WorkerPersonalDetailsScreenState
         prefixIcon: Icon(icon, color: _muted, size: 20),
         filled: true,
         fillColor: Colors.white.withValues(alpha: 0.96),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 16,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(13),
           borderSide: const BorderSide(color: _line),
@@ -557,24 +593,40 @@ class _WorkerPersonalDetailsScreenState
       );
 
   Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 5),
-        child: Text(text,
-            style: const TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w700, color: _plum)),
-      );
+    padding: const EdgeInsets.only(bottom: 5),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: _plum,
+      ),
+    ),
+  );
 
-  Widget _verifiedMarker(bool verified, VoidCallback onVerify,
-      {required bool loading}) {
+  Widget _verifiedMarker(
+    bool verified,
+    VoidCallback onVerify, {
+    required bool loading,
+  }) {
     if (verified) {
       return const Padding(
         padding: EdgeInsets.only(right: 10),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.verified_rounded, size: 17, color: Color(0xFF208454)),
-          SizedBox(width: 4),
-          Text('Verified',
-              style: TextStyle(fontSize: 11, color: Color(0xFF208454),
-                  fontWeight: FontWeight.w700)),
-        ]),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.verified_rounded, size: 17, color: Color(0xFF208454)),
+            SizedBox(width: 4),
+            Text(
+              'Verified',
+              style: TextStyle(
+                fontSize: 11,
+                color: Color(0xFF208454),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
       );
     }
     return Padding(
@@ -589,9 +641,12 @@ class _WorkerPersonalDetailsScreenState
         child: loading
             ? const SizedBox.square(
                 dimension: 16,
-                child: CircularProgressIndicator(strokeWidth: 2))
-            : const Text('Verify',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text(
+                'Verify',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              ),
       ),
     );
   }
@@ -604,15 +659,14 @@ class _WorkerPersonalDetailsScreenState
         backgroundColor: _ivory,
         foregroundColor: _plum,
         elevation: 0,
-        title: const Text('Join Hi Beauty',
-            style: TextStyle(fontFamily: 'Georgia',
-                fontWeight: FontWeight.w700, fontSize: 20)),
+        title: const WorkerAuthBrand(),
+        toolbarHeight: 76,
         centerTitle: true,
       ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: const BoxConstraints(maxWidth: 420),
             child: Form(
               key: _formKey,
               child: Column(
@@ -625,184 +679,306 @@ class _WorkerPersonalDetailsScreenState
                       children: [
                         Row(
                           children: [
-                            const Expanded(child: Text('STEP 1 OF 4',
-                                style: TextStyle(color: _berry, fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 1.1))),
-                            Text('25% complete',
-                                style: TextStyle(color: _muted.withValues(alpha: .9),
-                                    fontSize: 12)),
+                            const Expanded(
+                              child: Text(
+                                'STEP 1 OF 4',
+                                style: TextStyle(
+                                  color: _berry,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1.1,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '25% complete',
+                              style: TextStyle(
+                                color: _muted.withValues(alpha: .9),
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 9),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: const LinearProgressIndicator(
-                            minHeight: 5,
-                            value: .25,
-                            backgroundColor: Color(0xFFF3DFE5),
-                            color: _berry,
+                        const SizedBox(height: 12),
+                        const WorkerAuthSteps(active: 0),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _draftStatus ??
+                                    'Your details are saved locally as you type',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: _muted,
+                                ),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: (_draftBusy || !_draftAvailable)
+                                  ? null
+                                  : _discardDraft,
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                size: 16,
+                              ),
+                              label: const Text(
+                                'Discard',
+                                style: TextStyle(fontSize: 11),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Personal Details',
+                          style: TextStyle(
+                            fontFamily: 'Montserrat',
+                            fontSize: 25,
+                            fontWeight: FontWeight.w700,
+                            color: _plum,
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        Row(children: [
-                          Expanded(child: Text(
-                            _draftStatus ?? 'Your details are saved locally as you type',
-                            style: const TextStyle(fontSize: 11, color: _muted),
-                          )),
-                          TextButton.icon(
-                            onPressed: (_draftBusy || !_draftAvailable) ? null : _discardDraft,
-                            icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                            label: const Text('Discard', style: TextStyle(fontSize: 11)),
-                          ),
-                        ]),
-                        const SizedBox(height: 12),
-                        const Text('Tell us about yourself',
-                            style: TextStyle(fontFamily: 'Georgia',
-                                fontSize: 23, fontWeight: FontWeight.w700,
-                                color: _plum)),
                         const SizedBox(height: 6),
-                        const Text('Create your professional profile to apply as a Hi Beauty partner.',
-                            style: TextStyle(fontSize: 13.5,
-                                height: 1.45, color: _muted)),
-                        const SizedBox(height: 14),
+                        const Text(
+                          'Create your professional profile to apply as a Hi Beauty partner.',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            height: 1.45,
+                            color: _muted,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         _label('Full name *'),
                         TextFormField(
                           controller: _name,
                           textCapitalization: TextCapitalization.words,
                           textInputAction: TextInputAction.next,
-                          decoration: _fieldDecoration('Enter name as on your ID', Icons.person_outline),
+                          decoration: _fieldDecoration(
+                            'Enter name as on your ID',
+                            Icons.person_outline,
+                          ),
                           validator: (v) => (v?.trim().length ?? 0) < 2
-                              ? 'Enter your full name.' : null,
+                              ? 'Enter your full name.'
+                              : null,
                         ),
-                        const SizedBox(height: 17),
+                        const SizedBox(height: 12),
                         _label('Mobile number *'),
                         TextFormField(
                           controller: _mobile,
                           keyboardType: TextInputType.phone,
                           textInputAction: TextInputAction.next,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(10)],
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(10),
+                          ],
                           onChanged: (_) => setState(() {}),
-                          decoration: _fieldDecoration('10-digit mobile number', Icons.phone_outlined)
-                              .copyWith(prefixText: '+91  ',
-                                prefixStyle: const TextStyle(color: _plum,
-                                    fontWeight: FontWeight.w700),
-                                suffixIconConstraints: const BoxConstraints(minWidth: 62),
-                                suffixIcon: _demoMobileMatches && !_mobileVerified
+                          decoration:
+                              _fieldDecoration(
+                                '10-digit mobile number',
+                                Icons.phone_outlined,
+                              ).copyWith(
+                                prefixText: '+91  ',
+                                prefixStyle: const TextStyle(
+                                  color: _plum,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                suffixIconConstraints: const BoxConstraints(
+                                  minWidth: 62,
+                                ),
+                                suffixIcon:
+                                    _demoMobileMatches && !_mobileVerified
                                     ? const Tooltip(
-                                        message: 'Demo only; not identity verified',
+                                        message:
+                                            'Demo only; not identity verified',
                                         child: Padding(
                                           padding: EdgeInsets.only(right: 9),
                                           child: Center(
                                             widthFactor: 1,
-                                            child: Text('Demo ✓', style: TextStyle(
-                                              color: _berry, fontWeight: FontWeight.bold, fontSize: 11)),
+                                            child: Text(
+                                              'Demo ✓',
+                                              style: TextStyle(
+                                                color: _berry,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 11,
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       )
-                                    : _verifiedMarker(_mobileVerified,
-                                        _verifyMobile, loading: _sendingMobile)),
-                          validator: (v) => RegExp(r'^[6-9][0-9]{9}$').hasMatch(v?.trim() ?? '')
-                              ? null : 'Enter a valid Indian mobile number.',
+                                    : _verifiedMarker(
+                                        _mobileVerified,
+                                        _verifyMobile,
+                                        loading: _sendingMobile,
+                                      ),
+                              ),
+                          validator: (v) =>
+                              RegExp(
+                                r'^[6-9][0-9]{9}$',
+                              ).hasMatch(v?.trim() ?? '')
+                              ? null
+                              : 'Enter a valid Indian mobile number.',
                         ),
-                        const SizedBox(height: 17),
+                        const SizedBox(height: 12),
                         _label('Email address (Optional)'),
                         TextFormField(
                           controller: _email,
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
                           onChanged: (_) => setState(() {}),
-                          decoration: _fieldDecoration('you@example.com', Icons.mail_outline)
-                              .copyWith(suffixIconConstraints: const BoxConstraints(minWidth: 62),
+                          decoration:
+                              _fieldDecoration(
+                                'you@example.com',
+                                Icons.mail_outline,
+                              ).copyWith(
+                                suffixIconConstraints: const BoxConstraints(
+                                  minWidth: 62,
+                                ),
                                 suffixIcon: _demoEmailMatches && !_emailVerified
-                                     ? const Tooltip(
-                                         message: 'Demo only; email ownership not verified',
-                                         child: Padding(
-                                           padding: EdgeInsets.only(right: 9),
-                                           child: Center(
-                                             widthFactor: 1,
-                                             child: Text('Demo ✓',
-                                               style: TextStyle(
-                                                 color: _berry,
-                                                 fontWeight: FontWeight.bold,
-                                                 fontSize: 11,
-                                               ),
-                                             ),
-                                           ),
-                                         ),
-                                       )
-                                     : _verifiedMarker(_emailVerified,
-                                         _verifyEmail, loading: _sendingEmail)),
-                          validator: (v) => RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
-                                  .hasMatch(v?.trim() ?? '')
-                              ? null : 'Enter a valid email address.',
+                                    ? const Tooltip(
+                                        message:
+                                            'Demo only; email ownership not verified',
+                                        child: Padding(
+                                          padding: EdgeInsets.only(right: 9),
+                                          child: Center(
+                                            widthFactor: 1,
+                                            child: Text(
+                                              'Demo ✓',
+                                              style: TextStyle(
+                                                color: _berry,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : _verifiedMarker(
+                                        _emailVerified,
+                                        _verifyEmail,
+                                        loading: _sendingEmail,
+                                      ),
+                              ),
+                          validator: (v) =>
+                              RegExp(
+                                r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+                              ).hasMatch(v?.trim() ?? '')
+                              ? null
+                              : 'Enter a valid email address.',
                         ),
-                        const SizedBox(height: 8),
-                        const Row(children: [
-                          Icon(Icons.lock_outline_rounded, size: 14, color: _muted),
-                          SizedBox(width: 5),
-                          Expanded(child: Text('Mobile number is verified for partner registration security.',
-                              style: TextStyle(color: _muted, fontSize: 11.5))),
-                        ]),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 12),
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.lock_outline_rounded,
+                              size: 14,
+                              color: _muted,
+                            ),
+                            SizedBox(width: 5),
+                            Expanded(
+                              child: Text(
+                                'Mobile number is verified for partner registration security.',
+                                style: TextStyle(color: _muted, fontSize: 11.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
                         _label('Date of birth *'),
                         InkWell(
                           onTap: _pickDob,
                           borderRadius: BorderRadius.circular(13),
                           child: InputDecorator(
-                            decoration: _fieldDecoration('Select date of birth', Icons.calendar_today_outlined),
-                            child: Text(_dob == null ? 'Select date of birth'
-                              : MaterialLocalizations.of(context).formatMediumDate(_dob!),
-                              style: TextStyle(fontSize: 14,
-                                  color: _dob == null ? _muted : _plum)),
+                            decoration: _fieldDecoration(
+                              'Select date of birth',
+                              Icons.calendar_today_outlined,
+                            ),
+                            child: Text(
+                              _dob == null
+                                  ? 'Select date of birth'
+                                  : MaterialLocalizations.of(
+                                      context,
+                                    ).formatMediumDate(_dob!),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: _dob == null ? _muted : _plum,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 7),
-                        const Text('You must be 18 or older to apply.',
-                            style: TextStyle(fontSize: 11.5, color: _muted)),
-                        const SizedBox(height: 17),
+                        const Text(
+                          'You must be 18 or older to apply.',
+                          style: TextStyle(fontSize: 11.5, color: _muted),
+                        ),
+                        const SizedBox(height: 12),
                         _label('City / residential area *'),
                         TextFormField(
                           controller: _city,
                           textCapitalization: TextCapitalization.words,
                           textInputAction: TextInputAction.done,
-                          decoration: _fieldDecoration('Enter your city and area', Icons.location_on_outlined),
+                          decoration: _fieldDecoration(
+                            'Enter your city and area',
+                            Icons.location_on_outlined,
+                          ),
                           validator: (v) => (v?.trim().length ?? 0) < 2
-                              ? 'Enter your city or residential area.' : null,
+                              ? 'Enter your city or residential area.'
+                              : null,
                         ),
-                        const SizedBox(height: 19),
+                        const SizedBox(height: 12),
                         _label('Profile photograph'),
-                         Row(children: [
-                           CircleAvatar(
-                             radius: 27,
-                             backgroundColor: const Color(0xFFF4DDE5),
-                             foregroundImage: _photoPreview,
-                             child: _photoPreview == null
-                                 ? const Icon(Icons.person_outline, color: _berry, size: 31)
-                                 : null,
-                           ),
-                           const SizedBox(width: 14),
-                           Expanded(child: OutlinedButton.icon(
-                             onPressed: _selectingPhoto ? null : _choosePhoto,
-                             icon: _selectingPhoto
-                                 ? const SizedBox.square(
-                                     dimension: 17,
-                                     child: CircularProgressIndicator(strokeWidth: 2),
-                                   )
-                                 : const Icon(Icons.add_a_photo_outlined, size: 18),
-                             label: Text(_selectedPhoto == null && widget.profileImage == null
-                                 ? 'Add profile photo' : 'Change photo'),
-                             style: OutlinedButton.styleFrom(
-                               foregroundColor: _berry,
-                               side: const BorderSide(color: _line),
-                               minimumSize: const Size(0, 40),
-                             ),
-                           )),
-                         ]),                        const SizedBox(height: 10),
-                        const Text('Use a clear, recent photo. Identity documents are collected in Step 3.',
-                            style: TextStyle(fontSize: 11.5, color: _muted)),
-                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 27,
+                              backgroundColor: const Color(0xFFF4DDE5),
+                              foregroundImage: _photoPreview,
+                              child: _photoPreview == null
+                                  ? const Icon(
+                                      Icons.person_outline,
+                                      color: _berry,
+                                      size: 31,
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _selectingPhoto
+                                    ? null
+                                    : _choosePhoto,
+                                icon: _selectingPhoto
+                                    ? const SizedBox.square(
+                                        dimension: 17,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.add_a_photo_outlined,
+                                        size: 18,
+                                      ),
+                                label: Text(
+                                  _selectedPhoto == null &&
+                                          widget.profileImage == null
+                                      ? 'Add profile photo'
+                                      : 'Change photo',
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: _berry,
+                                  side: const BorderSide(color: _line),
+                                  minimumSize: const Size(0, 40),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Use a clear, recent photo. Identity documents are collected in Step 3.',
+                          style: TextStyle(fontSize: 11.5, color: _muted),
+                        ),
+                        const SizedBox(height: 12),
                       ],
                     ),
                   ),
@@ -814,11 +990,12 @@ class _WorkerPersonalDetailsScreenState
                     ),
                     child: SizedBox(
                       width: double.infinity,
-                      height: 46,
+                      height: 52,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFFD41361), Color(0xFF750034)]),
+                            colors: [Color(0xFFFF4B91), Color(0xFFF52D7A)],
+                          ),
                           borderRadius: BorderRadius.circular(28),
                         ),
                         child: FilledButton(
@@ -827,20 +1004,29 @@ class _WorkerPersonalDetailsScreenState
                             backgroundColor: Colors.transparent,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(28)),
+                              borderRadius: BorderRadius.circular(28),
+                            ),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: [Text('Continue',
-                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                              SizedBox(width: 10), Icon(Icons.arrow_forward_rounded)],
+                            children: [
+                              Text(
+                                'Continue',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.arrow_forward_rounded),
+                            ],
                           ),
                         ),
                       ),
                     ),
                   ),
                   if (WorkerEnvironment.developmentPreview) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                       child: OutlinedButton.icon(

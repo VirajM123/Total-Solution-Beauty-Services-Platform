@@ -78,6 +78,7 @@ flutter:
     - assets/images/backgrounds/
     - assets/images/branding/
     - assets/images/dashboard/
+    - assets/images/services/
     - assets/images/illustrations/
     - assets/images/logo/logo.png
 

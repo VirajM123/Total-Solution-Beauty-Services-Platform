@@ -1,3 +1,4 @@
+import '../../widgets/worker_auth_visuals.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -16,11 +17,11 @@ import 'worker_personal_details_screen.dart';
 // Do not attach this screen to a production registration submission until
 // server-attested mobile and email verification are implemented.
 
-const _plum = Color(0xFF460621);
-const _berry = Color(0xFFB20A50);
-const _muted = Color(0xFF624352);
-const _ivory = Color(0xFFFFF9F5);
-const _line = Color(0xFFE8C9CE);
+const _plum = Color(0xFF210B35);
+const _berry = Color(0xFFF52D7A);
+const _muted = Color(0xFF686080);
+const _ivory = Color(0xFFFFFCFD);
+const _line = Color(0xFFF4DDE6);
 
 class WorkerProfessionalDetails {
   const WorkerProfessionalDetails({
@@ -427,7 +428,7 @@ class _WorkerProfessionalDetailsScreenState
     prefixIcon: Icon(icon, color: _muted, size: 20),
     filled: true,
     fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(13),
       borderSide: const BorderSide(color: _line),
@@ -468,15 +469,8 @@ class _WorkerProfessionalDetailsScreenState
     return Scaffold(
       backgroundColor: _ivory,
       appBar: AppBar(
-        title: const Text(
-          'Join Hi Beauty',
-          style: TextStyle(
-            fontFamily: 'Georgia',
-            color: _plum,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        title: const WorkerAuthBrand(),
+        toolbarHeight: 76,
         centerTitle: true,
         backgroundColor: _ivory,
         foregroundColor: _plum,
@@ -485,7 +479,7 @@ class _WorkerProfessionalDetailsScreenState
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: const BoxConstraints(maxWidth: 420),
             child: Form(
               key: _formKey,
               child: Column(
@@ -516,15 +510,7 @@ class _WorkerProfessionalDetailsScreenState
                           ],
                         ),
                         const SizedBox(height: 9),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: const LinearProgressIndicator(
-                            value: .5,
-                            minHeight: 5,
-                            backgroundColor: Color(0xFFF3DFE5),
-                            color: _berry,
-                          ),
-                        ),
+                        const WorkerAuthSteps(active: 1),
                         const SizedBox(height: 10),
                         Row(
                           children: [
@@ -555,11 +541,11 @@ class _WorkerProfessionalDetailsScreenState
                         ),
                         const SizedBox(height: 12),
                         const Text(
-                          'Your expertise, your way',
+                          'Professional Details',
                           style: TextStyle(
-                            fontFamily: 'Georgia',
+                            fontFamily: 'Montserrat',
                             fontWeight: FontWeight.w700,
-                            fontSize: 22,
+                            fontSize: 25,
                             height: 1.15,
                             color: _plum,
                           ),
@@ -573,7 +559,7 @@ class _WorkerProfessionalDetailsScreenState
                             height: 1.35,
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 8),
                         _sectionTitle(
                           'Primary expertise *',
                           hint:
@@ -635,7 +621,7 @@ class _WorkerProfessionalDetailsScreenState
                                   _onDraftChanged();
                                 }),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 8),
                         _sectionTitle(
                           'Services you provide *',
                           hint:
@@ -643,7 +629,7 @@ class _WorkerProfessionalDetailsScreenState
                         ),
                         if (_category == null)
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF8EAEC),
                               borderRadius: BorderRadius.circular(14),
@@ -691,7 +677,7 @@ class _WorkerProfessionalDetailsScreenState
                               );
                             }).toList(),
                           ),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 8),
                         _sectionTitle('Professional experience *'),
                         DropdownButtonFormField<int>(
                           initialValue: _years,
@@ -717,7 +703,7 @@ class _WorkerProfessionalDetailsScreenState
                             _onDraftChanged();
                           },
                         ),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 8),
                         _sectionTitle('How do you work? *'),
                         ..._workModes.map(
                           (mode) => Padding(
@@ -813,7 +799,7 @@ class _WorkerProfessionalDetailsScreenState
                             ),
                           ),
                         ],
-                        const SizedBox(height: 21),
+                        const SizedBox(height: 8),
                         _sectionTitle(
                           'Languages you speak *',
                           hint:
@@ -850,7 +836,7 @@ class _WorkerProfessionalDetailsScreenState
                             );
                           }).toList(),
                         ),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 8),
                         _sectionTitle(
                           'About you',
                           hint: 'Optional — a short professional introduction.',
@@ -920,13 +906,13 @@ class _WorkerProfessionalDetailsScreenState
                         const SizedBox(width: 12),
                         Expanded(
                           child: SizedBox(
-                            height: 46,
+                            height: 52,
                             child: DecoratedBox(
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
                                   colors: [
-                                    Color(0xFFD41361),
-                                    Color(0xFF750034),
+                                    Color(0xFFFF4B91),
+                                    Color(0xFFF52D7A),
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(26),

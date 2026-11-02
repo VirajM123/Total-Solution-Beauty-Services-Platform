@@ -1,14 +1,13 @@
 import '../../../integration/worker_environment.dart';
 import 'dart:async';
 
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 const _plum = Color(0xFF460621);
-const _berry = Color(0xFFB20A50);
+const _berry = Color(0xFFF52D7A);
 const _muted = Color(0xFF624352);
-const _ivory = Color(0xFFFFF9F5);
+const _ivory = Color(0xFFFFF8FB);
 const _line = Color(0xFFE8C9CE);
 
 /// Development-only email-code preview. No email is delivered, and a successful
@@ -97,7 +96,10 @@ class _WorkerRegistrationEmailOtpScreenState
         foregroundColor: _plum,
         title: const Text(
           'Email verification',
-          style: TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
@@ -107,7 +109,7 @@ class _WorkerRegistrationEmailOtpScreenState
             constraints: const BoxConstraints(maxWidth: 460),
             child: SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -121,19 +123,19 @@ class _WorkerRegistrationEmailOtpScreenState
                       ),
                       child: const Icon(
                         Icons.mark_email_unread_outlined,
-                        size: 42,
+                        size: 28,
                         color: _berry,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   const Text(
                     'Verify your email',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: _plum,
-                      fontFamily: 'Georgia',
-                      fontSize: 23,
+                      fontFamily: 'Montserrat',
+                      fontSize: 19,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -153,7 +155,7 @@ class _WorkerRegistrationEmailOtpScreenState
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   const Text(
                     '6-digit development code',
                     style: TextStyle(color: _plum, fontWeight: FontWeight.bold),
@@ -162,7 +164,8 @@ class _WorkerRegistrationEmailOtpScreenState
                   TextField(
                     key: const Key('worker-registration-email-code'),
                     controller: _codeController,
-                    enabled: WorkerEnvironment.developmentPreview && !_verifying,
+                    enabled:
+                        WorkerEnvironment.developmentPreview && !_verifying,
                     keyboardType: TextInputType.number,
                     textInputAction: TextInputAction.done,
                     textAlign: TextAlign.center,
@@ -170,7 +173,7 @@ class _WorkerRegistrationEmailOtpScreenState
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     style: const TextStyle(
                       color: _plum,
-                      fontSize: 24,
+                      fontSize: 19,
                       letterSpacing: 9,
                       fontWeight: FontWeight.w700,
                     ),
@@ -203,18 +206,21 @@ class _WorkerRegistrationEmailOtpScreenState
                     },
                     onSubmitted: (_) => _verify(),
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 8),
                   SizedBox(
                     height: 46,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFD41361), Color(0xFF750034)],
+                          colors: [Color(0xFFFF4B91), Color(0xFFF52D7A)],
                         ),
                         borderRadius: BorderRadius.circular(28),
                       ),
                       child: FilledButton(
-                        onPressed: !WorkerEnvironment.developmentPreview || _verifying ? null : _verify,
+                        onPressed:
+                            !WorkerEnvironment.developmentPreview || _verifying
+                            ? null
+                            : _verify,
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           disabledBackgroundColor: Colors.transparent,
@@ -241,7 +247,7 @@ class _WorkerRegistrationEmailOtpScreenState
                       ),
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
                   Text(
                     _secondsRemaining > 0
                         ? 'Demo timer: ${_secondsRemaining}s'
@@ -251,7 +257,9 @@ class _WorkerRegistrationEmailOtpScreenState
                   ),
                   Center(
                     child: TextButton(
-                      onPressed: !WorkerEnvironment.developmentPreview || _secondsRemaining > 0
+                      onPressed:
+                          !WorkerEnvironment.developmentPreview ||
+                              _secondsRemaining > 0
                           ? null
                           : _startTimer,
                       child: const Text('Restart demo timer'),
@@ -259,7 +267,7 @@ class _WorkerRegistrationEmailOtpScreenState
                   ),
                   const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFCE9F0),
                       borderRadius: BorderRadius.circular(14),

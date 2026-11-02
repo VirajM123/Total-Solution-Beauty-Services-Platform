@@ -219,6 +219,11 @@ void main() {
     expect(find.text('Backend Custom Category'), findsOneWidget);
     await tester.tap(find.text('Backend Custom Category'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Backend Custom Treatment'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Backend Custom Treatment'), findsOneWidget);
     expect(find.text('Hair'), findsNothing);
     expect(find.text('Haircut'), findsNothing);

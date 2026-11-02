@@ -13,6 +13,7 @@ class CancellableHttp {
     Uri uri, {
     required Map<String, String> headers,
     String? body,
+    List<int>? bodyBytes,
     Duration timeout = const Duration(seconds: 12),
   }) async {
     if (_closed) throw http.ClientException('Request cancelled.', uri);
@@ -29,6 +30,7 @@ class CancellableHttp {
       abortTrigger: abort.future,
     )..headers.addAll(headers);
     if (body != null) request.body = body;
+    if (bodyBytes != null) request.bodyBytes = bodyBytes;
     try {
       // Future.timeout also bounds injected clients that do not support Abortable.
       return await http.Response.fromStream(

@@ -1,3 +1,4 @@
+import '../../widgets/worker_auth_visuals.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -10,11 +11,11 @@ import 'worker_document_verification_screen.dart';
 
 // Step 4 is intentionally a DEBUG-ONLY local review preview.
 // No application, identity document or verification result is transmitted.
-const _plum = Color(0xFF460621);
-const _berry = Color(0xFFB20A50);
-const _muted = Color(0xFF624352);
-const _ivory = Color(0xFFFFF9F5);
-const _line = Color(0xFFE8C9CE);
+const _plum = Color(0xFF210B35);
+const _berry = Color(0xFFF52D7A);
+const _muted = Color(0xFF686080);
+const _ivory = Color(0xFFFFFCFD);
+const _line = Color(0xFFF4DDE6);
 
 class WorkerReviewSubmitScreen extends StatefulWidget {
   const WorkerReviewSubmitScreen({
@@ -136,7 +137,9 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
     if (_submitting) return;
     if (!_confirmedAccurate || !_termsAgreed) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please confirm both statements before submitting.')),
+        const SnackBar(
+          content: Text('Please confirm both statements before submitting.'),
+        ),
       );
       return;
     }
@@ -190,7 +193,8 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
           }
         }
         if (serviceIds.isEmpty && fetchedServices.isNotEmpty) {
-          final firstId = fetchedServices.first['id'] ?? fetchedServices.first['_id'];
+          final firstId =
+              fetchedServices.first['id'] ?? fetchedServices.first['_id'];
           if (firstId != null) serviceIds.add(firstId.toString());
         }
       }
@@ -227,19 +231,22 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
         SlidePageRoute<void>(
           page: WorkerApplicationStatusScreen(
             stage: WorkerApplicationStage.underReview,
-            applicationReference: identity.workerId.isNotEmpty ? identity.workerId : null,
+            applicationReference: identity.workerId.isNotEmpty
+                ? identity.workerId
+                : null,
             authApi: auth,
             workerPhone: widget.mobile,
-            reviewMessage: 'Your application has been received and is pending admin verification.',
+            reviewMessage:
+                'Your application has been received and is pending admin verification.',
           ),
         ),
         (_) => false,
       );
     } on WorkerAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (e) {
       if (mounted) {
@@ -251,7 +258,6 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
       if (mounted) setState(() => _submitting = false);
     }
   }
-
 
   Widget _detail(String label, String value) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 5),
@@ -339,15 +345,8 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
     return Scaffold(
       backgroundColor: _ivory,
       appBar: AppBar(
-        title: const Text(
-          'Join Hi Beauty',
-          style: TextStyle(
-            fontFamily: 'Georgia',
-            color: _plum,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
-        ),
+        title: const WorkerAuthBrand(),
+        toolbarHeight: 76,
         centerTitle: true,
         backgroundColor: _ivory,
         foregroundColor: _plum,
@@ -356,7 +355,7 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: const BoxConstraints(maxWidth: 420),
             child: Column(
               children: [
                 Expanded(
@@ -383,23 +382,15 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                         ],
                       ),
                       const SizedBox(height: 9),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: const LinearProgressIndicator(
-                          value: 1,
-                          minHeight: 5,
-                          backgroundColor: Color(0xFFF3DFE5),
-                          color: _berry,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
+                      const WorkerAuthSteps(active: 3),
+                      const SizedBox(height: 8),
                       const Text(
                         'Almost there, beautiful',
                         style: TextStyle(
-                          fontFamily: 'Georgia',
+                          fontFamily: 'Montserrat',
                           color: _plum,
                           fontWeight: FontWeight.w700,
-                          fontSize: 22,
+                          fontSize: 25,
                         ),
                       ),
                       const SizedBox(height: 7),
@@ -411,7 +402,7 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                           height: 1.4,
                         ),
                       ),
-                      const SizedBox(height: 17),
+                      const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(13),
                         decoration: BoxDecoration(
@@ -442,7 +433,7 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 19),
+                      const SizedBox(height: 8),
                       _section(
                         icon: Icons.person_outline,
                         heading: 'Personal details',
@@ -583,17 +574,19 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: SizedBox(
-                          height: 46,
+                          height: 52,
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [Color(0xFFD41361), Color(0xFF750034)],
+                                colors: [Color(0xFFFF4B91), Color(0xFFF52D7A)],
                               ),
                               borderRadius: BorderRadius.circular(26),
                             ),
                             child: !_isLiveSubmission
                                 ? FilledButton.icon(
-                                    onPressed: _savingPreview ? null : _previewSubmission,
+                                    onPressed: _savingPreview
+                                        ? null
+                                        : _previewSubmission,
                                     style: FilledButton.styleFrom(
                                       backgroundColor: Colors.transparent,
                                       foregroundColor: Colors.white,
@@ -617,7 +610,9 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                                     ),
                                   )
                                 : FilledButton.icon(
-                                    onPressed: _submitting ? null : _submitApplication,
+                                    onPressed: _submitting
+                                        ? null
+                                        : _submitApplication,
                                     style: FilledButton.styleFrom(
                                       backgroundColor: Colors.transparent,
                                       foregroundColor: Colors.white,

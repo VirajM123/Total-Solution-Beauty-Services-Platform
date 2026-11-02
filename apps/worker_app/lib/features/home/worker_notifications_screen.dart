@@ -100,14 +100,16 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
         .toList(growable: false);
   }
 
-  List<WorkerNotificationItem> get _visible => _alerts.where((item) {
-    final isRead = item.isRead || _readIds.contains(item.id);
-    if (_hideSeen && isRead) return false;
-    if (_filter == 'Unread') return !isRead;
-    if (_filter == 'Bookings') return item.group == 'Bookings';
-    if (_filter == 'Updates') return item.group == 'Updates';
-    return true;
-  }).toList(growable: false);
+  List<WorkerNotificationItem> get _visible => _alerts
+      .where((item) {
+        final isRead = item.isRead || _readIds.contains(item.id);
+        if (_hideSeen && isRead) return false;
+        if (_filter == 'Unread') return !isRead;
+        if (_filter == 'Bookings') return item.group == 'Bookings';
+        if (_filter == 'Updates') return item.group == 'Updates';
+        return true;
+      })
+      .toList(growable: false);
 
   int get _unreadCount =>
       _alerts.where((a) => !a.isRead && !_readIds.contains(a.id)).length;
@@ -160,11 +162,7 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
         ),
         child: const Row(
           children: [
-            Icon(
-              Icons.cloud_off_outlined,
-              size: 15,
-              color: Color(0xFF6B7280),
-            ),
+            Icon(Icons.cloud_off_outlined, size: 15, color: Color(0xFF6B7280)),
             SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -184,30 +182,19 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
 
     if (widget.demoMode) {
       return Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 10,
-          vertical: 8,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: const Color(0xFFFFEDF3),
           borderRadius: BorderRadius.circular(11),
         ),
         child: const Row(
           children: [
-            Icon(
-              Icons.info_outline_rounded,
-              size: 15,
-              color: _pink,
-            ),
+            Icon(Icons.info_outline_rounded, size: 15, color: _pink),
             SizedBox(width: 7),
             Expanded(
               child: Text(
                 'Preview alerts from bookings. Push notifications and a server inbox are not connected.',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: _deep,
-                  height: 1.2,
-                ),
+                style: TextStyle(fontSize: 10, color: _deep, height: 1.2),
               ),
             ),
           ],
@@ -228,11 +215,7 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
       ),
       child: const Row(
         children: [
-          Icon(
-            Icons.verified_outlined,
-            size: 15,
-            color: Color(0xFF16A34A),
-          ),
+          Icon(Icons.verified_outlined, size: 15, color: Color(0xFF16A34A)),
           SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -361,10 +344,7 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                             label: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  Icons.visibility_off_outlined,
-                                  size: 13,
-                                ),
+                                Icon(Icons.visibility_off_outlined, size: 13),
                                 SizedBox(width: 4),
                                 Text('Hide seen'),
                               ],
@@ -433,150 +413,144 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                       ),
                     )
                   else
-                    ..._visible.map(
-                      (alert) {
-                        final isRead =
-                            alert.isRead || _readIds.contains(alert.id);
-                        final bookingSubtitle = alert.order != null
-                            ? 'Booking ${alert.order!.id}  ·  ${alert.group}'
-                            : (alert.entityId != null &&
+                    ..._visible.map((alert) {
+                      final isRead =
+                          alert.isRead || _readIds.contains(alert.id);
+                      final bookingSubtitle = alert.order != null
+                          ? 'Booking ${alert.order!.id}  ·  ${alert.group}'
+                          : (alert.entityId != null &&
                                     alert.entityId!.isNotEmpty
                                 ? 'Ref ${alert.entityId!.substring(0, alert.entityId!.length.clamp(0, 8))}  ·  ${alert.group}'
                                 : alert.group);
 
-                        return Padding(
-                          key: ValueKey('alert-${alert.id}'),
-                          padding: const EdgeInsets.only(bottom: 7),
-                          child: Material(
-                            color: isRead
-                                ? const Color(0xFFFAFAFA)
-                                : Colors.white,
-                            elevation: isRead ? 0 : 1,
-                            shadowColor: const Color(0x12C74776),
+                      return Padding(
+                        key: ValueKey('alert-${alert.id}'),
+                        padding: const EdgeInsets.only(bottom: 7),
+                        child: Material(
+                          color: isRead
+                              ? const Color(0xFFFAFAFA)
+                              : Colors.white,
+                          elevation: isRead ? 0 : 1,
+                          shadowColor: const Color(0x12C74776),
+                          borderRadius: BorderRadius.circular(14),
+                          child: InkWell(
                             borderRadius: BorderRadius.circular(14),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(14),
-                              onTap: () => _open(alert),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 11,
-                                  vertical: 10,
+                            onTap: () => _open(alert),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 11,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: isRead
+                                      ? const Color(0xFFE5E7EB)
+                                      : _border,
                                 ),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: isRead
-                                        ? const Color(0xFFE5E7EB)
-                                        : _border,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 34,
+                                    height: 34,
+                                    decoration: BoxDecoration(
+                                      color: isRead
+                                          ? const Color(0xFFF3F4F6)
+                                          : const Color(0xFFFFEDF3),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(
+                                      alert.icon,
+                                      color: isRead
+                                          ? const Color(0xFF9CA3AF)
+                                          : _pink,
+                                      size: 18,
+                                    ),
                                   ),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      width: 34,
-                                      height: 34,
-                                      decoration: BoxDecoration(
-                                        color: isRead
-                                            ? const Color(0xFFF3F4F6)
-                                            : const Color(0xFFFFEDF3),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(
-                                        alert.icon,
-                                        color: isRead
-                                            ? const Color(0xFF9CA3AF)
-                                            : _pink,
-                                        size: 18,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 9),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  alert.title,
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    color: isRead
-                                                        ? const Color(
-                                                            0xFF4B5563,
-                                                          )
-                                                        : _deep,
-                                                    fontSize: 12,
-                                                    fontWeight: isRead
-                                                        ? FontWeight.w600
-                                                        : FontWeight.w800,
-                                                  ),
+                                  const SizedBox(width: 9),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                alert.title,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  color: isRead
+                                                      ? const Color(0xFF4B5563)
+                                                      : _deep,
+                                                  fontSize: 12,
+                                                  fontWeight: isRead
+                                                      ? FontWeight.w600
+                                                      : FontWeight.w800,
                                                 ),
                                               ),
-                                              Text(
-                                                alert.formattedTime,
-                                                style: const TextStyle(
-                                                  fontSize: 10,
-                                                  color: _muted,
+                                            ),
+                                            Text(
+                                              alert.formattedTime,
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                color: _muted,
+                                              ),
+                                            ),
+                                            if (!isRead) ...[
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                width: 7,
+                                                height: 7,
+                                                decoration: const BoxDecoration(
+                                                  color: _pink,
+                                                  shape: BoxShape.circle,
                                                 ),
                                               ),
-                                              if (!isRead) ...[
-                                                const SizedBox(width: 6),
-                                                Container(
-                                                  width: 7,
-                                                  height: 7,
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                    color: _pink,
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                ),
-                                              ],
                                             ],
+                                          ],
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          alert.message,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: _muted,
+                                            height: 1.25,
                                           ),
-                                          const SizedBox(height: 3),
-                                          Text(
-                                            alert.message,
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: _muted,
-                                              height: 1.25,
-                                            ),
+                                        ),
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          bookingSubtitle,
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            color: isRead
+                                                ? const Color(0xFF9CA3AF)
+                                                : _pink,
+                                            fontWeight: FontWeight.w700,
                                           ),
-                                          const SizedBox(height: 5),
-                                          Text(
-                                            bookingSubtitle,
-                                            style: TextStyle(
-                                              fontSize: 9,
-                                              color: isRead
-                                                  ? const Color(0xFF9CA3AF)
-                                                  : _pink,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 5),
-                                    const Icon(
-                                      Icons.chevron_right_rounded,
-                                      color: _muted,
-                                      size: 17,
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  const Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: _muted,
+                                    size: 17,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    }),
                 ],
               ),
             ),

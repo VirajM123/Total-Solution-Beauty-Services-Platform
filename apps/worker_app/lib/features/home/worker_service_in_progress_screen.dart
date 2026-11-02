@@ -1,3 +1,4 @@
+import '../widgets/worker_images.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -12,10 +13,10 @@ import 'worker_add_extra_service_screen.dart';
 import 'worker_finish_service_screen.dart';
 import '../../app/slide_page_route.dart';
 
-const _pink = Color(0xFFE91368);
+const _pink = Color(0xFFF52D7A);
 const _deep = Color(0xFF460621);
 const _muted = Color(0xFF735866);
-const _cream = Color(0xFFFFF9F7);
+const _cream = Color(0xFFFFF8FB);
 const _border = Color(0xFFF0D6DF);
 
 /// Development-only service-workspace preview.
@@ -166,7 +167,7 @@ class _WorkerServiceInProgressScreenState
 
   Widget _card(Widget child, {Color color = Colors.white}) => Container(
     width: double.infinity,
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: color,
       border: Border.all(color: _border),
@@ -265,7 +266,7 @@ class _WorkerServiceInProgressScreenState
                                     : order.customer[0],
                                 style: const TextStyle(
                                   color: _pink,
-                                  fontSize: 22,
+                                  fontSize: 19,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -343,7 +344,7 @@ class _WorkerServiceInProgressScreenState
                         ),
                         color: const Color(0xFFFFF0F5),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
                       _card(
                         Row(
                           children: [
@@ -371,7 +372,7 @@ class _WorkerServiceInProgressScreenState
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
                       _card(
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,7 +398,7 @@ class _WorkerServiceInProgressScreenState
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 8),
                             Row(
                               children: [
                                 Container(
@@ -407,10 +408,9 @@ class _WorkerServiceInProgressScreenState
                                     color: const Color(0xFFFFE4EE),
                                     borderRadius: BorderRadius.circular(14),
                                   ),
-                                  child: const Icon(
-                                    Icons.spa_rounded,
-                                    color: _pink,
-                                    size: 29,
+                                  child: WorkerServiceImage(
+                                    service: order.service, serviceId: order.serviceId,
+                                    demoMode: widget.demoMode,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -444,7 +444,7 @@ class _WorkerServiceInProgressScreenState
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
                       _card(
                         const Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,7 +465,7 @@ class _WorkerServiceInProgressScreenState
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
                       _card(
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

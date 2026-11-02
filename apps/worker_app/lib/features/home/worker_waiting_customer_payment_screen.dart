@@ -6,10 +6,10 @@ import 'worker_booking_state_repository.dart';
 import 'worker_demo_booking_store.dart';
 import 'worker_extra_service_item.dart';
 
-const _pink = Color(0xFFE91368);
+const _pink = Color(0xFFF52D7A);
 const _deep = Color(0xFF460621);
 const _muted = Color(0xFF735866);
-const _cream = Color(0xFFFFF9F7);
+const _cream = Color(0xFFFFF8FB);
 const _border = Color(0xFFF0D6DF);
 const _green = Color(0xFF12875A);
 
@@ -57,7 +57,7 @@ class _WorkerWaitingCustomerPaymentScreenState
 
   Widget _panel(Widget child, {Color color = Colors.white}) => Container(
     width: double.infinity,
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: color,
       borderRadius: BorderRadius.circular(18),
@@ -246,7 +246,7 @@ class _WorkerWaitingCustomerPaymentScreenState
                           ),
                           color: const Color(0xFFFFF0F5),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 8),
                         _panel(
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,7 +267,7 @@ class _WorkerWaitingCustomerPaymentScreenState
                                   fontSize: 11.5,
                                 ),
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 8),
                               const Divider(color: _border),
                               const SizedBox(height: 7),
                               _moneyRow(
@@ -290,7 +290,7 @@ class _WorkerWaitingCustomerPaymentScreenState
                             ],
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 8),
                         _panel(
                           const Row(
                             crossAxisAlignment: CrossAxisAlignment.start,

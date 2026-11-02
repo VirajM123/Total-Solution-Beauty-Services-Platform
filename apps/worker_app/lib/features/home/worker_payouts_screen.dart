@@ -162,7 +162,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 8),
               const Text(
                 'Payout details',
                 style: TextStyle(
@@ -171,7 +171,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 8),
               _detailRow(
                 'Payout amount',
                 formatCustomerPaise(record.exactAmountPaise),
@@ -427,7 +427,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
       return _awaitingPayoutSummary();
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: WorkerDesign.surface(radius: 16),
       child: Column(
         children: [
@@ -469,7 +469,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: _deep,
-                    fontSize: 22,
+                    fontSize: 19,
                     height: 1.05,
                     fontWeight: FontWeight.w900,
                   ),
@@ -513,7 +513,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
   }
 
   Widget _awaitingPayoutSummary() => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
     decoration: BoxDecoration(
       gradient: const LinearGradient(
         begin: Alignment.topLeft,
@@ -541,7 +541,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [Color(0xFFF50070), Color(0xFFFF78A9)],
+                  colors: [Color(0xFFF52D7A), Color(0xFFFF78A9)],
                 ),
               ),
               child: const Icon(
@@ -971,7 +971,7 @@ class _StateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
-    padding: const EdgeInsets.all(20),
+    padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(17),
@@ -997,7 +997,7 @@ class _StateCard extends StatelessWidget {
           style: const TextStyle(color: _muted, height: 1.35, fontSize: 12),
         ),
         if (showProgress) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
           const SizedBox(
             width: 20,
             height: 20,

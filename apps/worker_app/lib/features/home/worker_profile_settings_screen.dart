@@ -1,5 +1,5 @@
+import '../widgets/worker_images.dart';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:ui' show instantiateImageCodec;
 
 import 'package:flutter/material.dart';
@@ -367,26 +367,10 @@ class _WorkerProfileSettingsScreenState
                         CircleAvatar(
                           radius: 24,
                           backgroundColor: Color(0xFFFFE2EC),
-                          child: _profile?.profilePhotoPath == null
-                              ? const Icon(
-                                  Icons.person_rounded,
-                                  color: _pink,
-                                  size: 29,
-                                )
-                              : ClipOval(
-                                  child: Image.file(
-                                    File(_profile!.profilePhotoPath!),
-                                    width: 48,
-                                    height: 48,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stack) =>
-                                        const Icon(
-                                          Icons.person_rounded,
-                                          color: _pink,
-                                          size: 29,
-                                        ),
-                                  ),
-                                ),
+                          child: WorkerProfilePhoto(
+                            path: _profile?.profilePhotoPath,
+                            size: 48,
+                          ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -690,7 +674,7 @@ class _WorkerPersonalInformationScreenState
             ),
           ),
           child: ListView(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             children: [
               const Text(
                 'Saved registration details · editable changes are local preview data.',
@@ -703,26 +687,10 @@ class _WorkerPersonalInformationScreenState
                     CircleAvatar(
                       radius: 28,
                       backgroundColor: const Color(0xFFFFE2EC),
-                      child: _currentProfile.profilePhotoPath == null
-                          ? const Icon(
-                              Icons.person_rounded,
-                              color: _pink,
-                              size: 32,
-                            )
-                          : ClipOval(
-                              child: Image.file(
-                                File(_currentProfile.profilePhotoPath!),
-                                width: 56,
-                                height: 56,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stack) =>
-                                    const Icon(
-                                      Icons.person_rounded,
-                                      color: _pink,
-                                      size: 32,
-                                    ),
-                              ),
-                            ),
+                      child: WorkerProfilePhoto(
+                        path: _currentProfile.profilePhotoPath,
+                        size: 56,
+                      ),
                     ),
                     TextButton.icon(
                       onPressed: _saving ? null : _choosePhoto,
@@ -925,7 +893,7 @@ class _WorkerServiceSpecializationScreenState
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           children: [
             if (_loadingCatalog)
               const Center(child: CircularProgressIndicator()),
@@ -1053,7 +1021,7 @@ class WorkerAccountSecurityScreen extends StatelessWidget {
       title: const Text('Account Security'),
     ),
     body: ListView(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       children: [
         const ListTile(
           dense: true,
@@ -1201,7 +1169,7 @@ class _WorkerHelpSupportScreenState extends State<WorkerHelpSupportScreen> {
       child: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           children: [
             const Text(
               'FAQ: For booking changes, open the booking from My Bookings. For account details, use Personal Information. No company support service is connected in this preview.',
@@ -1276,7 +1244,7 @@ class WorkerTermsPrivacyScreen extends StatelessWidget {
     body: const SafeArea(
       child: Center(
         child: Padding(
-          padding: EdgeInsets.all(18),
+          padding: EdgeInsets.all(12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1314,7 +1282,7 @@ class _LoadError extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

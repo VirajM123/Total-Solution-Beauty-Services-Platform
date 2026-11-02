@@ -1,3 +1,4 @@
+import '../../widgets/worker_auth_visuals.dart';
 import 'package:flutter/material.dart';
 
 import '../../../integration/worker_api.dart';
@@ -48,10 +49,10 @@ class _WorkerApplicationStatusScreenState
   bool _checking = false;
   String? _message;
 
-  static const _plum = Color(0xFF460621);
-  static const _berry = Color(0xFFB20A50);
+  static const _plum = Color(0xFF210B35);
+  static const _berry = Color(0xFFF52D7A);
   static const _muted = Color(0xFF755B67);
-  static const _ivory = Color(0xFFFFF9F5);
+  static const _ivory = Color(0xFFFFFCFD);
   static const _line = Color(0xFFEEDCE2);
 
   @override
@@ -106,13 +107,16 @@ class _WorkerApplicationStatusScreenState
       case WorkerApplicationStage.submitted:
       case WorkerApplicationStage.underReview:
       case WorkerApplicationStage.adminVerification:
-        return _message ?? 'Thank you for joining Hi Beauty. Your application is under admin review.';
+        return _message ??
+            'Thank you for joining Hi Beauty. Your application is under admin review.';
       case WorkerApplicationStage.actionRequired:
-        return _message ?? 'Some information needs updating before review can continue.';
+        return _message ??
+            'Some information needs updating before review can continue.';
       case WorkerApplicationStage.approved:
         return 'Your partner registration has been approved by the Hi Beauty team. You can now access your dashboard and start accepting bookings!';
       case WorkerApplicationStage.rejected:
-        return _message ?? 'Your application could not be approved at this time.';
+        return _message ??
+            'Your application could not be approved at this time.';
     }
   }
 
@@ -120,8 +124,18 @@ class _WorkerApplicationStatusScreenState
     final date = widget.submittedAt;
     if (date == null || _isPreview) return null;
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
     final minute = date.minute.toString().padLeft(2, '0');
@@ -146,10 +160,13 @@ class _WorkerApplicationStatusScreenState
         } else if (serverStatus == 'pending') {
           setState(() {
             _stage = WorkerApplicationStage.underReview;
-            _message = 'Application is currently under review by our admin team.';
+            _message =
+                'Application is currently under review by our admin team.';
           });
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Application is still pending admin review.')),
+            const SnackBar(
+              content: Text('Application is still pending admin review.'),
+            ),
           );
         } else if (serverStatus == 'rejected') {
           setState(() {
@@ -166,9 +183,9 @@ class _WorkerApplicationStatusScreenState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not refresh status: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not refresh status: $e')));
       }
     } finally {
       if (mounted) setState(() => _checking = false);
@@ -189,7 +206,8 @@ class _WorkerApplicationStatusScreenState
 
   @override
   Widget build(BuildContext context) {
-    final isPositive = _stage != WorkerApplicationStage.rejected &&
+    final isPositive =
+        _stage != WorkerApplicationStage.rejected &&
         _stage != WorkerApplicationStage.actionRequired;
     final isApproved = _stage == WorkerApplicationStage.approved;
 
@@ -198,7 +216,7 @@ class _WorkerApplicationStatusScreenState
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: const BoxConstraints(maxWidth: 420),
             child: Column(
               children: [
                 Expanded(
@@ -206,6 +224,8 @@ class _WorkerApplicationStatusScreenState
                     padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
                     children: [
                       const SizedBox(height: 8),
+                      const WorkerAuthBrand(),
+                      const SizedBox(height: 16),
                       _hero(isPositive: isPositive),
                       const SizedBox(height: 12),
                       Text(
@@ -213,8 +233,8 @@ class _WorkerApplicationStatusScreenState
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: _plum,
-                          fontFamily: 'Georgia',
-                          fontSize: 23,
+                          fontFamily: 'Montserrat',
+                          fontSize: 25,
                           fontWeight: FontWeight.bold,
                           height: 1.18,
                         ),
@@ -230,14 +250,18 @@ class _WorkerApplicationStatusScreenState
                         ),
                       ),
                       if (_isPreview) ...[
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 8),
                         _previewBanner(),
                       ],
-                      if (widget.applicationReference != null && !_isPreview) ...[
+                      if (widget.applicationReference != null &&
+                          !_isPreview) ...[
                         const SizedBox(height: 10),
                         Center(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFDE8F0),
                               borderRadius: BorderRadius.circular(12),
@@ -253,9 +277,9 @@ class _WorkerApplicationStatusScreenState
                           ),
                         ),
                       ],
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
                       _timeline(),
-                      const SizedBox(height: 22),
+                      const SizedBox(height: 8),
                       _notificationInfo(),
                     ],
                   ),
@@ -276,7 +300,7 @@ class _WorkerApplicationStatusScreenState
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [Color(0xFFD41361), Color(0xFF750034)],
+                                colors: [Color(0xFFFF4B91), Color(0xFFF52D7A)],
                               ),
                               borderRadius: BorderRadius.circular(27),
                             ),
@@ -294,7 +318,10 @@ class _WorkerApplicationStatusScreenState
                                 children: [
                                   Text(
                                     'Go to Partner Dashboard',
-                                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
                                   ),
                                   SizedBox(width: 8),
                                   Icon(Icons.arrow_forward_rounded, size: 20),
@@ -320,8 +347,12 @@ class _WorkerApplicationStatusScreenState
                                   )
                                 : const Icon(Icons.refresh_rounded, size: 19),
                             label: Text(
-                              _checking ? 'Checking Status…' : 'Check Review Status',
-                              style: const TextStyle(fontWeight: FontWeight.w700),
+                              _checking
+                                  ? 'Checking Status…'
+                                  : 'Check Review Status',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             style: FilledButton.styleFrom(
                               backgroundColor: _berry,
@@ -338,7 +369,9 @@ class _WorkerApplicationStatusScreenState
                         width: double.infinity,
                         height: 44,
                         child: OutlinedButton(
-                          onPressed: widget.onBackToLogin ?? () => Navigator.of(context).maybePop(),
+                          onPressed:
+                              widget.onBackToLogin ??
+                              () => Navigator.of(context).maybePop(),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: _plum,
                             side: const BorderSide(color: Color(0xFFF0B8C9)),
@@ -346,8 +379,10 @@ class _WorkerApplicationStatusScreenState
                               borderRadius: BorderRadius.circular(27),
                             ),
                           ),
-                          child: const Text('Back to Login',
-                              style: TextStyle(fontWeight: FontWeight.w600)),
+                          child: const Text(
+                            'Back to Login',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
                     ],
@@ -372,8 +407,11 @@ class _WorkerApplicationStatusScreenState
             left: 25,
             child: Transform.rotate(
               angle: -.35,
-              child: const Icon(Icons.spa_rounded,
-                  color: Color(0xFF97AA80), size: 54),
+              child: const Icon(
+                Icons.spa_rounded,
+                color: Color(0xFF97AA80),
+                size: 28,
+              ),
             ),
           ),
           Positioned(
@@ -381,21 +419,30 @@ class _WorkerApplicationStatusScreenState
             right: 20,
             child: Transform.rotate(
               angle: .45,
-              child: const Icon(Icons.local_florist_rounded,
-                  color: Color(0xFFEAA0B5), size: 54),
+              child: const Icon(
+                Icons.local_florist_rounded,
+                color: Color(0xFFEAA0B5),
+                size: 28,
+              ),
             ),
           ),
           Positioned(
             bottom: 2,
             right: 73,
-            child: const Icon(Icons.auto_awesome_rounded,
-                color: Color(0xFFEAC073), size: 21),
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              color: Color(0xFFEAC073),
+              size: 21,
+            ),
           ),
           Positioned(
             top: 12,
             right: 79,
-            child: const Icon(Icons.favorite,
-                color: Color(0xFFF6B2CA), size: 17),
+            child: const Icon(
+              Icons.favorite,
+              color: Color(0xFFF6B2CA),
+              size: 17,
+            ),
           ),
           Container(
             width: 125,
@@ -409,14 +456,21 @@ class _WorkerApplicationStatusScreenState
               border: Border.all(color: const Color(0xFFEBAFC2), width: 2),
               borderRadius: BorderRadius.circular(22),
               boxShadow: const [
-                BoxShadow(color: Color(0x23A60C52), blurRadius: 20, offset: Offset(0, 9)),
+                BoxShadow(
+                  color: Color(0x23A60C52),
+                  blurRadius: 20,
+                  offset: Offset(0, 9),
+                ),
               ],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.assignment_rounded,
-                    color: Color(0xFFD786A3), size: 46),
+                const Icon(
+                  Icons.assignment_rounded,
+                  color: Color(0xFFD786A3),
+                  size: 28,
+                ),
                 const SizedBox(height: 3),
                 Container(
                   width: 75,
@@ -426,13 +480,20 @@ class _WorkerApplicationStatusScreenState
                     gradient: LinearGradient(
                       colors: [Color(0xFFEB3D85), Color(0xFF9C084C)],
                     ),
-                    boxShadow: [BoxShadow(
-                        color: Color(0x44B20A50), blurRadius: 14, offset: Offset(0, 4))],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x44B20A50),
+                        blurRadius: 14,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Icon(
-                    isPositive ? Icons.check_rounded : Icons.info_outline_rounded,
+                    isPositive
+                        ? Icons.check_rounded
+                        : Icons.info_outline_rounded,
                     color: Colors.white,
-                    size: 44,
+                    size: 28,
                   ),
                 ),
               ],
@@ -475,7 +536,9 @@ class _WorkerApplicationStatusScreenState
       'Approved',
     ];
     final captions = <String>[
-      _isPreview ? 'Waiting for registration submission' : (_dateText ?? 'Application received'),
+      _isPreview
+          ? 'Waiting for registration submission'
+          : (_dateText ?? 'Application received'),
       'Our team is checking your details.',
       'Document and profile verification.',
       'You’ll receive a notification.',
@@ -497,17 +560,32 @@ class _WorkerApplicationStatusScreenState
                       width: 23,
                       height: 23,
                       decoration: BoxDecoration(
-                        color: completed && !active ? _berry :
-                          active ? const Color(0xFFFFF1F5) : const Color(0xFFC4B9BE),
+                        color: completed && !active
+                            ? _berry
+                            : active
+                            ? const Color(0xFFFFF1F5)
+                            : const Color(0xFFC4B9BE),
                         shape: BoxShape.circle,
-                        border: active ? Border.all(color: _berry, width: 2) : null,
+                        border: active
+                            ? Border.all(color: _berry, width: 2)
+                            : null,
                       ),
                       child: Icon(
-                        completed && !active ? Icons.check_rounded :
-                          active ? Icons.access_time_rounded : Icons.circle,
-                        size: completed && !active ? 17 : active ? 16 : 9,
-                        color: completed && !active ? Colors.white :
-                          active ? _berry : Colors.white,
+                        completed && !active
+                            ? Icons.check_rounded
+                            : active
+                            ? Icons.access_time_rounded
+                            : Icons.circle,
+                        size: completed && !active
+                            ? 17
+                            : active
+                            ? 16
+                            : 9,
+                        color: completed && !active
+                            ? Colors.white
+                            : active
+                            ? _berry
+                            : Colors.white,
                       ),
                     ),
                     if (!last)
@@ -528,11 +606,23 @@ class _WorkerApplicationStatusScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(labels[index], style: const TextStyle(
-                          color: _plum, fontWeight: FontWeight.w700, fontSize: 14)),
+                      Text(
+                        labels[index],
+                        style: const TextStyle(
+                          color: _plum,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
                       const SizedBox(height: 3),
-                      Text(captions[index], style: const TextStyle(
-                          color: _muted, fontSize: 12, height: 1.4)),
+                      Text(
+                        captions[index],
+                        style: const TextStyle(
+                          color: _muted,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
                     ],
                   ),
                 ),
