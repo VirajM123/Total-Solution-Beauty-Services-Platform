@@ -90,7 +90,7 @@ class _WorkerServiceImageState extends State<WorkerServiceImage> {
               child: Icon(
                 Icons.spa_outlined,
                 size: 20,
-                color: Color(0xFFF52D7A),
+                color: Color(0xFFFF1678),
               ),
             ),
           )
@@ -162,7 +162,7 @@ class WorkerProfilePhoto extends StatelessWidget {
       child: Center(
         child: Icon(
           Icons.person_outline_rounded,
-          color: const Color(0xFFF52D7A),
+          color: const Color(0xFFFF1678),
           size: size * .5,
         ),
       ),

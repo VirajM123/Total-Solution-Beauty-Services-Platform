@@ -13,11 +13,11 @@ import 'worker_add_extra_service_screen.dart';
 import 'worker_finish_service_screen.dart';
 import '../../app/slide_page_route.dart';
 
-const _pink = Color(0xFFF52D7A);
-const _deep = Color(0xFF460621);
-const _muted = Color(0xFF735866);
+const _pink = Color(0xFFFF1678);
+const _deep = Color(0xFF210B35);
+const _muted = Color(0xFF686080);
 const _cream = Color(0xFFFFF8FB);
-const _border = Color(0xFFF0D6DF);
+const _border = Color(0xFFFFDFEB);
 
 /// Development-only service-workspace preview.
 /// Does not alter bookings, approve extras, or complete services remotely.

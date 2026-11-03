@@ -9,7 +9,14 @@ BoxDecoration workerReferenceSurface({
   bool tinted = false,
   double radius = 16,
 }) => BoxDecoration(
-  color: tinted ? const Color(0xFFFFF1F7) : Colors.white,
+  color: tinted ? null : Colors.white,
+  gradient: tinted
+      ? const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFF7FA), Color(0xFFFFE8F2)],
+        )
+      : null,
   borderRadius: BorderRadius.circular(radius),
   border: Border.all(color: const Color(0xFFFFDFEB)),
   boxShadow: const [
@@ -23,23 +30,71 @@ class WorkerReferenceHeader extends StatelessWidget {
     this.location,
     this.onNotifications,
     this.unread = 0,
+    this.brandWidth = 190,
+    this.brandAsset = 'assets/images/dashboard/reference_brand.png',
   });
   final String? location;
   final VoidCallback? onNotifications;
   final int unread;
+  final double brandWidth;
+  final String? brandAsset;
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 10, 12, 12),
+    padding: const EdgeInsets.fromLTRB(16, 4, 12, 8),
     child: Row(
       children: [
         Expanded(
           child: Align(
             alignment: Alignment.centerLeft,
-            child: WorkerAuthBrand(
-              subtitle: location?.isNotEmpty == true
-                  ? location!
-                  : 'For Beauty Professionals',
+            child: SizedBox(
+              width: brandWidth,
+              child: brandAsset != null
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          brandAsset!,
+                          width: brandWidth,
+                          fit: BoxFit.contain,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 70),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.location_on_outlined,
+                                size: 13,
+                                color: workerMuted,
+                              ),
+                              const SizedBox(width: 3),
+                              Flexible(
+                                child: Text(
+                                  location ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: workerMuted,
+                                  ),
+                                ),
+                              ),
+                              const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                size: 14,
+                                color: workerMuted,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : WorkerAuthBrand(
+                      subtitle: location?.isNotEmpty == true
+                          ? location!
+                          : 'For Beauty Professionals',
+                    ),
             ),
           ),
         ),

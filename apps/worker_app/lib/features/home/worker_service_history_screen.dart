@@ -7,11 +7,11 @@ import 'worker_demo_booking_store.dart';
 import 'worker_booking_details_screen.dart';
 import '../../app/slide_page_route.dart';
 
-const _pink = Color(0xFFF52D7A);
-const _deep = Color(0xFF111D3A);
-const _muted = Color(0xFF667085);
+const _pink = Color(0xFFFF1678);
+const _deep = Color(0xFF210B35);
+const _muted = Color(0xFF686080);
 const _cream = Color(0xFFFFF8FB);
-const _border = Color(0xFFF4DDE6);
+const _border = Color(0xFFFFDFEB);
 
 /// A read-only view of terminal bookings. Does not change booking or payment state.
 /// The caller supplies authenticated worker-scoped bookings outside demo mode.

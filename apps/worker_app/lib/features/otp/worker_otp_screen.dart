@@ -13,7 +13,7 @@ import '../home/worker_home_screen.dart';
 import '../registration/screens/worker_personal_details_screen.dart';
 
 const _plum = Color(0xFF210B35);
-const _berry = Color(0xFFF52D7A);
+const _berry = Color(0xFFFF1678);
 const _muted = Color(0xFF686080);
 const _ivory = Color(0xFFFFF8FB);
 const _line = Color(0xFFFFCEE0);
@@ -213,7 +213,7 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _plum),
         ),
         title: const WorkerAuthBrand(subtitle: ''),
-        toolbarHeight: 76,
+        toolbarHeight: 60,
       ),
       body: DecoratedBox(
         decoration: const BoxDecoration(
@@ -378,7 +378,7 @@ class _WorkerOtpScreenState extends State<WorkerOtpScreen> {
                           height: 52,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFFFF4B91), Color(0xFFF52D7A)],
+                              colors: [Color(0xFFFF4B91), Color(0xFFFF1678)],
                             ),
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: const [

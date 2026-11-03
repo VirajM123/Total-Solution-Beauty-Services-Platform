@@ -42,8 +42,8 @@ class _WorkerRegistrationMobileOtpScreenState
 
   @override
   Widget build(BuildContext context) {
-    const plum = Color(0xFF460621);
-    const berry = Color(0xFFF52D7A);
+    const plum = Color(0xFF210B35);
+    const berry = Color(0xFFFF1678);
     const muted = Color(0xFF624352);
     const ivory = Color(0xFFFFF8FB);
     return Scaffold(
@@ -160,7 +160,7 @@ class _WorkerRegistrationMobileOtpScreenState
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFFF4B91), Color(0xFFF52D7A)],
+                          colors: [Color(0xFFFF4B91), Color(0xFFFF1678)],
                         ),
                         borderRadius: BorderRadius.circular(28),
                       ),

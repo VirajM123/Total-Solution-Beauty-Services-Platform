@@ -10,11 +10,11 @@ import 'worker_extra_service_item.dart';
 import 'worker_waiting_customer_payment_screen.dart';
 import '../../app/slide_page_route.dart';
 
-const _pink = Color(0xFFF52D7A);
-const _deep = Color(0xFF460621);
-const _muted = Color(0xFF735866);
+const _pink = Color(0xFFFF1678);
+const _deep = Color(0xFF210B35);
+const _muted = Color(0xFF686080);
 const _cream = Color(0xFFFFF8FB);
-const _border = Color(0xFFF0D6DF);
+const _border = Color(0xFFFFDFEB);
 
 /// A read-only review and simulated finish action.
 /// It does NOT finish the real booking, charge the customer, or verify payment.

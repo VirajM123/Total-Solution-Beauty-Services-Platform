@@ -12,10 +12,10 @@ import 'worker_document_verification_screen.dart';
 // Step 4 is intentionally a DEBUG-ONLY local review preview.
 // No application, identity document or verification result is transmitted.
 const _plum = Color(0xFF210B35);
-const _berry = Color(0xFFF52D7A);
+const _berry = Color(0xFFFF1678);
 const _muted = Color(0xFF686080);
 const _ivory = Color(0xFFFFFCFD);
-const _line = Color(0xFFF4DDE6);
+const _line = Color(0xFFFFDFEB);
 
 class WorkerReviewSubmitScreen extends StatefulWidget {
   const WorkerReviewSubmitScreen({
@@ -346,7 +346,7 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
       backgroundColor: _ivory,
       appBar: AppBar(
         title: const WorkerAuthBrand(),
-        toolbarHeight: 76,
+        toolbarHeight: 60,
         centerTitle: true,
         backgroundColor: _ivory,
         foregroundColor: _plum,
@@ -578,7 +578,7 @@ class _WorkerReviewSubmitScreenState extends State<WorkerReviewSubmitScreen> {
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [Color(0xFFFF4B91), Color(0xFFF52D7A)],
+                                colors: [Color(0xFFFF4B91), Color(0xFFFF1678)],
                               ),
                               borderRadius: BorderRadius.circular(26),
                             ),

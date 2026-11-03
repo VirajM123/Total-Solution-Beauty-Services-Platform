@@ -4,8 +4,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-const _plum = Color(0xFF460621);
-const _berry = Color(0xFFF52D7A);
+const _plum = Color(0xFF210B35);
+const _berry = Color(0xFFFF1678);
 const _muted = Color(0xFF624352);
 const _ivory = Color(0xFFFFF8FB);
 const _line = Color(0xFFE8C9CE);
@@ -212,7 +212,7 @@ class _WorkerRegistrationEmailOtpScreenState
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFFF4B91), Color(0xFFF52D7A)],
+                          colors: [Color(0xFFFF4B91), Color(0xFFFF1678)],
                         ),
                         borderRadius: BorderRadius.circular(28),
                       ),

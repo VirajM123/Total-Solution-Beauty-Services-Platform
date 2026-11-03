@@ -17,8 +17,8 @@ class WorkerApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Montserrat',
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFF52D7A),
-        ).copyWith(primary: const Color(0xFFF52D7A), surface: Colors.white),
+          seedColor: const Color(0xFFFF1678),
+        ).copyWith(primary: const Color(0xFFFF1678), surface: Colors.white),
         scaffoldBackgroundColor: const Color(0xFFFFF8FB),
         visualDensity: VisualDensity.compact,
         appBarTheme: const AppBarTheme(
@@ -42,12 +42,12 @@ class WorkerApp extends StatelessWidget {
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFF4DDE6)),
+            borderSide: const BorderSide(color: Color(0xFFFFDFEB)),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFF52D7A),
+            backgroundColor: const Color(0xFFFF1678),
             foregroundColor: Colors.white,
             minimumSize: const Size(48, 44),
             shape: RoundedRectangleBorder(
@@ -57,7 +57,7 @@ class WorkerApp extends StatelessWidget {
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFF52D7A),
+            foregroundColor: const Color(0xFFFF1678),
             minimumSize: const Size(48, 44),
           ),
         ),

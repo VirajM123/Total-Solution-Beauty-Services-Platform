@@ -13,44 +13,31 @@ class WorkerAuthBrand extends StatelessWidget {
     label: 'Hi Beauty',
     image: true,
     child: ExcludeSemantics(
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: SizedBox(
-          width: 270,
-          child: Row(
-            children: [
-              const SizedBox(
-                width: 70,
-                child: _BrandFragment(
-                  source: Rect.fromLTWH(120, 68, 1010, 738),
+      child: SizedBox(
+        width: 190,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Image.asset(
+              'assets/images/dashboard/reference_brand.png',
+              width: 190,
+              fit: BoxFit.contain,
+            ),
+            if (subtitle.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 68, top: 2),
+                child: Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    color: Color(0xFF686080),
+                  ),
                 ),
               ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _BrandFragment(
-                      source: Rect.fromLTWH(20, 817, 1214, 352),
-                    ),
-                    if (subtitle.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 3),
-                        child: Text(
-                          subtitle,
-                          maxLines: 1,
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            color: Color(0xFF686080),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     ),

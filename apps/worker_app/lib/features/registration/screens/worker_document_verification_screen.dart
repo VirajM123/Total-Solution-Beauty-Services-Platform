@@ -15,10 +15,10 @@ import 'worker_review_submit_screen.dart';
 // Never describe selected files as verified or approved.
 
 const _plum = Color(0xFF210B35);
-const _berry = Color(0xFFF52D7A);
+const _berry = Color(0xFFFF1678);
 const _muted = Color(0xFF686080);
 const _ivory = Color(0xFFFFFCFD);
-const _line = Color(0xFFF4DDE6);
+const _line = Color(0xFFFFDFEB);
 
 class WorkerSelectedDocument {
   const WorkerSelectedDocument({
@@ -519,7 +519,7 @@ class _WorkerDocumentVerificationScreenState
       backgroundColor: _ivory,
       appBar: AppBar(
         title: const WorkerAuthBrand(),
-        toolbarHeight: 76,
+        toolbarHeight: 60,
         centerTitle: true,
         backgroundColor: _ivory,
         foregroundColor: _plum,
@@ -769,7 +769,7 @@ class _WorkerDocumentVerificationScreenState
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [Color(0xFFFF4B91), Color(0xFFF52D7A)],
+                                colors: [Color(0xFFFF4B91), Color(0xFFFF1678)],
                               ),
                               borderRadius: BorderRadius.circular(26),
                             ),

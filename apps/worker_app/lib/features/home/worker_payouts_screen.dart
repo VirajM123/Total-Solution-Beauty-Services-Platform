@@ -541,7 +541,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [Color(0xFFF52D7A), Color(0xFFFF78A9)],
+                  colors: [Color(0xFFFF1678), Color(0xFFFF78A9)],
                 ),
               ),
               child: const Icon(

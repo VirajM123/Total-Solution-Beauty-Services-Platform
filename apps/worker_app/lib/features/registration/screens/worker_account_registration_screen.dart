@@ -118,7 +118,7 @@ class _WorkerAccountRegistrationScreenState
     backgroundColor: const Color(0xFFFFFCFD),
     appBar: AppBar(
       title: const WorkerAuthBrand(subtitle: 'Beauty Services, Brighter You'),
-      toolbarHeight: 76,
+      toolbarHeight: 60,
       backgroundColor: const Color(0xFFFFFCFD),
       surfaceTintColor: Colors.transparent,
     ),

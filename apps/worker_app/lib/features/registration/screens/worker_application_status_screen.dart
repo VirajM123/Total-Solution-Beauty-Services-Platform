@@ -50,7 +50,7 @@ class _WorkerApplicationStatusScreenState
   String? _message;
 
   static const _plum = Color(0xFF210B35);
-  static const _berry = Color(0xFFF52D7A);
+  static const _berry = Color(0xFFFF1678);
   static const _muted = Color(0xFF755B67);
   static const _ivory = Color(0xFFFFFCFD);
   static const _line = Color(0xFFEEDCE2);
@@ -300,7 +300,7 @@ class _WorkerApplicationStatusScreenState
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [Color(0xFFFF4B91), Color(0xFFF52D7A)],
+                                colors: [Color(0xFFFF4B91), Color(0xFFFF1678)],
                               ),
                               borderRadius: BorderRadius.circular(27),
                             ),

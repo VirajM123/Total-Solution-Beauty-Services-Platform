@@ -1,4 +1,6 @@
-import '../widgets/worker_images.dart';
+import '../widgets/worker_booking_reference_panel.dart';
+import '../widgets/worker_auth_visuals.dart';
+import '../widgets/worker_reference_widgets.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -32,11 +34,13 @@ class WorkerBookingDetailsScreen extends StatefulWidget {
     required this.order,
     this.demoMode = true,
     this.operationsApi,
+    this.onNavigationSelected,
   });
 
   final WorkerDashboardOrder order;
   final bool demoMode;
   final WorkerOperationsApi? operationsApi;
+  final ValueChanged<int>? onNavigationSelected;
 
   @override
   State<WorkerBookingDetailsScreen> createState() =>
@@ -902,6 +906,61 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
     );
   }
 
+  void _showContact() {
+    final phone = _currentOrder.customerPhone?.trim() ?? '';
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_currentOrder.customer),
+        content: Text(phone.isEmpty ? 'Phone unavailable' : phone),
+        actions: [
+          if (phone.isNotEmpty)
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: phone));
+                Navigator.pop(context);
+              },
+              child: const Text('Copy phone number'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLocation() {
+    final address = _currentOrder.location;
+    final link = Uri.https('www.google.com', '/maps/search/', {
+      'api': '1',
+      'query': address,
+    }).toString();
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Customer Location'),
+        content: Text(address.isEmpty ? 'Address unavailable' : address),
+        actions: [
+          if (address.isNotEmpty)
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: link));
+                Navigator.pop(context);
+                _notice('Maps link copied');
+              },
+              child: const Text('Copy Maps link'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final order = _currentOrder;
@@ -911,486 +970,312 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
         _previewAllowed &&
         session?.serviceStage == WorkerServiceStage.inProgress &&
         session?.startedAt != null;
-    return Scaffold(
-      backgroundColor: _cream,
-      appBar: AppBar(
-        backgroundColor: _cream,
-        surfaceTintColor: _cream,
-        foregroundColor: _deep,
-        centerTitle: true,
-        title: const Text(
-          'Booking Details',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+    if (order.status.toLowerCase().trim() == 'travelling' &&
+        !(widget.demoMode && (_storeLoading || _storeError != null))) {
+      return Theme(
+        data: Theme.of(context).copyWith(
+          textTheme: Theme.of(
+            context,
+          ).textTheme.apply(fontFamily: 'WorkerDashboardText'),
         ),
+        child: WorkerTravelReferenceView(
+          order: order,
+          demoMode: widget.demoMode,
+          busy: _updatingProgress,
+          onBack: () => Navigator.of(context).maybePop(),
+          onContact: _showContact,
+          onLocation: _showLocation,
+          onArrived: _updatingProgress
+              ? null
+              : _isLiveMode
+              ? _handleProgressAction
+              : canStart
+              ? _startServicePreview
+              : null,
+        ),
+      );
+    }
+    return Theme(
+      data: Theme.of(context).copyWith(
+        textTheme: Theme.of(
+          context,
+        ).textTheme.apply(fontFamily: 'WorkerDashboardText'),
       ),
-      body: widget.demoMode && (_storeLoading || _storeError != null)
-          ? SafeArea(
-              child: Center(
-                child: _storeLoading
-                    ? const CircularProgressIndicator(color: _pink)
-                    : Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('Could not load saved booking status.'),
-                            Text('$_storeError', textAlign: TextAlign.center),
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _storeLoading = true;
-                                  _storeError = null;
-                                });
-                                _loadStore();
-                              },
-                              child: const Text('Retry loading'),
-                            ),
-                          ],
-                        ),
-                      ),
+      child: Scaffold(
+        backgroundColor: _cream,
+        appBar: AppBar(
+          backgroundColor: _cream,
+          surfaceTintColor: _cream,
+          foregroundColor: _deep,
+          centerTitle: true,
+          toolbarHeight: 62,
+          title: WorkerAuthBrand(subtitle: order.location),
+          actions: const [
+            Padding(
+              padding: EdgeInsets.only(right: 14),
+              child: Icon(
+                Icons.notifications_none_rounded,
+                color: Color(0xFF842514),
+                size: 27,
               ),
-            )
-          : SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(17, 10, 17, 24),
-                          children: [
-                            const WorkerPageBanner(
-                              eyebrow: 'Appointment',
-                              title: 'Booking Details',
-                              subtitle:
-                                  'Everything you need before the service.',
-                              icon: Icons.spa_outlined,
-                              photo: true,
-                            ),
-                            const SizedBox(height: 8),
-                            if (widget.demoMode && !_isLiveMode)
-                              const Padding(
-                                padding: EdgeInsets.only(bottom: 14),
-                                child: Text(
-                                  'DEVELOPMENT PREVIEW · No live service actions',
-                                  style: TextStyle(fontSize: 10, color: _muted),
-                                ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: widget.onNavigationSelected == null
+            ? null
+            : WorkerReferenceNav(
+                selected: 0,
+                onSelected: widget.onNavigationSelected!,
+              ),
+        body: widget.demoMode && (_storeLoading || _storeError != null)
+            ? SafeArea(
+                child: Center(
+                  child: _storeLoading
+                      ? const CircularProgressIndicator(color: _pink)
+                      : Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Could not load saved booking status.',
                               ),
-                            _card(
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 27,
-                                    backgroundColor: const Color(0xFFFFE2EC),
-                                    child: Text(
-                                      order.customer.isNotEmpty
-                                          ? order.customer[0]
-                                          : 'C',
-                                      style: const TextStyle(
-                                        color: _pink,
-                                        fontSize: 19,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                              Text('$_storeError', textAlign: TextAlign.center),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _storeLoading = true;
+                                    _storeError = null;
+                                  });
+                                  _loadStore();
+                                },
+                                child: const Text('Retry loading'),
+                              ),
+                            ],
+                          ),
+                        ),
+                ),
+              )
+            : SafeArea(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: ListView(
+                            padding: const EdgeInsets.fromLTRB(14, 4, 14, 12),
+                            children: [
+                              WorkerBookingReferencePanel(
+                                order: order,
+                                demoMode: widget.demoMode,
+                                onContact: _showContact,
+                                onLocation: _showLocation,
+                              ),
+                              if (_isLiveMode &&
+                                  order.status.toLowerCase() ==
+                                      'in progress') ...[
+                                const SizedBox(height: 8),
+                                if (_refreshError != null) ...[
+                                  Text(
+                                    _refreshError!,
+                                    style: const TextStyle(color: Colors.red),
                                   ),
-                                  const SizedBox(width: 13),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          order.customer,
-                                          style: const TextStyle(
-                                            color: _deep,
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          order.customerPhone != null &&
-                                                  order
-                                                      .customerPhone!
-                                                      .isNotEmpty
-                                              ? '${order.customerPhone} · Booking ${order.id}'
-                                              : 'Booking ${order.id}',
+                                  if (_lastRefresh != null)
+                                    Text(
+                                      'Last updated: ' +
+                                          _lastRefresh!.toLocal().toString(),
+                                    ),
+                                  TextButton(
+                                    onPressed: _refreshLiveBooking,
+                                    child: const Text('Retry booking update'),
+                                  ),
+                                ],
+                                _serviceTimingCard(),
+                              ],
+                              if (session != null) ...[
+                                const SizedBox(height: 8),
+                                _savedServiceSummary(context, session),
+                              ],
+                              const SizedBox(height: 8),
+                              if (widget.demoMode)
+                                _card(
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(
+                                        session != null
+                                            ? Icons.check_circle_outline
+                                            : Icons.lock_outline_rounded,
+                                        color: _pink,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          canResume
+                                              ? 'Demo service start is saved locally. Resume the service with its original start time. No backend booking was changed.'
+                                              : session != null
+                                              ? 'This demo service was already started. It cannot be started again, even after reopening the booking.'
+                                              : 'Start-service OTP can be previewed only for eligible accepted bookings. Real verification, service completion and payments require backend integration.',
                                           style: const TextStyle(
                                             color: _muted,
                                             fontSize: 12,
+                                            height: 1.4,
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(
-                                    Icons.verified_user_outlined,
-                                    color: _pink,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            _card(
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        width: 65,
-                                        height: 65,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFFFE8EF),
-                                          borderRadius: BorderRadius.circular(
-                                            13,
-                                          ),
-                                        ),
-                                        child: WorkerServiceImage(
-                                          service: order.service, serviceId: order.serviceId,
-                                          demoMode: widget.demoMode,
-                                          width: 48,
-                                          height: 48,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 13),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              order.service,
-                                              style: const TextStyle(
-                                                color: _deep,
-                                                fontSize: 17,
-                                                fontWeight: FontWeight.w800,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              order.status,
-                                              style: const TextStyle(
-                                                color: _pink,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Text(
-                                        formatCustomerPaise(
-                                          order.customerPayablePaise ??
-                                              order.customerPayable * 100,
-                                        ),
-                                        style: const TextStyle(
-                                          color: _deep,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w800,
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 13),
-                                  const Divider(color: _border),
-                                  const SizedBox(height: 12),
-                                  _info(
-                                    Icons.access_time_rounded,
-                                    '${order.time} · ${order.duration}',
-                                  ),
-                                  _info(Icons.place_outlined, order.location),
-                                  _info(
-                                    Icons.payments_outlined,
-                                    'Customer payable: ${formatCustomerPaise(order.customerPayablePaise ?? order.customerPayable * 100)}',
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            _card(
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Service Details',
-                                    style: TextStyle(
-                                      color: _deep,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    order.itemsDescription ??
-                                        (order.service.isNotEmpty
-                                            ? order.service
-                                            : 'The full service description will be shown once booking details are available from the backend.'),
-                                    style: const TextStyle(
-                                      color: _muted,
-                                      fontSize: 12.5,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                  if (order.compensationRupees != null) ...[
-                                    const SizedBox(height: 10),
-                                    const Divider(color: _border),
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.account_balance_wallet_outlined,
-                                          size: 18,
-                                          color: Color(0xFF14865E),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            'Worker Compensation: ₹${order.compensationRupees}',
-                                            style: const TextStyle(
-                                              color: Color(0xFF14865E),
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                  if (order.paymentMethod != null) ...[
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.receipt_outlined,
-                                          size: 18,
-                                          color: _muted,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            'Payment: ${order.paymentMethod?.toUpperCase()} (${order.paymentStatus?.toUpperCase() ?? 'PENDING'})',
-                                            style: const TextStyle(
-                                              color: _muted,
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'Customer Note',
-                                    style: TextStyle(
-                                      color: _deep,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'No special requests noted for this appointment.',
-                                    style: TextStyle(
-                                      color: _muted,
-                                      fontSize: 12.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (_isLiveMode &&
-                                order.status.toLowerCase() ==
-                                    'in progress') ...[
-                              const SizedBox(height: 8),
-                              if (_refreshError != null) ...[
-                                Text(
-                                  _refreshError!,
-                                  style: const TextStyle(color: Colors.red),
                                 ),
-                                if (_lastRefresh != null)
-                                  Text(
-                                    'Last updated: ' +
-                                        _lastRefresh!.toLocal().toString(),
-                                  ),
-                                TextButton(
-                                  onPressed: _refreshLiveBooking,
-                                  child: const Text('Retry booking update'),
-                                ),
-                              ],
-                              _serviceTimingCard(),
                             ],
-                            if (session != null) ...[
-                              const SizedBox(height: 8),
-                              _savedServiceSummary(context, session),
-                            ],
-                            const SizedBox(height: 8),
-                            _card(
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    session != null
-                                        ? Icons.check_circle_outline
-                                        : Icons.lock_outline_rounded,
-                                    color: _pink,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      canResume
-                                          ? 'Demo service start is saved locally. Resume the service with its original start time. No backend booking was changed.'
-                                          : session != null
-                                          ? 'This demo service was already started. It cannot be started again, even after reopening the booking.'
-                                          : 'Start-service OTP can be previewed only for eligible accepted bookings. Real verification, service completion and payments require backend integration.',
-                                      style: const TextStyle(
-                                        color: _muted,
-                                        fontSize: 12,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(17, 10, 17, 15),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (_isLiveMode &&
-                                order.status.toLowerCase() == 'in progress')
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 9),
-                                child: OutlinedButton.icon(
-                                  onPressed: _openLiveExtraServices,
-                                  icon: const Icon(Icons.add_circle_outline),
-                                  label: const Text('Request Extra Service'),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(17, 10, 17, 15),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (_isLiveMode &&
+                                  order.status.toLowerCase() == 'in progress')
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 9),
+                                  child: OutlinedButton.icon(
+                                    onPressed: _openLiveExtraServices,
+                                    icon: const Icon(Icons.add_circle_outline),
+                                    label: const Text('Request Extra Service'),
+                                  ),
                                 ),
-                              ),
-                            if (_showPaymentChoices)
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: FilledButton.icon(
-                                      key: Key(
-                                        order.paymentMethod == 'cash'
-                                            ? 'generate-payment-qr'
-                                            : 'start-service-entry',
-                                      ),
-                                      onPressed: _updatingProgress
-                                          ? null
-                                          : _openPaymentQr,
-                                      icon: const Icon(Icons.qr_code),
-                                      label: const Text('Generate QR'),
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: _pink,
-                                        foregroundColor: Colors.white,
-                                        minimumSize: const Size(0, 50),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      key: Key(
-                                        order.paymentMethod == 'cash'
-                                            ? 'start-service-entry'
-                                            : 'cash-collection',
-                                      ),
-                                      onPressed: _updatingProgress
-                                          ? null
-                                          : _completeCashService,
-                                      icon: const Icon(Icons.payments_outlined),
-                                      label: const Text('Cash Collection'),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: _pink,
-                                        minimumSize: const Size(0, 50),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            else
-                              SizedBox(
-                                height: 50,
-                                child: FilledButton(
-                                  key: const Key('start-service-entry'),
-                                  onPressed: _isLiveMode
-                                      ? order.status.toLowerCase() ==
-                                                'completed'
-                                            ? order.paymentStatus == 'paid'
-                                                  ? () => Navigator.of(
-                                                      context,
-                                                    ).maybePop()
-                                                  : _openPaymentQr
-                                            : _canAct(order.status)
-                                            ? _handleProgressAction
-                                            : () => Navigator.of(
-                                                context,
-                                              ).maybePop()
-                                      : (session?.serviceStage ==
-                                                WorkerServiceStage.finished
-                                            ? () => Navigator.of(
-                                                context,
-                                              ).maybePop()
-                                            : _startingService
+                              if (_showPaymentChoices)
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: FilledButton.icon(
+                                        key: Key(
+                                          order.paymentMethod == 'cash'
+                                              ? 'generate-payment-qr'
+                                              : 'start-service-entry',
+                                        ),
+                                        onPressed: _updatingProgress
                                             ? null
-                                            : canResume
-                                            ? _openProgressPreview
-                                            : canStart
-                                            ? _startServicePreview
-                                            : null),
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: _pink,
-                                    foregroundColor: Colors.white,
-                                    disabledBackgroundColor: const Color(
-                                      0xFFF5CBD9,
+                                            : _openPaymentQr,
+                                        icon: const Icon(Icons.qr_code),
+                                        label: const Text('Generate QR'),
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: _pink,
+                                          foregroundColor: Colors.white,
+                                          minimumSize: const Size(0, 50),
+                                        ),
+                                      ),
                                     ),
-                                    disabledForegroundColor: _deep,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        key: Key(
+                                          order.paymentMethod == 'cash'
+                                              ? 'start-service-entry'
+                                              : 'cash-collection',
+                                        ),
+                                        onPressed: _updatingProgress
+                                            ? null
+                                            : _completeCashService,
+                                        icon: const Icon(
+                                          Icons.payments_outlined,
+                                        ),
+                                        label: const Text('Cash Collection'),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: _pink,
+                                          minimumSize: const Size(0, 50),
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                  child: Text(
-                                    _updatingProgress
-                                        ? 'Updating status…'
-                                        : _isLiveMode
+                                  ],
+                                )
+                              else
+                                SizedBox(
+                                  height: 50,
+                                  child: FilledButton(
+                                    key: const Key('start-service-entry'),
+                                    onPressed: _isLiveMode
                                         ? order.status.toLowerCase() ==
                                                   'completed'
                                               ? order.paymentStatus == 'paid'
-                                                    ? 'Service Completed - Payment Received'
-                                                    : 'Generate Payment QR'
-                                              : _progressButtonText(
-                                                  order.status,
-                                                )
+                                                    ? () => Navigator.of(
+                                                        context,
+                                                      ).maybePop()
+                                                    : _openPaymentQr
+                                              : _canAct(order.status)
+                                              ? _handleProgressAction
+                                              : () => Navigator.of(
+                                                  context,
+                                                ).maybePop()
                                         : (session?.serviceStage ==
                                                   WorkerServiceStage.finished
-                                              ? 'Back to My Bookings'
+                                              ? () => Navigator.of(
+                                                  context,
+                                                ).maybePop()
                                               : _startingService
-                                              ? 'Saving Demo Service…'
+                                              ? null
                                               : canResume
-                                              ? 'Resume Demo Service'
+                                              ? _openProgressPreview
                                               : canStart
-                                              ? 'Start Service · Enter Customer OTP'
-                                              : 'Start Service Not Available'),
+                                              ? _startServicePreview
+                                              : null),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: _pink,
+                                      foregroundColor: Colors.white,
+                                      disabledBackgroundColor: const Color(
+                                        0xFFF5CBD9,
+                                      ),
+                                      disabledForegroundColor: _deep,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      _updatingProgress
+                                          ? 'Updating status…'
+                                          : _isLiveMode
+                                          ? order.status.toLowerCase() ==
+                                                    'completed'
+                                                ? order.paymentStatus == 'paid'
+                                                      ? 'Service Completed - Payment Received'
+                                                      : 'Generate Payment QR'
+                                                : {
+                                                    'accepted',
+                                                    'assigned',
+                                                  }.contains(
+                                                    order.status
+                                                        .toLowerCase()
+                                                        .trim(),
+                                                  )
+                                                ? 'Start Navigation'
+                                                : _progressButtonText(
+                                                    order.status,
+                                                  )
+                                          : (session?.serviceStage ==
+                                                    WorkerServiceStage.finished
+                                                ? 'Back to My Bookings'
+                                                : _startingService
+                                                ? 'Saving Demo Service…'
+                                                : canResume
+                                                ? 'Resume Demo Service'
+                                                : canStart
+                                                ? 'Start Service · Enter Customer OTP'
+                                                : 'Start Service Not Available'),
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+      ),
     );
   }
 }

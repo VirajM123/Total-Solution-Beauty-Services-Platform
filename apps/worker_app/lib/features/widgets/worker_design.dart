@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'worker_auth_visuals.dart';
 
 /// Visual primitives shared by the worker's primary screens.
 abstract final class WorkerDesign {
-  static const pink = Color(0xFFF52D7A);
-  static const deep = Color(0xFF111D3A);
-  static const muted = Color(0xFF667085);
+  static const pink = Color(0xFFFF1678);
+  static const deep = Color(0xFF210B35);
+  static const muted = Color(0xFF686080);
   static const cream = Color(0xFFFFF7FA);
-  static const border = Color(0xFFF4DDE6);
+  static const border = Color(0xFFFFDFEB);
 
   static BoxDecoration surface({double radius = 16}) => BoxDecoration(
     color: Colors.white,
@@ -71,13 +72,15 @@ class WorkerPageBanner extends StatelessWidget {
             ),
           ),
         ),
-        Positioned(
-          right: 20,
-          top: 22,
-          child: Icon(icon, size: 28, color: const Color(0x66E91368)),
+        const Positioned(
+          right: -10,
+          bottom: -14,
+          width: 100,
+          height: 90,
+          child: Opacity(opacity: .28, child: WorkerLotusArtwork()),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 58, 8),
+          padding: const EdgeInsets.fromLTRB(14, 10, 82, 10),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

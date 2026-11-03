@@ -182,14 +182,14 @@ class _WorkerSplashScreenState extends State<WorkerSplashScreen>
                               child: Column(
                                 children: [
                                   Image.asset(
-                                    'assets/images/logo/logo.png',
-                                    width: compact ? 210 : 245,
-                                    height: compact ? 140 : 165,
+                                    'assets/images/dashboard/reference_brand.png',
+                                    width: 190,
+                                    height: 40,
                                     fit: BoxFit.contain,
                                     semanticLabel: 'Hi Beauty',
                                     errorBuilder: (_, _, _) => const Icon(
                                       Icons.spa_rounded,
-                                      color: Color(0xFFF52D7A),
+                                      color: Color(0xFFFF1678),
                                       size: 28,
                                     ),
                                   ),
@@ -286,7 +286,7 @@ class _WorkerSplashScreenState extends State<WorkerSplashScreen>
                             width: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Color(0xFFF52D7A),
+                              color: Color(0xFFFF1678),
                             ),
                           ),
 

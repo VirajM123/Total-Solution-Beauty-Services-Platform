@@ -67,6 +67,10 @@ void main() {
     final font = FontLoader('Montserrat')
       ..addFont(rootBundle.load('assets/fonts/Montserrat-Regular.ttf'));
     await font.load();
+    final dashboardFont = FontLoader('WorkerDashboardText')
+      ..addFont(rootBundle.load('assets/fonts/Roboto-Regular.ttf'))
+      ..addFont(rootBundle.load('assets/fonts/Roboto-Bold.ttf'));
+    await dashboardFont.load();
     final icons = FontLoader('MaterialIcons')
       ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
     await icons.load();
@@ -101,6 +105,12 @@ void main() {
           await Future.wait([
             for (final asset in [
               'assets/images/logo/logo.png',
+              'assets/images/dashboard/reference_profile.png',
+              'assets/images/dashboard/reference_lotus.png',
+              'assets/images/dashboard/reference_brand.png',
+              'assets/images/dashboard/reference_facial.png',
+              'assets/images/dashboard/reference_hair.png',
+              'assets/images/dashboard/reference_bridal.png',
               'assets/images/services/gold_facial.png',
               'assets/images/services/hair_spa.png',
               'assets/images/services/bridal_makeup.png',
@@ -120,6 +130,20 @@ void main() {
           greaterThanOrEqualTo(0),
           reason: page.key,
         );
+        if (page.key == 'dashboard') {
+          expect(find.text('Manage Your Work'), findsNothing);
+          expect(find.text('Incoming Bookings'), findsNothing);
+          if (width == 390) {
+            final scroll = tester.state<ScrollableState>(
+              find.byType(Scrollable).first,
+            );
+            expect(
+              scroll.position.maxScrollExtent,
+              lessThanOrEqualTo(2),
+              reason: 'Dashboard summary fits one phone screen',
+            );
+          }
+        }
         if (width == 390) {
           await tester.runAsync(() async {
             final image =

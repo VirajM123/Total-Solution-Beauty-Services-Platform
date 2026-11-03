@@ -1,9 +1,35 @@
+import 'package:worker_app/features/widgets/worker_reference_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:worker_app/features/home/worker_booking_data.dart';
 import 'package:worker_app/features/home/worker_dashboard_screen.dart';
 
 void main() {
+  testWidgets(
+    'empty dashboard stays anchored to the top on a 360 by 800 phone',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: WorkerDashboardScreen(demoMode: false, orders: []),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(find.byType(WorkerReferenceHeader)).dy,
+        lessThanOrEqualTo(4),
+      );
+      final header = tester.widget<WorkerReferenceHeader>(
+        find.byType(WorkerReferenceHeader),
+      );
+      expect(header.brandWidth, 190);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   final today = DateTime(2026, 10, 19, 9, 30);
   final orders = [
     WorkerDashboardOrder(
@@ -47,10 +73,10 @@ void main() {
 
         expect(find.text('Pinkora'), findsNothing);
         expect(find.text('Worker App'), findsNothing);
-        expect(find.text('Incoming Bookings'), findsOneWidget);
-        expect(find.text('Customer Payable'), findsOneWidget);
-        expect(find.text('₹1,200'), findsWidgets);
-        expect(find.text('A Customer'), findsNWidgets(2));
+        expect(find.text('Manage Your Work'), findsNothing);
+        expect(find.text('Rating'), findsOneWidget);
+        expect(find.textContaining('₹1,200'), findsWidgets);
+        expect(find.text('A Customer'), findsOneWidget);
         expect(tester.takeException(), isNull);
       }
       addTearDown(tester.view.resetPhysicalSize);
@@ -119,7 +145,7 @@ void main() {
 
       expect(find.text('0'), findsWidgets);
       expect(find.text('₹0'), findsWidgets);
-      expect(find.text('Customer Payable'), findsOneWidget);
+      expect(find.text('Rating'), findsOneWidget);
       expect(
         find.text('No upcoming appointment is scheduled yet.'),
         findsOneWidget,
@@ -200,13 +226,13 @@ void main() {
 
     expect(find.text('3'), findsOneWidget);
     expect(find.text('1'), findsOneWidget);
-    expect(find.text('₹2,800'), findsWidgets);
-    expect(find.text('Later Customer'), findsNWidgets(2));
+    expect(find.text('Unavailable'), findsOneWidget);
+    expect(find.text('Later Customer'), findsOneWidget);
     expect(find.text('Tomorrow Customer'), findsNothing);
     expect(find.text('Cancelled Customer'), findsNothing);
     expect(
       tester.getTopLeft(find.text('Early Customer')).dy,
-      lessThan(tester.getTopLeft(find.text('Later Customer').last).dy),
+      greaterThan(tester.getTopLeft(find.text('Completed Customer')).dy),
     );
     expect(tester.takeException(), isNull);
   });
@@ -238,8 +264,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('1'), findsWidgets);
-    expect(find.text('₹900'), findsWidgets);
-    expect(find.text('Customer Payable'), findsOneWidget);
+    expect(find.text('Unavailable'), findsOneWidget);
+    expect(find.text('Rating'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -259,8 +285,8 @@ void main() {
 
     expect(find.text('2'), findsOneWidget);
     expect(find.text('1'), findsOneWidget);
-    expect(find.text('Sneha Patil'), findsNWidgets(2));
-    expect(find.text('₹2,199'), findsOneWidget);
+    expect(find.text('Sneha Patil'), findsOneWidget);
+    expect(find.text('Unavailable'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -297,7 +323,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('quick actions and navigation retain existing destinations', (
+  testWidgets('dashboard navigation retains existing destinations', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -335,15 +361,14 @@ void main() {
       ),
     );
 
-    await tester.ensureVisible(find.text('Incoming Bookings'));
-    await tester.tap(find.text('Incoming Bookings'));
+    await tester.tap(find.text('Bookings').last);
     await tester.pumpAndSettle();
     expect(find.text('My Bookings'), findsOneWidget);
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('My Schedule'));
-    await tester.tap(find.text('My Schedule'));
+    await tester.ensureVisible(find.byTooltip('My Schedule'));
+    await tester.tap(find.byTooltip('My Schedule'));
     await tester.pumpAndSettle();
     expect(
       find.descendant(
@@ -352,15 +377,6 @@ void main() {
       ),
       findsOneWidget,
     );
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-
-    await tester.ensureVisible(find.byKey(const Key('open-service-history')));
-    await tester.tap(find.byKey(const Key('open-service-history')));
-    await tester.pumpAndSettle();
-    expect(find.text('Service History'), findsOneWidget);
-    expect(find.text('Completed Customer  ·  completed'), findsOneWidget);
-    expect(find.text('Cancelled Customer  ·  cancelled'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
 
@@ -415,8 +431,8 @@ void main() {
       ),
     );
 
-    await tester.ensureVisible(find.text('My Schedule'));
-    await tester.tap(find.text('My Schedule'));
+    await tester.ensureVisible(find.byTooltip('My Schedule'));
+    await tester.tap(find.byTooltip('My Schedule'));
     await tester.pumpAndSettle();
 
     expect(find.text('Shared Service'), findsOneWidget);

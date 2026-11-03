@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../app/route_names.dart';
 import '../../core/api/mobile_api.dart';
-import '../shared/auth_brand_mark.dart';
+import '../../core/constants/app_assets.dart';
 import '../shared/customer_visuals.dart';
 import '../../core/constants/pinkora_brand.dart';
 import '../../integration/customer_auth_api.dart';
@@ -254,7 +254,16 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 4),
-              const Center(child: AuthBrandMark()),
+              Center(
+                child: Image.asset(
+                  AppAssets.customerOtpHero,
+                  key: const ValueKey('customer-otp-hero'),
+                  width: 148,
+                  height: 148,
+                  fit: BoxFit.contain,
+                  excludeFromSemantics: true,
+                ),
+              ),
               const SizedBox(height: 6),
               const Text(
                 'One step closer',

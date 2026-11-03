@@ -13,7 +13,7 @@ import '../otp/worker_otp_screen.dart';
 import '../widgets/worker_login_footer.dart';
 
 const _plum = Color(0xFF210B35);
-const _berry = Color(0xFFF52D7A);
+const _berry = Color(0xFFFF1678);
 const _muted = Color(0xFF686080);
 const _line = Color(0xFFFFCEE0);
 const _ivory = Color(0xFFFFF8FB);
@@ -150,8 +150,8 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
                 final horizontalPadding = width < 340 ? 18.0 : 22.0;
                 final heroHeight = keyboardOpen
                     ? 100.0
-                    : (constraints.maxHeight * .34)
-                          .clamp(190.0, 270.0)
+                    : (constraints.maxHeight * .20)
+                          .clamp(110.0, 170.0)
                           .toDouble();
 
                 return SingleChildScrollView(
@@ -178,13 +178,13 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
                             const Center(child: WorkerAuthBrand()),
                             const SizedBox(height: 12),
                             WorkerAuthHero(height: heroHeight, phone: true),
-                            const SizedBox(height: 18),
+                            const SizedBox(height: 10),
                             const Text(
                               'Welcome Back',
                               textAlign: TextAlign.left,
                               style: TextStyle(
                                 fontFamily: 'Montserrat',
-                                fontSize: 29,
+                                fontSize: 26,
                                 fontWeight: FontWeight.bold,
                                 color: _plum,
                               ),
@@ -206,12 +206,12 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
                               style: TextStyle(
                                 color: _muted,
                                 fontSize: 12,
-                                height: 1.6,
+                                height: 1.4,
                               ),
                             ),
-                            SizedBox(height: keyboardOpen ? 16 : 20),
+                            SizedBox(height: keyboardOpen ? 12 : 14),
                             Container(
-                              padding: const EdgeInsets.all(18),
+                              padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: const Color(0xEDFFF0F6),
                                 borderRadius: BorderRadius.circular(22),
@@ -339,7 +339,7 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen> {
                                         gradient: const LinearGradient(
                                           colors: [
                                             Color(0xFFFF4B91),
-                                            Color(0xFFF52D7A),
+                                            Color(0xFFFF1678),
                                           ],
                                         ),
                                         borderRadius: BorderRadius.circular(16),

@@ -63,6 +63,11 @@ flutter:
   uses-material-design: true
 
   fonts:
+    - family: WorkerDashboardText
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700
     - family: Montserrat
       fonts:
         - asset: assets/fonts/Montserrat-Regular.ttf
