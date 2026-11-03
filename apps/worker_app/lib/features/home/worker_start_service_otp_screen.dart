@@ -1,9 +1,9 @@
-import '../widgets/worker_images.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../widgets/worker_auth_visuals.dart';
 import 'worker_booking_data.dart';
 import '../../integration/worker_mobile_operations_api.dart';
 
@@ -28,11 +28,13 @@ class WorkerStartServiceOtpScreen extends StatefulWidget {
     required this.order,
     this.demoMode = true,
     this.operationsApi,
+    this.onContact,
   });
 
   final WorkerDashboardOrder order;
   final bool demoMode;
   final WorkerMobileOperationsApi? operationsApi;
+  final VoidCallback? onContact;
 
   @override
   State<WorkerStartServiceOtpScreen> createState() =>
@@ -46,6 +48,8 @@ class _WorkerStartServiceOtpScreenState
   final _formKey = GlobalKey<FormState>();
   bool _checking = false;
   bool _uploadingPhoto = false;
+  bool _showOtpError = false;
+  bool _showOtpPage = false;
   String _lastOtpInput = '';
   final List<String> _evidenceIds = [];
   final List<Uint8List> _photoPreviews = [];
@@ -73,7 +77,10 @@ class _WorkerStartServiceOtpScreenState
       _notice('Capture and upload at least one product photo first.');
       return;
     }
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      setState(() => _showOtpError = true);
+      return;
+    }
     if (!_previewAllowed) {
       Navigator.of(context).pop(
         WorkerStartServiceInput(
@@ -144,26 +151,303 @@ class _WorkerStartServiceOtpScreenState
     child: child,
   );
 
-  Widget _line(IconData icon, String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: _pink),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(color: _muted, fontSize: 13),
+  void _continueToOtp() {
+    if (_evidenceIds.isEmpty) {
+      _notice('Capture and upload at least one product photo first.');
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    setState(() => _showOtpPage = true);
+  }
+
+  void _returnToProductPhotos() {
+    FocusScope.of(context).unfocus();
+    setState(() => _showOtpPage = false);
+  }
+
+  Widget _buildOtpPage(WorkerDashboardOrder order) => Scaffold(
+    backgroundColor: const Color(0xFFFFFBFD),
+    body: SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: ListView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(17, 10, 17, 16),
+            children: [
+              Row(
+                children: [
+                  if (!_previewAllowed)
+                    IconButton(
+                      key: const Key('back-to-product-photos'),
+                      tooltip: 'Back to product photos',
+                      onPressed: _returnToProductPhotos,
+                      color: _pink,
+                      icon: const Icon(Icons.arrow_back_rounded),
+                    )
+                  else
+                    const SizedBox(width: 48),
+                  const Expanded(
+                    child: Center(
+                      child: WorkerAuthBrand(subtitle: 'Worker App'),
+                    ),
+                  ),
+                  const SizedBox(width: 48),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: AspectRatio(
+                  aspectRatio: 1.58,
+                  child: Image.asset(
+                    'assets/images/illustrations/worker_customer_otp_phone.png',
+                    fit: BoxFit.cover,
+                    alignment: const Alignment(0, -.2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.fromLTRB(19, 19, 19, 18),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFFF5F9), Color(0xFFFFEDF4)],
+                  ),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Enter Customer OTP',
+                        style: TextStyle(
+                          color: _deep,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -.55,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        'Ask the customer to share the $_otpLength-digit OTP sent to their mobile number.',
+                        style: const TextStyle(
+                          color: _muted,
+                          fontSize: 14,
+                          height: 1.4,
+                        ),
+                      ),
+                      if (_previewAllowed) ...[
+                        const SizedBox(height: 7),
+                        const Text(
+                          'Development preview · Demo code: 2841',
+                          style: TextStyle(
+                            color: _pink,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 18),
+                      SizedBox(
+                        height: 68,
+                        child: Stack(
+                          children: [
+                            Row(
+                              children: List.generate(
+                                _otpLength,
+                                (index) => Expanded(
+                                  child: Container(
+                                    height: 66,
+                                    margin: EdgeInsets.only(
+                                      right: index == _otpLength - 1 ? 0 : 7,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: _code.text.length > index
+                                            ? _pink
+                                            : const Color(0xFFFFCFE0),
+                                        width: _code.text.length > index
+                                            ? 1.5
+                                            : 1,
+                                      ),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x0AFF1678),
+                                          blurRadius: 8,
+                                          offset: Offset(0, 3),
+                                        ),
+                                      ],
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      _code.text.length > index
+                                          ? _code.text[index]
+                                          : '',
+                                      style: const TextStyle(
+                                        color: _deep,
+                                        fontSize: 31,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned.fill(
+                              child: Opacity(
+                                opacity: .01,
+                                child: TextFormField(
+                                  key: const Key('start-service-otp'),
+                                  controller: _code,
+                                  onChanged: (value) {
+                                    if (value.length > _lastOtpInput.length ||
+                                        (value.length == _lastOtpInput.length &&
+                                            value != _lastOtpInput)) {
+                                      HapticFeedback.lightImpact();
+                                    }
+                                    _lastOtpInput = value;
+                                    setState(() => _showOtpError = false);
+                                  },
+                                  keyboardType: TextInputType.number,
+                                  textInputAction: TextInputAction.done,
+                                  textAlign: TextAlign.center,
+                                  maxLength: _otpLength,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(
+                                      _otpLength,
+                                    ),
+                                  ],
+                                  style: const TextStyle(
+                                    color: Colors.transparent,
+                                    fontSize: 1,
+                                  ),
+                                  cursorColor: Colors.transparent,
+                                  decoration: const InputDecoration(
+                                    counterText: '',
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                    errorStyle: TextStyle(
+                                      fontSize: 0,
+                                      height: 0,
+                                    ),
+                                  ),
+                                  validator: (value) =>
+                                      value != null &&
+                                          value.length == _otpLength &&
+                                          RegExp(r'^\d+$').hasMatch(value)
+                                      ? null
+                                      : 'Enter all $_otpLength digits.',
+                                  onFieldSubmitted: (_) => _verify(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_showOtpError)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 5),
+                          child: Text(
+                            'Enter all digits to continue.',
+                            style: TextStyle(
+                              color: Color(0xFFB3261E),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        key: const Key('verify-start-service'),
+                        onPressed:
+                            !_checking &&
+                                !_uploadingPhoto &&
+                                (_previewAllowed || _evidenceIds.isNotEmpty)
+                            ? _verify
+                            : null,
+                        icon: _checking
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.check_circle_rounded, size: 23),
+                        label: const Text('Verify & Start Service'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: _pink,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: const Color(0xFFF2C0D2),
+                          minimumSize: const Size.fromHeight(62),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed:
+                            widget.onContact ??
+                            () => _notice(
+                              _previewAllowed
+                                  ? 'For this preview, return to Booking Details and contact Pinkora support through the normal channel.'
+                                  : 'Ask the customer to confirm the code and retry.',
+                            ),
+                        icon: Icon(
+                          widget.onContact == null
+                              ? Icons.support_agent_outlined
+                              : Icons.call_rounded,
+                          size: 22,
+                        ),
+                        label: Text(
+                          widget.onContact == null
+                              ? 'Need Help'
+                              : 'Call Customer',
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _pink,
+                          side: const BorderSide(color: _pink),
+                          minimumSize: const Size.fromHeight(58),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     ),
   );
 
   @override
   Widget build(BuildContext context) {
     final order = widget.order;
+    if (_previewAllowed || _showOtpPage) {
+      return _buildOtpPage(order);
+    }
+
     return Scaffold(
       backgroundColor: _cream,
       appBar: AppBar(
@@ -171,10 +455,8 @@ class _WorkerStartServiceOtpScreenState
         surfaceTintColor: _cream,
         foregroundColor: _deep,
         centerTitle: true,
-        title: const Text(
-          'Start Service',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-        ),
+        toolbarHeight: 66,
+        title: const WorkerAuthBrand(subtitle: 'Worker App'),
       ),
       body: SafeArea(
         child: Center(
@@ -188,28 +470,92 @@ class _WorkerStartServiceOtpScreenState
                         ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: const EdgeInsets.fromLTRB(17, 8, 17, 24),
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(13),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFEAF1),
-                          border: Border.all(color: _border),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline, color: _pink, size: 19),
-                            SizedBox(width: 9),
-                            Expanded(
-                              child: Text(
-                                _previewAllowed
-                                    ? 'DEVELOPMENT PREVIEW ONLY · No real customer OTP is checked and no service is started on the server.'
-                                    : 'Enter the 6-digit code provided by the customer. The server verifies it before service starts.',
-                                style: TextStyle(color: _deep, fontSize: 11.5),
-                              ),
-                            ),
-                          ],
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: SizedBox(
+                          height: 156,
+                          child: _previewAllowed
+                              ? Image.asset(
+                                  'assets/images/illustrations/worker_customer_otp_phone.png',
+                                  fit: BoxFit.cover,
+                                  alignment: const Alignment(0, -.2),
+                                )
+                              : Container(
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Color(0xFFFFE8F0),
+                                        Color(0xFFFFF7FA),
+                                      ],
+                                    ),
+                                  ),
+                                  child: const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.inventory_2_outlined,
+                                        color: _pink,
+                                        size: 38,
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'A quick product check before you begin',
+                                        style: TextStyle(
+                                          color: _deep,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _previewAllowed
+                            ? 'Enter Customer OTP'
+                            : 'Photograph Service Products',
+                        style: const TextStyle(
+                          color: _deep,
+                          fontSize: 25,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _previewAllowed
+                            ? 'Ask ${order.customer} to share the $_otpLength-digit code sent to their mobile number.'
+                            : 'Capture up to 3 photos of the products you plan to use. Tap Next when you are ready to enter the customer OTP.',
+                        style: const TextStyle(
+                          color: _muted,
+                          fontSize: 13,
+                          height: 1.4,
+                        ),
+                      ),
+                      if (_previewAllowed) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(11),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEAF1),
+                            border: Border.all(color: _border),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.info_outline, color: _pink, size: 18),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Development preview only. No real OTP is checked and no service is started on the server.',
+                                  style: TextStyle(color: _deep, fontSize: 11),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       _panel(
                         Row(
@@ -256,60 +602,49 @@ class _WorkerStartServiceOtpScreenState
                           ],
                         ),
                       ),
-                      const SizedBox(height: 13),
+                      const SizedBox(height: 8),
                       _panel(
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        Row(
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  height: 62,
-                                  width: 62,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFE8EF),
-                                    borderRadius: BorderRadius.circular(13),
-                                  ),
-                                  child: WorkerServiceImage(
-                                    service: order.service, serviceId: order.serviceId,
-                                    demoMode: widget.demoMode,
-                                  ),
-                                ),
-                                const SizedBox(width: 13),
-                                Expanded(
-                                  child: Text(
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFFE8F0),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.spa_outlined,
+                                color: _pink,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
                                     order.service,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       color: _deep,
-                                      fontSize: 16,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
-                                ),
-                                Text(
-                                  formatCustomerPaise(
-                                    order.customerPayablePaise ??
-                                        order.customerPayable * 100,
+                                  Text(
+                                    'Booking ${order.id} · ${order.time}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: _muted,
+                                      fontSize: 11,
+                                    ),
                                   ),
-                                  style: const TextStyle(
-                                    color: _deep,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            const Divider(color: _border),
-                            const SizedBox(height: 11),
-                            _line(
-                              Icons.access_time_rounded,
-                              '${order.time} · ${order.duration}',
-                            ),
-                            _line(Icons.place_outlined, order.location),
-                            _line(
-                              Icons.receipt_long_outlined,
-                              'Customer payable — ${formatCustomerPaise(order.customerPayablePaise ?? order.customerPayable * 100)}',
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -328,9 +663,20 @@ class _WorkerStartServiceOtpScreenState
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
+                              if (_evidenceIds.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${_evidenceIds.length} of 3 photos uploaded',
+                                  style: const TextStyle(
+                                    color: _muted,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 6),
                               const Text(
-                                'Photograph the products you plan to use. At least one successful private upload is required before OTP entry.',
+                                'Photograph the products you plan to use. At least one successful upload is required before you can continue.',
                                 style: TextStyle(
                                   color: _muted,
                                   fontSize: 12.5,
@@ -390,109 +736,167 @@ class _WorkerStartServiceOtpScreenState
                           ),
                         ),
                       ],
-                      if (_previewAllowed || _evidenceIds.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF0F5),
-                            borderRadius: BorderRadius.circular(19),
-                            border: Border.all(color: _border),
-                          ),
-                          child: Form(
+                      if (_previewAllowed) ...[
+                        const SizedBox(height: 10),
+                        _panel(
+                          Form(
                             key: _formKey,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const Text(
-                                  'Start-service OTP',
-                                  style: TextStyle(
-                                    color: _deep,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 19,
-                                  ),
-                                ),
-                                const SizedBox(height: 7),
-                                Text(
-                                  'At the customer location, ask the customer for the $_otpLength-digit start-service code.',
-                                  style: TextStyle(
-                                    color: _muted,
-                                    fontSize: 12.5,
-                                    height: 1.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                TextFormField(
-                                  key: const Key('start-service-otp'),
-                                  controller: _code,
-                                  onChanged: (value) {
-                                    if (value.length > _lastOtpInput.length ||
-                                        (value.length == _lastOtpInput.length &&
-                                            value != _lastOtpInput)) {
-                                      HapticFeedback.lightImpact();
-                                    }
-                                    _lastOtpInput = value;
-                                  },
-                                  keyboardType: TextInputType.number,
-                                  textInputAction: TextInputAction.done,
-                                  textAlign: TextAlign.center,
-                                  obscureText: true,
-                                  obscuringCharacter: '●',
-                                  maxLength: _otpLength,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                    LengthLimitingTextInputFormatter(
-                                      _otpLength,
+                                Row(
+                                  children: [
+                                    const Expanded(
+                                      child: Text(
+                                        'Customer OTP',
+                                        style: TextStyle(
+                                          color: _deep,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 19,
+                                        ),
+                                      ),
+                                    ),
+                                    const Icon(
+                                      Icons.verified_user_outlined,
+                                      color: _pink,
+                                      size: 20,
                                     ),
                                   ],
-                                  style: TextStyle(
-                                    color: _deep,
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: _otpLength == 4 ? 13 : 8,
-                                  ),
-                                  decoration: InputDecoration(
-                                    counterText: '',
-                                    hintText: _otpLength == 4
-                                        ? '••••'
-                                        : '••••••',
-                                    hintStyle: const TextStyle(
-                                      fontSize: 19,
-                                      letterSpacing: 8,
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 15,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                      borderSide: const BorderSide(
-                                        color: _border,
-                                      ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                      borderSide: const BorderSide(
-                                        color: _border,
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                      borderSide: const BorderSide(
-                                        color: _pink,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                  validator: (value) =>
-                                      value != null &&
-                                          value.length == _otpLength &&
-                                          RegExp(r'^\d+$').hasMatch(value)
-                                      ? null
-                                      : 'Enter all $_otpLength digits.',
-                                  onFieldSubmitted: (_) => _verify(),
                                 ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Enter the $_otpLength-digit code shared by the customer.',
+                                  style: const TextStyle(
+                                    color: _muted,
+                                    fontSize: 12.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  height: 70,
+                                  child: Stack(
+                                    children: [
+                                      Row(
+                                        children: List.generate(
+                                          _otpLength,
+                                          (index) => Expanded(
+                                            child: Container(
+                                              height: 66,
+                                              margin: EdgeInsets.only(
+                                                right: index == _otpLength - 1
+                                                    ? 0
+                                                    : 7,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color:
+                                                      _code.text.length > index
+                                                      ? _pink
+                                                      : const Color(0xFFFFCFE0),
+                                                  width:
+                                                      _code.text.length > index
+                                                      ? 1.5
+                                                      : 1,
+                                                ),
+                                                boxShadow: const [
+                                                  BoxShadow(
+                                                    color: Color(0x0AFF1678),
+                                                    blurRadius: 8,
+                                                    offset: Offset(0, 3),
+                                                  ),
+                                                ],
+                                              ),
+                                              alignment: Alignment.center,
+                                              child: Text(
+                                                _code.text.length > index
+                                                    ? '●'
+                                                    : '',
+                                                style: const TextStyle(
+                                                  color: _deep,
+                                                  fontSize: 22,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned.fill(
+                                        child: Opacity(
+                                          opacity: .01,
+                                          child: TextFormField(
+                                            key: const Key('start-service-otp'),
+                                            controller: _code,
+                                            onChanged: (value) {
+                                              if (value.length >
+                                                      _lastOtpInput.length ||
+                                                  (value.length ==
+                                                          _lastOtpInput
+                                                              .length &&
+                                                      value != _lastOtpInput)) {
+                                                HapticFeedback.lightImpact();
+                                              }
+                                              _lastOtpInput = value;
+                                              setState(
+                                                () => _showOtpError = false,
+                                              );
+                                            },
+                                            keyboardType: TextInputType.number,
+                                            textInputAction:
+                                                TextInputAction.done,
+                                            textAlign: TextAlign.center,
+                                            obscureText: true,
+                                            maxLength: _otpLength,
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter
+                                                  .digitsOnly,
+                                              LengthLimitingTextInputFormatter(
+                                                _otpLength,
+                                              ),
+                                            ],
+                                            style: const TextStyle(
+                                              color: Colors.transparent,
+                                              fontSize: 1,
+                                            ),
+                                            cursorColor: Colors.transparent,
+                                            decoration: const InputDecoration(
+                                              counterText: '',
+                                              border: InputBorder.none,
+                                              contentPadding: EdgeInsets.zero,
+                                              errorStyle: TextStyle(
+                                                fontSize: 0,
+                                                height: 0,
+                                              ),
+                                            ),
+                                            validator: (value) =>
+                                                value != null &&
+                                                    value.length ==
+                                                        _otpLength &&
+                                                    RegExp(
+                                                      r'^\d+$',
+                                                    ).hasMatch(value)
+                                                ? null
+                                                : 'Enter all $_otpLength digits.',
+                                            onFieldSubmitted: (_) => _verify(),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (_showOtpError)
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      'Enter all digits to continue.',
+                                      style: TextStyle(
+                                        color: Color(0xFFB3261E),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
                                 if (_previewAllowed) ...[
                                   const SizedBox(height: 7),
                                   const Text(
@@ -525,59 +929,95 @@ class _WorkerStartServiceOtpScreenState
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.fromLTRB(17, 10, 17, 15),
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                   decoration: const BoxDecoration(
-                    color: _cream,
+                    color: Color(0xFFFFFBFD),
                     border: Border(top: BorderSide(color: _border)),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       OutlinedButton.icon(
-                        onPressed: () => _notice(
-                          _previewAllowed
-                              ? 'For this preview, return to Booking Details and contact Pinkora support through the normal channel.'
-                              : 'Ask the customer to confirm the code and retry.',
-                        ),
-                        icon: const Icon(
-                          Icons.support_agent_outlined,
+                        onPressed:
+                            widget.onContact ??
+                            () => _notice(
+                              _previewAllowed
+                                  ? 'For this preview, return to Booking Details and contact Pinkora support through the normal channel.'
+                                  : 'Ask the customer to confirm the code and retry.',
+                            ),
+                        icon: Icon(
+                          widget.onContact == null
+                              ? Icons.support_agent_outlined
+                              : Icons.call_rounded,
                           size: 18,
                         ),
-                        label: const Text('Need Help'),
+                        label: Text(
+                          widget.onContact == null
+                              ? 'Need Help'
+                              : 'Call Customer',
+                        ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: _pink,
                           side: const BorderSide(color: _pink),
-                          minimumSize: const Size(0, 49),
+                          minimumSize: const Size.fromHeight(44),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: FilledButton(
-                          key: const Key('verify-start-service'),
-                          onPressed:
-                              !_checking &&
-                                  !_uploadingPhoto &&
-                                  (_previewAllowed || _evidenceIds.isNotEmpty)
-                              ? _verify
-                              : null,
-                          style: FilledButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: _pink,
-                            disabledBackgroundColor: const Color(0xFFF2C0D2),
-                            minimumSize: const Size(0, 49),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
+                      const SizedBox(height: 8),
+                      FilledButton.icon(
+                        key: Key(
+                          _previewAllowed
+                              ? 'verify-start-service'
+                              : 'next-to-start-service-otp',
+                        ),
+                        onPressed:
+                            !_checking &&
+                                !_uploadingPhoto &&
+                                (_previewAllowed || _evidenceIds.isNotEmpty)
+                            ? _previewAllowed
+                                  ? _verify
+                                  : _continueToOtp
+                            : null,
+                        icon: _checking
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Icon(
+                                _previewAllowed
+                                    ? Icons.check_circle_rounded
+                                    : Icons.arrow_forward_rounded,
+                              ),
+                        style: FilledButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: _pink,
+                          disabledBackgroundColor: const Color(0xFFF2C0D2),
+                          minimumSize: const Size.fromHeight(54),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
                           ),
-                          child: Text(
-                            _previewAllowed
-                                ? 'Verify & Start Service'
-                                : 'Verify Code & Start Service',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
+                          textStyle: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
                           ),
+                        ),
+                        label: Text(
+                          _previewAllowed
+                              ? 'Verify & Start Service'
+                              : _evidenceIds.isEmpty
+                              ? 'Add at least one photo'
+                              : 'Next',
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ],

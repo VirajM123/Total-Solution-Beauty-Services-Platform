@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../home/worker_booking_data.dart';
 import '../home/worker_demo_booking_store.dart';
 import '../widgets/worker_design.dart';
+import '../widgets/worker_images.dart';
+import '../widgets/worker_reference_widgets.dart';
 import 'worker_leave_repository.dart';
 
 const _pink = WorkerDesign.pink;
@@ -42,6 +44,9 @@ class WorkerScheduleLeaveScreen extends StatefulWidget {
     this.orders,
     this.leaveRepository,
     this.operationsApi,
+    this.location,
+    this.onNotificationsTap,
+    this.onNavigationSelected,
   });
 
   final bool demoMode;
@@ -49,6 +54,9 @@ class WorkerScheduleLeaveScreen extends StatefulWidget {
   final List<WorkerDashboardOrder>? orders;
   final WorkerLeaveRepository? leaveRepository;
   final WorkerOperationsApi? operationsApi;
+  final String? location;
+  final VoidCallback? onNotificationsTap;
+  final ValueChanged<int>? onNavigationSelected;
 
   @override
   State<WorkerScheduleLeaveScreen> createState() =>
@@ -74,6 +82,9 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
     } else if (widget.operationsApi != null) {
       _repo = WorkerBackendLeaveRepository(operationsApi: widget.operationsApi);
       _isBackend = true;
+    } else if (!widget.demoMode) {
+      _repo = WorkerBackendLeaveRepository();
+      _isBackend = true;
     } else {
       _repo = WorkerDemoLeaveStore.repository;
       _isBackend = false;
@@ -96,6 +107,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
       } else if (_previewAllowed) {
         await WorkerDemoLeaveStore.initialize();
       }
+
       if (mounted) {
         setState(() {
           _leaveLoading = false;
@@ -107,6 +119,29 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
         setState(() {
           _leaveLoading = false;
           _leaveError = e;
+        });
+      }
+    }
+  }
+
+  Future<void> _refreshLeave() async {
+    if (_leaveLoading) return;
+    setState(() {
+      _leaveLoading = true;
+      _leaveError = null;
+    });
+    try {
+      if (_repo is WorkerBackendLeaveRepository) {
+        await _repo.refresh();
+      } else if (_previewAllowed) {
+        await WorkerDemoLeaveStore.initialize();
+      }
+      if (mounted) setState(() => _leaveLoading = false);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _leaveLoading = false;
+          _leaveError = error;
         });
       }
     }
@@ -185,6 +220,9 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
 
   String _dateLabel(DateTime date) =>
       '${_weekdays[date.weekday - 1]}, ${date.day} ${_months[date.month - 1]} ${date.year}';
+  String _shortDateLabel(DateTime date) =>
+      '${_weekdays[date.weekday - 1]}, ${date.day.toString().padLeft(2, '0')} '
+      '${_months[date.month - 1].substring(0, 3)} ${date.year}';
   static const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   static const _months = [
     'January',
@@ -234,13 +272,33 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
         !_day(date).isAfter(_day(request.to)),
   );
 
-  Widget _card(Widget child, {EdgeInsets padding = const EdgeInsets.all(12)}) =>
-      Container(
-        width: double.infinity,
-        padding: padding,
-        decoration: WorkerDesign.surface(radius: 17),
-        child: child,
-      );
+  Widget _card(
+    Widget child, {
+    EdgeInsets padding = const EdgeInsets.all(12),
+    bool tinted = false,
+  }) => Container(
+    width: double.infinity,
+    padding: padding,
+    decoration: tinted
+        ? BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFFEDF4), Color(0xFFFFF8FA)],
+            ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: WorkerDesign.border),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0DF52D7A),
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          )
+        : WorkerDesign.surface(radius: 17),
+    child: child,
+  );
 
   Future<void> _applyForLeave() async {
     if (_leaveLoading || _leaveError != null || _savingLeave) {
@@ -372,7 +430,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save leave draft: $error')),
+          SnackBar(content: Text('Could not submit leave request: $error')),
         );
       }
     } finally {
@@ -389,25 +447,13 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
         children: [
           Row(
             children: [
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints.tightFor(
-                  width: 36,
-                  height: 36,
-                ),
-                tooltip: 'Previous month',
-                onPressed: () => setState(
-                  () => _month = DateTime(_month.year, _month.month - 1),
-                ),
-                icon: const Icon(Icons.chevron_left, color: _deep),
-              ),
+              const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   '${_months[_month.month - 1]} ${_month.year}',
-                  textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: _deep,
-                    fontSize: 14,
+                    fontSize: 17,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -415,8 +461,20 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
               IconButton(
                 visualDensity: VisualDensity.compact,
                 constraints: const BoxConstraints.tightFor(
-                  width: 36,
-                  height: 36,
+                  width: 32,
+                  height: 32,
+                ),
+                tooltip: 'Previous month',
+                onPressed: () => setState(
+                  () => _month = DateTime(_month.year, _month.month - 1),
+                ),
+                icon: const Icon(Icons.chevron_left, color: _deep),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
                 ),
                 tooltip: 'Next month',
                 onPressed: () => setState(
@@ -452,10 +510,8 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
             itemCount: cells,
             itemBuilder: (context, index) {
               final dateNumber = index - startOffset + 1;
-              if (dateNumber < 1 || dateNumber > days) {
-                return const SizedBox.shrink();
-              }
               final date = DateTime(_month.year, _month.month, dateNumber);
+              final inMonth = date.month == _month.month;
               final selected = _sameDay(date, _selected);
               final hasBooking = _appointments.any(
                 (a) => _sameDay(a.day, date),
@@ -463,7 +519,10 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
               final hasLeave = _isOnLeave(date);
               return InkWell(
                 borderRadius: BorderRadius.circular(8),
-                onTap: () => setState(() => _selected = date),
+                onTap: () => setState(() {
+                  _selected = date;
+                  if (!inMonth) _month = DateTime(date.year, date.month);
+                }),
                 child: Container(
                   decoration: BoxDecoration(
                     color: selected
@@ -477,9 +536,13 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        '$dateNumber',
+                        '${date.day}',
                         style: TextStyle(
-                          color: selected ? Colors.white : _deep,
+                          color: selected
+                              ? Colors.white
+                              : inMonth
+                              ? _deep
+                              : const Color(0xFFB8B4C0),
                           fontSize: 11,
                           fontWeight: selected
                               ? FontWeight.w800
@@ -507,6 +570,7 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
           ),
         ],
       ),
+      tinted: true,
     );
   }
 
@@ -520,37 +584,38 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
             if (secondTime == null) return -1;
             return firstTime.compareTo(secondTime);
           });
+    final isToday = _sameDay(_selected, _day(DateTime.now()));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _calendar(),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
               child: Text(
-                _dateLabel(_selected),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
+                isToday ? "Today's appointments" : 'Appointments',
+                style: TextStyle(
                   color: _deep,
-                  fontSize: 13,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
             Text(
-              '${matches.length} booking${matches.length == 1 ? '' : 's'}',
+              _shortDateLabel(_selected),
               style: const TextStyle(color: _muted, fontSize: 11),
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         if (matches.isEmpty)
           _card(
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 9),
+              padding: EdgeInsets.symmetric(vertical: 16),
               child: Center(
                 child: Text(
-                  'No preview appointments on this date.',
+                  'No appointments scheduled for this date.',
                   style: TextStyle(color: _muted, fontSize: 12),
                 ),
               ),
@@ -560,14 +625,47 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
           for (final item in matches) ...[
             _card(
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Container(
-                    width: 4,
-                    height: 54,
-                    decoration: BoxDecoration(
-                      color: _pink,
-                      borderRadius: BorderRadius.circular(4),
+                  SizedBox(
+                    width: 68,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          item.booking.time,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _pink,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: _pink,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFFFC5D8),
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  const SizedBox(width: 5),
+                  WorkerServiceImage(
+                    service: item.booking.service,
+                    imageUrl: item.booking.serviceImageUrl,
+                    serviceId: item.booking.serviceId,
+                    width: 58,
+                    height: 68,
+                    demoMode: _previewAllowed,
                   ),
                   const SizedBox(width: 9),
                   Expanded(
@@ -575,47 +673,75 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          item.booking.time,
-                          style: const TextStyle(
-                            color: _pink,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
                           item.booking.service,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: _deep,
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                        Text(
-                          '${item.booking.customer} · ${item.booking.location}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: _muted, fontSize: 10),
+                        _appointmentInfo(
+                          Icons.person_outline_rounded,
+                          item.booking.customer,
+                        ),
+                        _appointmentInfo(
+                          Icons.schedule_rounded,
+                          item.booking.duration,
+                          trailing: item.booking.formattedCustomerPayable,
+                        ),
+                        _appointmentInfo(
+                          Icons.location_on_outlined,
+                          item.booking.location,
                         ),
                       ],
                     ),
                   ),
-                  Text(
-                    item.booking.formattedCustomerPayable,
-                    style: const TextStyle(
-                      color: _deep,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                    ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: _muted,
+                    size: 21,
                   ),
                 ],
               ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 7),
           ],
       ],
     );
   }
+
+  Widget _appointmentInfo(IconData icon, String text, {String? trailing}) =>
+      Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Row(
+          children: [
+            Icon(icon, size: 14, color: _muted),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: _muted, fontSize: 10.5),
+              ),
+            ),
+            if (trailing != null) ...[
+              const SizedBox(width: 4),
+              Text(
+                trailing,
+                style: const TextStyle(
+                  color: _deep,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
 
   String _statusLabel(WorkerLeaveStatus status) => switch (status) {
     WorkerLeaveStatus.draft => 'Draft · Not Submitted',
@@ -636,7 +762,35 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
         ),
       ),
       const SizedBox(height: 6),
-      if (_requests.isEmpty)
+      if (_leaveLoading)
+        _card(
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 18),
+            child: Center(
+              child: CircularProgressIndicator(color: _pink, strokeWidth: 2),
+            ),
+          ),
+        )
+      else if (_leaveError != null)
+        _card(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              children: [
+                const Text(
+                  'Could not load leave requests.',
+                  style: TextStyle(color: _muted, fontSize: 12),
+                ),
+                TextButton.icon(
+                  onPressed: _refreshLeave,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        )
+      else if (_requests.isEmpty)
         _card(
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -710,156 +864,239 @@ class _WorkerScheduleLeaveScreenState extends State<WorkerScheduleLeaveScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: _cream,
-    appBar: AppBar(
-      title: const Text(
-        'My Schedule / Leave',
-        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-      ),
-      centerTitle: true,
-      backgroundColor: _cream,
-      foregroundColor: _deep,
-      surfaceTintColor: _cream,
-    ),
     body: SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
+      child: Column(
+        children: [
+          Row(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(17, 7, 17, 8),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFE5EF),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.event_available_outlined,
-                        color: _pink,
-                        size: 21,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Plan your week',
-                            style: TextStyle(
-                              color: _pink,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: .8,
-                            ),
-                          ),
-                          SizedBox(height: 1),
-                          Text(
-                            'Appointments and time away, together.',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: _muted, fontSize: 11),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              IconButton(
+                tooltip: 'Back',
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.arrow_back_rounded, color: _deep),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(17, 0, 17, 7),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    _isBackend
-                        ? 'LIVE PRODUCTION · Leave requests synced with salon admin'
-                        : 'DEMO PREVIEW · Changes are not sent to admin',
-                    style: TextStyle(
-                      color: _isBackend ? const Color(0xFF00A95C) : _muted,
-                      fontSize: 9,
-                      fontWeight: _isBackend
-                          ? FontWeight.w700
-                          : FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 17),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _tab(
-                        'Schedule',
-                        !_leaveTab,
-                        () => setState(() => _leaveTab = false),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _tab(
-                        'Leave',
-                        _leaveTab,
-                        () => setState(() => _leaveTab = true),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
-                  children: [if (_leaveTab) _leaveHistory() else _schedule()],
+                child: WorkerReferenceHeader(
+                  location: widget.location,
+                  onNotifications: widget.onNotificationsTap,
+                  brandWidth: 165,
                 ),
               ),
-              if (_previewAllowed)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 5, 14, 9),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 42,
-                    child: OutlinedButton.icon(
-                      onPressed:
-                          _savingLeave || _leaveLoading || _leaveError != null
-                          ? null
-                          : _applyForLeave,
-                      icon: const Icon(Icons.event_available_outlined),
-                      label: Text(
-                        _savingLeave
-                            ? 'Saving Draft…'
-                            : 'Apply for Leave · Demo',
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _pink,
-                        side: const BorderSide(color: _pink),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'My Schedule & Leave',
+                  style: TextStyle(
+                    color: _deep,
+                    fontSize: 23,
+                    height: 1.1,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                const Text(
+                  'Manage your appointments and plan your time.',
+                  style: TextStyle(color: _muted, fontSize: 12),
+                ),
+                if (_previewAllowed) ...[
+                  const SizedBox(height: 4),
+                  const Text(
+                    'DEMO PREVIEW · Changes are not sent to admin',
+                    style: TextStyle(
+                      color: _muted,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF0F5),
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: WorkerDesign.border),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _tab(
+                      'My Schedule',
+                      Icons.calendar_month_outlined,
+                      !_leaveTab,
+                      () => setState(() => _leaveTab = false),
+                    ),
+                  ),
+                  Expanded(
+                    child: _tab(
+                      'Schedule Leave',
+                      Icons.flight_outlined,
+                      _leaveTab,
+                      () => setState(() => _leaveTab = true),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(13, 2, 13, 10),
+              children: [if (_leaveTab) _leaveHistory() else _schedule()],
+            ),
+          ),
+        ],
+      ),
+    ),
+    bottomNavigationBar: SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_isBackend || _previewAllowed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
+              child: SizedBox(
+                width: double.infinity,
+                height: 42,
+                child: OutlinedButton.icon(
+                  onPressed:
+                      _savingLeave || _leaveLoading || _leaveError != null
+                      ? null
+                      : _applyForLeave,
+                  icon: const Icon(Icons.event_available_outlined),
+                  label: Text(
+                    _savingLeave
+                        ? 'Submitting…'
+                        : _previewAllowed && !_isBackend
+                        ? 'Apply for Leave · Demo'
+                        : 'Apply for Leave',
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _pink,
+                    side: const BorderSide(color: _pink),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          _bottomNavigation(),
+        ],
       ),
     ),
   );
 
-  Widget _tab(String label, bool selected, VoidCallback tapped) => FilledButton(
+  Widget _tab(
+    String label,
+    IconData icon,
+    bool selected,
+    VoidCallback tapped,
+  ) => FilledButton(
     onPressed: tapped,
     style: FilledButton.styleFrom(
-      backgroundColor: selected ? _pink : const Color(0xFFF5EFF1),
-      foregroundColor: selected ? Colors.white : _muted,
-      elevation: 0,
-      minimumSize: const Size(0, 38),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+      backgroundColor: selected ? _pink : Colors.transparent,
+      foregroundColor: selected ? Colors.white : _deep,
+      elevation: selected ? 1 : 0,
+      minimumSize: const Size(0, 44),
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
-    child: Text(label),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 19),
+        const SizedBox(width: 7),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _bottomNavigation() => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: const BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      boxShadow: [
+        BoxShadow(
+          color: Color(0x0DF52D7A),
+          blurRadius: 12,
+          offset: Offset(0, -3),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        for (var index = 0; index < 4; index++)
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                if (index == 1) return;
+                final callback = widget.onNavigationSelected;
+                if (callback != null) {
+                  callback(index);
+                } else if (index == 0) {
+                  Navigator.of(context).maybePop();
+                }
+              },
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                decoration: BoxDecoration(
+                  color: index == 1
+                      ? const Color(0xFFFFE8F2)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      const [
+                        Icons.home_outlined,
+                        Icons.calendar_month_outlined,
+                        Icons.bar_chart_rounded,
+                        Icons.person_outline,
+                      ][index],
+                      color: index == 1 ? _pink : _muted,
+                      size: 24,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      const ['Home', 'Schedule', 'Earnings', 'Profile'][index],
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: index == 1 ? _pink : _muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    ),
   );
 }

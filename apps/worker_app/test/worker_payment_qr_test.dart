@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:worker_app/features/home/worker_booking_data.dart';
 import 'package:worker_app/features/home/worker_payment_qr_screen.dart';
 import 'package:worker_app/features/home/worker_booking_details_screen.dart';
+import 'package:worker_app/features/home/worker_extra_service_item.dart';
+import 'package:worker_app/features/home/worker_waiting_customer_payment_screen.dart';
 import 'package:worker_app/integration/worker_mobile_operations_api.dart';
 
 const order = WorkerDashboardOrder(
@@ -77,9 +79,91 @@ class PaymentApi extends WorkerMobileOperationsApi {
 }
 
 void main() {
+  testWidgets('demo payment status follows the collection-screen styling', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    for (final width in [320.0, 390.0]) {
+      tester.view.physicalSize = Size(width, 844);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: WorkerWaitingCustomerPaymentScreen(
+            order: order.copyWith(status: 'Payment Pending'),
+            extraServices: const [
+              WorkerExtraServiceItem(
+                id: 'preview-extra',
+                name: 'Head Massage',
+                customerPrice: 400,
+                durationMinutes: 15,
+              ),
+            ],
+            demoFinishedAt: DateTime(2026, 11, 3, 10),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Payment Collection'), findsOneWidget);
+      expect(find.text('Amount to collect'), findsOneWidget);
+      expect(find.text('Card · Soon'), findsOneWidget);
+      expect(find.text('PAYMENT PENDING · NOT SENT'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    }
+  });
+
+  testWidgets('payment collection keeps future card UI inactive', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    for (final width in [320.0, 390.0]) {
+      tester.view.physicalSize = Size(width, 844);
+      final api = PaymentApi();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: WorkerPaymentQrScreen(
+            order: order,
+            operationsApi: api,
+            onCashCollection: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Payment Collection'), findsOneWidget);
+      expect(find.text('UPI'), findsOneWidget);
+      expect(find.text('Card · Soon'), findsOneWidget);
+      expect(find.text('Cash'), findsOneWidget);
+      expect(
+        tester
+            .widget<TextButton>(
+              find.ancestor(
+                of: find.text('Card · Soon'),
+                matching: find.byType(TextButton),
+              ),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      api.close();
+    }
+  });
+
   testWidgets(
     'payment checks recover after a connection failure without showing success',
     (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
       final api = PaymentApi()..readFails = true;
       await tester.pumpWidget(
         MaterialApp(
@@ -90,6 +174,7 @@ void main() {
       expect(find.textContaining('Unable to check payment.'), findsOneWidget);
       expect(find.text('Payment received · Service completed'), findsNothing);
       api.readFails = false;
+      await tester.ensureVisible(find.text('Check payment status'));
       await tester.tap(find.text('Check payment status'));
       await tester.pump();
       expect(
@@ -119,9 +204,15 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Generate QR'), findsOneWidget);
-    expect(find.text('Cash Collection'), findsOneWidget);
-    await tester.tap(find.text('Cash Collection'));
+    expect(find.text('Add Extra Service'), findsOneWidget);
+    expect(find.text('Finish Service'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('finish-service')));
+    await tester.pumpAndSettle();
+    expect(find.text('Services provided'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('finish-service-continue')));
+    await tester.pumpAndSettle();
+    expect(find.text('Payment Collection'), findsOneWidget);
+    await tester.tap(find.text('Cash'));
     await tester.pumpAndSettle();
     expect(find.text('Report cash collection'), findsOneWidget);
     await tester.enterText(find.byType(TextField).last, 'cash-receipt-1');
@@ -142,7 +233,10 @@ void main() {
     await tester.tap(find.text('Verify'));
     await tester.pumpAndSettle();
     expect(api.completed, isTrue);
-    expect(find.text('Service Completed - Payment Received'), findsOneWidget);
+    expect(find.text('Service completed!'), findsOneWidget);
+    expect(find.text('Paid'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Go to Home'), 200);
+    expect(find.text('Go to Home'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
   testWidgets('finishing work opens QR checkout before completion', (
@@ -162,18 +256,19 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        find.text(finished ? 'View Payment QR' : 'Generate QR'),
+        find.text(finished ? 'View Payment QR' : 'Finish Service'),
         findsOneWidget,
       );
-      if (!finished) {
-        expect(find.text('Cash Collection'), findsOneWidget);
-        final qrPosition = tester.getCenter(find.text('Generate QR'));
-        final cashPosition = tester.getCenter(find.text('Cash Collection'));
-        expect(qrPosition.dy, cashPosition.dy);
-      }
-      await tester.tap(find.byKey(const Key('start-service-entry')));
+      await tester.tap(
+        find.byKey(Key(finished ? 'start-service-entry' : 'finish-service')),
+      );
       await tester.pumpAndSettle();
-      expect(find.text('Customer Payment'), findsOneWidget);
+      if (!finished) {
+        expect(find.text('Services provided'), findsOneWidget);
+        await tester.tap(find.byKey(const Key('finish-service-continue')));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('Payment Collection'), findsOneWidget);
       expect(find.text('Generate QR Code'), findsOneWidget);
       expect(api.creates, 0);
       await tester.pumpWidget(const SizedBox());
@@ -182,15 +277,23 @@ void main() {
   testWidgets('verified payment still requires the worker completion OTP', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
     final api = PaymentApi();
     await tester.pumpWidget(
       MaterialApp(
         home: WorkerPaymentQrScreen(order: order, operationsApi: api),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('Payment Collection'), findsOneWidget);
     expect(find.text('Payment received · Service completed'), findsNothing);
-    await tester.tap(find.text('Generate QR Code'));
+    await tester.ensureVisible(
+      find.byKey(const Key('generate-payment-qr-action')),
+    );
+    await tester.tap(find.byKey(const Key('generate-payment-qr-action')));
     await tester.pumpAndSettle();
     expect(api.creates, 0);
     await tester.tap(find.text('Generate QR'));
@@ -201,7 +304,12 @@ void main() {
     api.paid = true;
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
-    expect(find.text('Payment verified · Enter admin OTP'), findsOneWidget);
+    expect(
+      find.text(
+        'Payment verified. Ask your administrator for the completion OTP.',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Payment received · Service completed'), findsNothing);
     await tester.enterText(find.byType(TextField), '123456');
     await tester.tap(find.text('Verify OTP & complete service'));

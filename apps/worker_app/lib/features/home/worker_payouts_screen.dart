@@ -200,14 +200,13 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
         backgroundColor: _background,
         foregroundColor: _deep,
         elevation: 0,
-        centerTitle: true,
         leading: IconButton(
           tooltip: 'Back',
           onPressed: () => Navigator.of(context).maybePop(),
           icon: const Icon(Icons.arrow_back),
         ),
         title: const Text(
-          'My Earnings / Payouts',
+          'Payouts',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
         ),
         actions: [
@@ -231,30 +230,47 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                 padding: const EdgeInsets.fromLTRB(14, 4, 14, 16),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    const WorkerPageBanner(
-                      eyebrow: 'Your earnings',
-                      title: 'Payouts',
-                      subtitle: 'A clear view of payments from Pinkora Admin.',
-                      icon: Icons.currency_rupee_rounded,
-                      photo: true,
+                    const Text(
+                      'Manage your earnings and payouts',
+                      style: TextStyle(
+                        color: _muted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    _adminNotice(),
-                    const SizedBox(height: 8),
                     _summaryCard(isConfigured: isConfigured, loaded: loaded),
-                    const SizedBox(height: 8),
-                    _filters(),
                     const SizedBox(height: 10),
+                    _adminNotice(),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         const Expanded(
                           child: Text(
-                            'Payout History',
+                            'Payout history',
                             style: TextStyle(
                               color: _deep,
-                              fontSize: 16,
+                              fontSize: 17,
                               fontWeight: FontWeight.w800,
                             ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _filter == _PayoutFilter.all
+                              ? null
+                              : () =>
+                                    setState(() => _filter = _PayoutFilter.all),
+                          style: TextButton.styleFrom(
+                            foregroundColor: _pink,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('View all'),
+                              SizedBox(width: 2),
+                              Icon(Icons.chevron_right_rounded, size: 18),
+                            ],
                           ),
                         ),
                         if (isConfigured)
@@ -266,7 +282,9 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
+                    _filters(),
+                    const SizedBox(height: 8),
                     if (_isLoading)
                       const _StateCard(
                         icon: Icons.hourglass_top_rounded,
@@ -382,10 +400,11 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
   }
 
   Widget _adminNotice() => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     decoration: BoxDecoration(
-      color: const Color(0xFFFFEDF3),
-      borderRadius: BorderRadius.circular(14),
+      color: const Color(0xFFFFF1F6),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: _border),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -401,12 +420,12 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                 style: TextStyle(
                   color: _deep,
                   fontWeight: FontWeight.w800,
-                  fontSize: 11,
+                  fontSize: 12,
                 ),
               ),
               Text(
-                'For payment questions, contact Admin.',
-                style: TextStyle(color: _muted, height: 1.2, fontSize: 10),
+                'Payout timing and payment questions are confirmed by Admin.',
+                style: TextStyle(color: _muted, height: 1.25, fontSize: 10),
               ),
             ],
           ),
@@ -427,22 +446,52 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
       return _awaitingPayoutSummary();
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-      decoration: WorkerDesign.surface(radius: 16),
+      padding: const EdgeInsets.fromLTRB(16, 15, 16, 13),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFEAF2), Colors.white, Color(0xFFFFF5F8)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF5D5E1)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12F50070),
+            blurRadius: 14,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.payments_outlined, color: _pink, size: 18),
-              const SizedBox(width: 8),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFFF1678), Color(0xFFFF78A9)],
+                  ),
+                ),
+                child: const Icon(
+                  Icons.account_balance_wallet_rounded,
+                  color: Colors.white,
+                  size: 19,
+                ),
+              ),
+              const SizedBox(width: 10),
               const Expanded(
                 child: Text(
-                  'Total Payouts (All Time)',
-                  maxLines: 2,
+                  'Verified paid total',
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: _deep,
-                    fontSize: 12,
+                    color: _muted,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -454,9 +503,9 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: Text(
@@ -469,43 +518,43 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: _deep,
-                    fontSize: 19,
-                    height: 1.05,
+                    fontSize: 32,
+                    height: 1.1,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const Text(
-                    'LAST PAYOUT',
-                    style: TextStyle(
-                      color: _muted,
-                      fontSize: 9,
-                      letterSpacing: .7,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    canShowTotal && _lastPaidDate != null
-                        ? _formatDate(_lastPaidDate!)
-                        : canShowTotal
-                        ? 'No payouts yet'
-                        : '—',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: _pink,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
             ],
+          ),
+          const SizedBox(height: 5),
+          Text(
+            canShowTotal && _lastPaidDate != null
+                ? 'Latest payout ${_formatDate(_lastPaidDate!)}'
+                : canShowTotal
+                ? 'No paid payouts yet'
+                : 'Only confirmed payout records are included.',
+            style: const TextStyle(color: _muted, fontSize: 11),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 42,
+            child: FilledButton.icon(
+              onPressed: _showHelp,
+              icon: const Icon(Icons.info_outline_rounded, size: 18),
+              label: const Text('Payout help'),
+              style: FilledButton.styleFrom(
+                backgroundColor: _pink,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -513,14 +562,14 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
   }
 
   Widget _awaitingPayoutSummary() => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+    padding: const EdgeInsets.fromLTRB(16, 15, 16, 13),
     decoration: BoxDecoration(
       gradient: const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [Color(0xFFFFEAF2), Colors.white, Color(0xFFFFF6F9)],
       ),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       border: Border.all(color: const Color(0xFFF5D5E1)),
       boxShadow: const [
         BoxShadow(
@@ -536,8 +585,8 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
         Row(
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: 36,
+              height: 36,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
@@ -556,7 +605,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'PAYOUT OVERVIEW',
+                    'PAYOUT SUMMARY',
                     style: TextStyle(
                       color: _pink,
                       fontSize: 10,
@@ -569,7 +618,7 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                     'Waiting for payout records',
                     style: TextStyle(
                       color: _deep,
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -579,12 +628,12 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
             const Icon(Icons.hourglass_top_rounded, color: _pink, size: 21),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         const Text(
-          'Your paid total and latest payout will appear here when Pinkora Admin shares payout data.',
-          style: TextStyle(color: _muted, height: 1.25, fontSize: 10),
+          'Your verified paid total and payout history will appear here when Pinkora Admin shares payout records.',
+          style: TextStyle(color: _muted, height: 1.3, fontSize: 11),
         ),
-        const SizedBox(height: 7),
+        const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.only(top: 5),
           decoration: const BoxDecoration(
@@ -726,45 +775,44 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
 
   Widget _payoutCard(WorkerPayoutRecord record) => Material(
     color: Colors.white,
-    borderRadius: BorderRadius.circular(15),
+    borderRadius: BorderRadius.circular(16),
     child: InkWell(
-      borderRadius: BorderRadius.circular(15),
+      borderRadius: BorderRadius.circular(16),
       onTap: () => _showDetails(record),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 84),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        constraints: const BoxConstraints(minHeight: 76),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: _border),
         ),
         child: Row(
           children: [
-            Container(
-              width: 54,
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFEDF3),
-                borderRadius: BorderRadius.circular(10),
-              ),
+            SizedBox(
+              width: 68,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '${record.date.toLocal().day}',
+                    _formatDate(record.date),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: _deep,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ),
-                  Text(
-                    _monthYear(record.date.toLocal()),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: _deep, fontSize: 10),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            Container(
+              width: 1,
+              height: 40,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              color: _border,
+            ),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -776,54 +824,48 @@ class _WorkerPayoutsScreenState extends State<WorkerPayoutsScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: _deep,
-                      fontSize: 16,
+                      fontSize: 17,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     '${record.serviceCount} ${record.serviceCount == 1 ? 'service' : 'services'}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: _muted, fontSize: 11),
                   ),
-                  const SizedBox(height: 2),
                   Text(
                     'Payout ID: ${record.payoutId}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: _muted, fontSize: 10),
+                    style: const TextStyle(color: _muted, fontSize: 9),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 68,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _StatusBadge(status: record.status),
-                  const SizedBox(height: 5),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          'Details',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: _pink,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+            const SizedBox(width: 5),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _StatusBadge(status: record.status),
+                const SizedBox(height: 3),
+                const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Details',
+                      style: TextStyle(
+                        color: _pink,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
                       ),
-                      Icon(Icons.chevron_right, size: 17, color: _pink),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                    Icon(Icons.chevron_right, size: 17, color: _pink),
+                  ],
+                ),
+              ],
             ),
           ],
         ),
@@ -1018,8 +1060,6 @@ String _statusLabel(WorkerPayoutStatus status) => switch (status) {
   WorkerPayoutStatus.pending => 'Pending',
   WorkerPayoutStatus.adjusted => 'Adjusted',
 };
-
-String _monthYear(DateTime date) => '${_month(date.month)} ${date.year}';
 
 String _formatDate(DateTime date) {
   final local = date.toLocal();

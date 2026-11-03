@@ -69,31 +69,66 @@ void main() {
     );
 
     await tester.pumpWidget(
-      const MaterialApp(home: WorkerStartServiceOtpScreen(order: _order)),
+      MaterialApp(
+        home: WorkerStartServiceOtpScreen(order: _order, onContact: () {}),
+      ),
     );
+    expect(find.text('Enter Customer OTP'), findsOneWidget);
+    expect(find.text('Call Customer'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, -700));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('start-service-otp')), '2');
     await tester.pump();
 
+    expect(find.text('2'), findsWidgets);
     expect(impacts, contains('HapticFeedbackType.lightImpact'));
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('live service OTP is returned for server verification', (
+  testWidgets('live service OTP stays locked before product photo upload', (
     tester,
   ) async {
-    String? submittedCode;
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: WorkerStartServiceOtpScreen(order: _order, demoMode: false),
+      ),
+    );
+    expect(find.text('Photograph Service Products'), findsOneWidget);
+    expect(find.byKey(const Key('start-service-otp')), findsNothing);
+    await tester.drag(find.byType(ListView), const Offset(0, -700));
+    await tester.pumpAndSettle();
+
+    final nextButton = tester.widget<FilledButton>(
+      find.byKey(const Key('next-to-start-service-otp')),
+    );
+    expect(nextButton.onPressed, isNull);
+    expect(find.text('Add at least one photo'), findsOneWidget);
+    expect(
+      find.text(
+        'OTP entry unlocks after a product photo has uploaded successfully.',
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('reference OTP screen preserves demo verification', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    bool? verified;
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
           builder: (context) => Scaffold(
             body: TextButton(
               onPressed: () async {
-                submittedCode = await Navigator.of(context).push<String>(
-                  MaterialPageRoute(
-                    builder: (_) => WorkerStartServiceOtpScreen(
-                      order: _order,
-                      demoMode: false,
-                    ),
+                verified = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute<bool>(
+                    builder: (_) => WorkerStartServiceOtpScreen(order: _order),
                   ),
                 );
               },
@@ -105,14 +140,12 @@ void main() {
     );
     await tester.tap(find.text('Open OTP'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const Key('start-service-otp')),
-      '123456',
-    );
+    await tester.enterText(find.byKey(const Key('start-service-otp')), '2841');
+    await tester.ensureVisible(find.byKey(const Key('verify-start-service')));
     await tester.tap(find.byKey(const Key('verify-start-service')));
     await tester.pumpAndSettle();
 
-    expect(submittedCode, '123456');
+    expect(verified, isTrue);
     expect(tester.takeException(), isNull);
   });
 

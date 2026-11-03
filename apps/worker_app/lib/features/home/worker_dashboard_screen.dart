@@ -411,9 +411,19 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           orders: _orders,
           operationsApi: widget.operationsApi,
           leaveRepository: widget.leaveRepository,
+          location: widget.location,
+          onNotificationsTap: _openNotifications,
+          onNavigationSelected: _handleScheduleNavigation,
         ),
       ),
     );
+  }
+
+  void _handleScheduleNavigation(int index) {
+    if (index == 1) return;
+    Navigator.of(context).pop();
+    if (index == 0) return;
+    _navigate(index == 3 ? 4 : index);
   }
 
   void _navigate(int i) {

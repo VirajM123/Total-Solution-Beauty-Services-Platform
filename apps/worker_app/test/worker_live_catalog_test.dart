@@ -305,8 +305,14 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Backend Custom Treatment'), findsOneWidget);
-      expect(find.textContaining('75 mins'), findsOneWidget);
+      expect(find.textContaining('75 min'), findsOneWidget);
       expect(find.textContaining('1,350'), findsOneWidget);
+      expect(find.byKey(const Key('extra-service-search')), findsOneWidget);
+      expect(find.byKey(const Key('extra-service-grid')), findsOneWidget);
+      await tester.drag(find.byType(ListView).first, const Offset(0, -800));
+      await tester.pumpAndSettle();
+      expect(find.text('Add a note (optional)'), findsOneWidget);
+      expect(find.text('Add to Service'), findsOneWidget);
       expect(find.text('Face Bleach'), findsNothing);
       expect(find.text('Head Massage'), findsNothing);
       expect(tester.takeException(), isNull);

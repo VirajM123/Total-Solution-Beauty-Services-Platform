@@ -370,14 +370,8 @@ void main() {
     await tester.ensureVisible(find.byTooltip('My Schedule'));
     await tester.tap(find.byTooltip('My Schedule'));
     await tester.pumpAndSettle();
-    expect(
-      find.descendant(
-        of: find.byType(AppBar),
-        matching: find.text('My Schedule / Leave'),
-      ),
-      findsOneWidget,
-    );
-    await tester.pageBack();
+    expect(find.text('My Schedule & Leave'), findsOneWidget);
+    await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.byTooltip('Notifications'));

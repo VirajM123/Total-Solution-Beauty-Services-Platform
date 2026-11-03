@@ -37,10 +37,14 @@ class WorkerLeaveRequest {
     final status = WorkerLeaveStatus.values.where(
       (v) => v.name == json['status'],
     );
-    if (json['id'] is! String || (json['id'] as String).isEmpty ||
-        json['reason'] is! String || (json['reason'] as String).isEmpty ||
-        json['from'] is! String || json['to'] is! String ||
-        json['createdAt'] is! String || status.isEmpty) {
+    if (json['id'] is! String ||
+        (json['id'] as String).isEmpty ||
+        json['reason'] is! String ||
+        (json['reason'] as String).isEmpty ||
+        json['from'] is! String ||
+        json['to'] is! String ||
+        json['createdAt'] is! String ||
+        status.isEmpty) {
       throw const FormatException('Invalid demo leave request');
     }
     final from = DateTime.tryParse(json['from'] as String);
@@ -67,7 +71,7 @@ abstract interface class WorkerLeaveStorage {
 
 class SecureDemoLeaveStorage implements WorkerLeaveStorage {
   SecureDemoLeaveStorage({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
   static const key = 'pinkora.worker.demo_leave_requests.v1';
   final FlutterSecureStorage _storage;
   @override
@@ -98,10 +102,16 @@ class WorkerLeaveRepository extends ChangeNotifier {
 
   void _ready() {
     if (!kDebugMode || !demoMode) {
-      throw const WorkerLeaveException('Demo leave is unavailable in release mode');
+      throw const WorkerLeaveException(
+        'Demo leave is unavailable in release mode',
+      );
     }
-    if (!_initialized) throw const WorkerLeaveException('Leave requests not loaded');
-    if (_busy) throw const WorkerLeaveException('Leave operation is already running');
+    if (!_initialized) {
+      throw const WorkerLeaveException('Leave requests not loaded');
+    }
+    if (_busy) {
+      throw const WorkerLeaveException('Leave operation is already running');
+    }
   }
 
   Future<void> initialize() async {
@@ -114,7 +124,8 @@ class WorkerLeaveRepository extends ChangeNotifier {
       final result = <WorkerLeaveRequest>[];
       if (raw != null) {
         final decoded = jsonDecode(raw);
-        if (decoded is! Map<String, dynamic> || decoded['version'] != 1 ||
+        if (decoded is! Map<String, dynamic> ||
+            decoded['version'] != 1 ||
             decoded['requests'] is! List) {
           throw const FormatException('Unrecognized leave storage format');
         }
@@ -135,9 +146,12 @@ class WorkerLeaveRepository extends ChangeNotifier {
 
   static DateTime day(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  bool overlaps(DateTime from, DateTime to) => _requests.any((r) =>
-      !day(from).isAfter(day(r.to)) && !day(to).isBefore(day(r.from)) &&
-      r.status != WorkerLeaveStatus.rejected);
+  bool overlaps(DateTime from, DateTime to) => _requests.any(
+    (r) =>
+        !day(from).isAfter(day(r.to)) &&
+        !day(to).isBefore(day(r.from)) &&
+        r.status != WorkerLeaveStatus.rejected,
+  );
 
   Future<WorkerLeaveRequest> saveDraft({
     required DateTime from,
@@ -151,21 +165,28 @@ class WorkerLeaveRepository extends ChangeNotifier {
       throw const WorkerLeaveException('Choose valid dates and a reason');
     }
     if (overlaps(start, end)) {
-      throw const WorkerLeaveException('An overlapping leave request already exists');
+      throw const WorkerLeaveException(
+        'An overlapping leave request already exists',
+      );
     }
     _busy = true;
     try {
       final now = DateTime.now();
       final request = WorkerLeaveRequest(
         id: 'demo-${now.microsecondsSinceEpoch}',
-        from: start, to: end, reason: reason.trim(), createdAt: now,
+        from: start,
+        to: end,
+        reason: reason.trim(),
+        createdAt: now,
       );
       final next = [..._requests, request];
       // Never update the UI state unless persistence succeeds.
-      await _storage.write(jsonEncode({
-        'version': 1,
-        'requests': next.map((r) => r.toJson()).toList(),
-      }));
+      await _storage.write(
+        jsonEncode({
+          'version': 1,
+          'requests': next.map((r) => r.toJson()).toList(),
+        }),
+      );
       _requests = List.unmodifiable(next);
       notifyListeners();
       return request;
@@ -178,7 +199,8 @@ class WorkerLeaveRepository extends ChangeNotifier {
 class WorkerDemoLeaveStore {
   WorkerDemoLeaveStore._();
   static final WorkerLeaveRepository repository = WorkerLeaveRepository(
-    SecureDemoLeaveStorage(), demoMode: true,
+    SecureDemoLeaveStorage(),
+    demoMode: true,
   );
   static Future<void>? _loading;
   static Future<void> initialize() {
@@ -191,14 +213,15 @@ class WorkerDemoLeaveStore {
 }
 
 class WorkerBackendLeaveRepository extends WorkerLeaveRepository {
-  WorkerBackendLeaveRepository({
-    WorkerOperationsApi? operationsApi,
-  })  : _api = operationsApi is WorkerMobileOperationsApi
-            ? operationsApi
-            : WorkerMobileOperationsApi(),
-        super(SecureDemoLeaveStorage(), demoMode: false);
+  WorkerBackendLeaveRepository({WorkerOperationsApi? operationsApi})
+    : _api = operationsApi is WorkerMobileOperationsApi
+          ? operationsApi
+          : WorkerMobileOperationsApi(),
+      _ownsApi = operationsApi is! WorkerMobileOperationsApi,
+      super(SecureDemoLeaveStorage(), demoMode: false);
 
   final WorkerMobileOperationsApi _api;
+  final bool _ownsApi;
   bool _backendInitialized = false;
 
   @override
@@ -210,46 +233,54 @@ class WorkerBackendLeaveRepository extends WorkerLeaveRepository {
   }
 
   Future<void> refresh() async {
-    try {
-      final items = await _api.fetchLeaves();
-      final parsed = <WorkerLeaveRequest>[];
-      for (final doc in items) {
-        final id = '${doc['_id'] ?? ''}';
-        final reason = '${doc['reason'] ?? 'Personal'}';
-        final startsAtStr = doc['startsAt'] as String?;
-        final endsAtStr = doc['endsAt'] as String?;
-        final createdAtStr = doc['createdAt'] as String?;
-        final rawStatus = '${doc['status'] ?? 'pending'}'.toLowerCase().trim();
+    final items = await _api.fetchLeaves();
+    final parsed = <WorkerLeaveRequest>[];
+    for (final doc in items) {
+      final id = '${doc['_id'] ?? ''}';
+      final reason = '${doc['reason'] ?? 'Personal'}';
+      final startsAtStr = doc['startsAt'] as String?;
+      final endsAtStr = doc['endsAt'] as String?;
+      final createdAtStr = doc['createdAt'] as String?;
+      final rawStatus = '${doc['status'] ?? 'pending'}'.toLowerCase().trim();
 
-        final from = startsAtStr != null ? DateTime.tryParse(startsAtStr)?.toLocal() : null;
-        final to = endsAtStr != null ? DateTime.tryParse(endsAtStr)?.toLocal() : null;
-        final created = createdAtStr != null ? DateTime.tryParse(createdAtStr)?.toLocal() : null;
+      final from = startsAtStr != null
+          ? DateTime.tryParse(startsAtStr)?.toLocal()
+          : null;
+      final to = endsAtStr != null
+          ? DateTime.tryParse(endsAtStr)?.toLocal()
+          : null;
+      final created = createdAtStr != null
+          ? DateTime.tryParse(createdAtStr)?.toLocal()
+          : null;
 
-        if (from == null || to == null) continue;
+      if (from == null || to == null) continue;
 
-        final status = switch (rawStatus) {
-          'approved' => WorkerLeaveStatus.approved,
-          'rejected' => WorkerLeaveStatus.rejected,
-          _ => WorkerLeaveStatus.pending,
-        };
+      final status = switch (rawStatus) {
+        'approved' => WorkerLeaveStatus.approved,
+        'rejected' => WorkerLeaveStatus.rejected,
+        _ => WorkerLeaveStatus.pending,
+      };
 
-        parsed.add(
-          WorkerLeaveRequest(
-            id: id,
-            from: DateTime(from.year, from.month, from.day),
-            to: DateTime(to.year, to.month, to.day),
-            reason: reason,
-            createdAt: created ?? from,
-            status: status,
-          ),
-        );
-      }
-      _requests = List.unmodifiable(parsed);
-      _backendInitialized = true;
-      notifyListeners();
-    } catch (_) {
-      // Keep existing requests
+      parsed.add(
+        WorkerLeaveRequest(
+          id: id,
+          from: DateTime(from.year, from.month, from.day),
+          to: DateTime(to.year, to.month, to.day),
+          reason: reason,
+          createdAt: created ?? from,
+          status: status,
+        ),
+      );
     }
+    _requests = List.unmodifiable(parsed);
+    _backendInitialized = true;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    if (_ownsApi) _api.close();
+    super.dispose();
   }
 
   @override
@@ -265,7 +296,8 @@ class WorkerBackendLeaveRepository extends WorkerLeaveRepository {
       endsAt: end,
       reason: reason,
     );
-    final id = '${response['_id'] ?? (response['leave'] is Map ? (response['leave'] as Map)['_id'] : '') ?? ''}';
+    final id =
+        '${response['_id'] ?? (response['leave'] is Map ? (response['leave'] as Map)['_id'] : '') ?? ''}';
     final request = WorkerLeaveRequest(
       id: id.isNotEmpty ? id : 'leave-${DateTime.now().microsecondsSinceEpoch}',
       from: from,

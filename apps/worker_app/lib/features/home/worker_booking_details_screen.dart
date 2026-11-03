@@ -16,6 +16,7 @@ import 'worker_demo_booking_store.dart';
 import 'worker_booking_state_repository.dart';
 import 'worker_start_service_otp_screen.dart';
 import 'worker_service_in_progress_screen.dart';
+import 'worker_finish_service_screen.dart';
 import 'worker_add_extra_service_screen.dart';
 import 'worker_payment_qr_screen.dart';
 import '../widgets/worker_design.dart';
@@ -49,11 +50,9 @@ class WorkerBookingDetailsScreen extends StatefulWidget {
 
 class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
     with WidgetsBindingObserver {
-  final _clock = ValueNotifier<DateTime>(DateTime.now());
   bool _appActive = true;
   bool _refreshing = false;
   String? _refreshError;
-  DateTime? _lastRefresh;
   late final WorkerMobileOperationsApi _liveApi =
       widget.operationsApi is WorkerMobileOperationsApi
       ? widget.operationsApi as WorkerMobileOperationsApi
@@ -64,7 +63,6 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
   String? _localStatus;
   bool _updatingProgress = false;
   WorkerDashboardOrder? _liveOrder;
-  Timer? _serverTimeTimer;
 
   bool get _isLiveMode =>
       (widget.operationsApi is WorkerMobileOperationsApi) ||
@@ -246,6 +244,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                 order: _currentOrder,
                 demoMode: false,
                 operationsApi: api,
+                onContact: _showContact,
               ),
             ),
           );
@@ -431,6 +430,16 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
         });
         _notice('Administrator OTP verified. Service completed.');
       }
+      if (mounted &&
+          updated != null &&
+          updated.status.toLowerCase() == 'completed' &&
+          updated.paymentStatus == 'paid') {
+        await Navigator.of(context).push<void>(
+          SlidePageRoute<void>(
+            page: WorkerPaymentQrScreen(order: updated, operationsApi: api),
+          ),
+        );
+      }
     } catch (error) {
       if (mounted) {
         _notice('Service-completion OTP verification failed: $error');
@@ -491,19 +500,20 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
     try {
       final refreshed = await _liveApi.fetchBookingDetails(widget.order.id);
       if (refreshed == null) throw StateError('Booking refresh unavailable');
-      if (mounted)
+      if (mounted) {
         setState(() {
           _liveOrder = refreshed;
           _localStatus = null;
           _refreshError = null;
-          _lastRefresh = DateTime.now();
         });
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _refreshError =
               'Booking updates are unavailable. Showing the last received status. Reconnect and retry.',
         );
+      }
     } finally {
       _refreshing = false;
     }
@@ -512,23 +522,17 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
   void _startServerTimeRefresh() {
     _serverSyncTimer?.cancel();
     _serverSyncTimer = Timer.periodic(const Duration(seconds: 20), (_) {
-      if (_appActive && (ModalRoute.of(context)?.isCurrent ?? true))
+      if (_appActive && (ModalRoute.of(context)?.isCurrent ?? true)) {
         unawaited(_refreshLiveBooking());
-    });
-    _serverTimeTimer?.cancel();
-    _serverTimeTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_appActive && (ModalRoute.of(context)?.isCurrent ?? true))
-        _clock.value = DateTime.now();
+      }
     });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _clock.dispose();
     if (widget.operationsApi is! WorkerMobileOperationsApi) _liveApi.close();
     _serverSyncTimer?.cancel();
-    _serverTimeTimer?.cancel();
     if (widget.demoMode && widget.order.id.length < 24) {
       WorkerDemoBookingStore.repository.removeListener(_onStoreUpdated);
     }
@@ -594,11 +598,168 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
     );
   }
 
+  Future<void> _openLiveFinishReview(WorkerDashboardOrder order) async {
+    await Navigator.of(context).push<void>(
+      SlidePageRoute<void>(
+        page: WorkerFinishServiceScreen(
+          order: order,
+          extraServices: const [],
+          demoStartedAt: order.serviceStartedAt ?? DateTime.now(),
+          demoMode: false,
+          liveMode: true,
+          onComplete: () async {
+            Navigator.of(context).pop();
+            await _openPaymentQr();
+          },
+        ),
+      ),
+    );
+  }
+
+  String? _serviceExtensionNotice(WorkerDashboardOrder order) {
+    final extension = order.durationExtension;
+    return switch (extension?['status']) {
+      'pending' =>
+        'The customer has 5 minutes to decide. Do not continue extension work until approved. No duration charge is added.',
+      'approved' =>
+        '${extension?['minutes'] ?? 15} additional minutes approved. No duration charge was added.',
+      'declined' || 'expired' =>
+        'No extension was approved. Finish the service; no extra-time charge was added.',
+      _ => null,
+    };
+  }
+
+  Widget _liveProgressBottomActions(WorkerDashboardOrder order) => Container(
+    padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      border: Border.all(color: _border),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x0C6A2540),
+          blurRadius: 14,
+          offset: Offset(0, -4),
+        ),
+      ],
+    ),
+    child: SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_showPaymentChoices)
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const Key('request-extra-service'),
+                    onPressed: _updatingProgress
+                        ? null
+                        : _openLiveExtraServices,
+                    icon: const Icon(Icons.add_rounded, size: 22),
+                    label: const Text('Add Extra Service'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _pink,
+                      side: const BorderSide(color: _pink, width: 1.3),
+                      minimumSize: const Size(0, 44),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.icon(
+                    key: const Key('finish-service'),
+                    onPressed: _updatingProgress
+                        ? null
+                        : () => _openLiveFinishReview(order),
+                    icon: const Icon(Icons.check_rounded, size: 22),
+                    label: const Text('Finish Service'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _pink,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 44),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      textStyle: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                OutlinedButton.icon(
+                  key: const Key('request-extra-service'),
+                  onPressed: _updatingProgress ? null : _openLiveExtraServices,
+                  icon: const Icon(Icons.add_rounded, size: 22),
+                  label: const Text('Add Extra Service'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _pink,
+                    side: const BorderSide(color: _pink, width: 1.3),
+                    minimumSize: const Size(0, 44),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 44,
+                  child: FilledButton.icon(
+                    key: const Key('start-service-entry'),
+                    onPressed: _updatingProgress ? null : _handleProgressAction,
+                    icon: const Icon(Icons.check_rounded, size: 22),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _pink,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    label: Text(
+                      _updatingProgress
+                          ? 'Updating status…'
+                          : _progressButtonText(order.status),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    ),
+  );
+
   Future<void> _openPaymentQr() async {
     final api = _liveApi;
     await Navigator.of(context).push<void>(
       SlidePageRoute<void>(
-        page: WorkerPaymentQrScreen(order: _currentOrder, operationsApi: api),
+        page: WorkerPaymentQrScreen(
+          order: _currentOrder,
+          operationsApi: api,
+          onCashCollection: () => _completeCashService(),
+        ),
       ),
     );
     final updated = await api.fetchBookingDetails(widget.order.id);
@@ -691,63 +852,6 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
         '${local.day.toString().padLeft(2, '0')}/'
         '${local.month.toString().padLeft(2, '0')}/${local.year}';
     return '$date · ${TimeOfDay.fromDateTime(local).format(context)}';
-  }
-
-  String _remainingServiceTime(DateTime? end) {
-    if (end == null) return 'Waiting for the server start time';
-    final seconds = end.difference(DateTime.now()).inSeconds;
-    if (seconds <= 0) return 'Booked service time has ended';
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final remainingSeconds = seconds % 60;
-    return '${hours.toString().padLeft(2, '0')}:'
-        '${minutes.toString().padLeft(2, '0')}:'
-        '${remainingSeconds.toString().padLeft(2, '0')} remaining';
-  }
-
-  Widget _serviceTimingCard() {
-    final order = _currentOrder;
-    final extension = order.durationExtension;
-    final extensionStatus = extension?['status'];
-    final extensionMessage = switch (extensionStatus) {
-      'pending' =>
-        'The customer has 5 minutes to decide. Do not continue extension work until approved. No duration charge is added.',
-      'approved' =>
-        '${extension?['minutes'] ?? 15} additional minutes approved. No duration charge was added.',
-      'declined' || 'expired' =>
-        'No extension was approved. Finish the service; no extra-time charge was added.',
-      _ => null,
-    };
-    return _card(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Booked service time',
-            style: TextStyle(
-              color: _deep,
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 7),
-          ValueListenableBuilder<DateTime>(
-            valueListenable: _clock,
-            builder: (context, _, child) =>
-                Text(_remainingServiceTime(order.serviceEndsAt)),
-          ),
-          if (order.serviceEndsAt != null)
-            Text(
-              'Server end: ${_formatSavedTime(context, order.serviceEndsAt)}',
-              style: const TextStyle(color: _muted, fontSize: 12),
-            ),
-          if (extensionMessage != null) ...[
-            const SizedBox(height: 7),
-            Text(extensionMessage, style: const TextStyle(color: _muted)),
-          ],
-        ],
-      ),
-    );
   }
 
   Widget _billRow(String label, int amount, {bool total = false}) => Padding(
@@ -970,6 +1074,29 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
         _previewAllowed &&
         session?.serviceStage == WorkerServiceStage.inProgress &&
         session?.startedAt != null;
+    if (_isLiveMode &&
+        const {
+          'in_progress',
+          'in progress',
+        }.contains(order.status.toLowerCase().trim())) {
+      return Theme(
+        data: Theme.of(context).copyWith(
+          textTheme: Theme.of(
+            context,
+          ).textTheme.apply(fontFamily: 'WorkerDashboardText'),
+        ),
+        child: WorkerServiceInProgressScreen(
+          order: order,
+          demoStartedAt: order.serviceStartedAt ?? DateTime.now(),
+          demoMode: false,
+          liveMode: true,
+          bottomActions: _liveProgressBottomActions(order),
+          refreshError: _refreshError,
+          onRetry: _refreshLiveBooking,
+          serviceNotice: _serviceExtensionNotice(order),
+        ),
+      );
+    }
     if (order.status.toLowerCase().trim() == 'travelling' &&
         !(widget.demoMode && (_storeLoading || _storeError != null))) {
       return Theme(
@@ -992,6 +1119,22 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
               : canStart
               ? _startServicePreview
               : null,
+        ),
+      );
+    }
+    if (!widget.demoMode && order.status.toLowerCase().trim() == 'arrived') {
+      return Theme(
+        data: Theme.of(context).copyWith(
+          textTheme: Theme.of(
+            context,
+          ).textTheme.apply(fontFamily: 'WorkerDashboardText'),
+        ),
+        child: WorkerArrivalReferenceView(
+          order: order,
+          busy: _updatingProgress,
+          onContact: _showContact,
+          onLocation: _showLocation,
+          onConfirm: _updatingProgress ? null : _handleProgressAction,
         ),
       );
     }
@@ -1072,27 +1215,6 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                                 onContact: _showContact,
                                 onLocation: _showLocation,
                               ),
-                              if (_isLiveMode &&
-                                  order.status.toLowerCase() ==
-                                      'in progress') ...[
-                                const SizedBox(height: 8),
-                                if (_refreshError != null) ...[
-                                  Text(
-                                    _refreshError!,
-                                    style: const TextStyle(color: Colors.red),
-                                  ),
-                                  if (_lastRefresh != null)
-                                    Text(
-                                      'Last updated: ' +
-                                          _lastRefresh!.toLocal().toString(),
-                                    ),
-                                  TextButton(
-                                    onPressed: _refreshLiveBooking,
-                                    child: const Text('Retry booking update'),
-                                  ),
-                                ],
-                                _serviceTimingCard(),
-                              ],
                               if (session != null) ...[
                                 const SizedBox(height: 8),
                                 _savedServiceSummary(context, session),
@@ -1148,49 +1270,30 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                                   ),
                                 ),
                               if (_showPaymentChoices)
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: FilledButton.icon(
-                                        key: Key(
-                                          order.paymentMethod == 'cash'
-                                              ? 'generate-payment-qr'
-                                              : 'start-service-entry',
-                                        ),
-                                        onPressed: _updatingProgress
-                                            ? null
-                                            : _openPaymentQr,
-                                        icon: const Icon(Icons.qr_code),
-                                        label: const Text('Generate QR'),
-                                        style: FilledButton.styleFrom(
-                                          backgroundColor: _pink,
-                                          foregroundColor: Colors.white,
-                                          minimumSize: const Size(0, 50),
-                                        ),
+                                SizedBox(
+                                  height: 50,
+                                  child: FilledButton.icon(
+                                    key: const Key('collect-payment-action'),
+                                    onPressed: _updatingProgress
+                                        ? null
+                                        : _openPaymentQr,
+                                    icon: const Icon(Icons.payment_rounded, size: 20),
+                                    label: const Text(
+                                      'Collect Payment',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: OutlinedButton.icon(
-                                        key: Key(
-                                          order.paymentMethod == 'cash'
-                                              ? 'start-service-entry'
-                                              : 'cash-collection',
-                                        ),
-                                        onPressed: _updatingProgress
-                                            ? null
-                                            : _completeCashService,
-                                        icon: const Icon(
-                                          Icons.payments_outlined,
-                                        ),
-                                        label: const Text('Cash Collection'),
-                                        style: OutlinedButton.styleFrom(
-                                          foregroundColor: _pink,
-                                          minimumSize: const Size(0, 50),
-                                        ),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: _pink,
+                                      foregroundColor: Colors.white,
+                                      minimumSize: const Size(double.infinity, 50),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
                                       ),
                                     ),
-                                  ],
+                                  ),
                                 )
                               else
                                 SizedBox(

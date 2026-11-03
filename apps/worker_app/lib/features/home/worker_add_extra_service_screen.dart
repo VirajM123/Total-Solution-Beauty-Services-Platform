@@ -2,6 +2,7 @@ import '../widgets/worker_images.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../widgets/worker_auth_visuals.dart';
 import 'worker_booking_data.dart';
 import 'worker_extra_service_item.dart';
 import '../../integration/worker_mobile_operations_api.dart';
@@ -39,12 +40,24 @@ class _WorkerAddExtraServiceScreenState
   List<WorkerExtraServiceItem> _catalog = [];
   bool _loading = true;
   String? _loadError;
+  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
+  String _selectedCategory = 'All';
 
   bool get _canPreview => kDebugMode && widget.demoMode;
   bool get _canManage =>
       !_loading &&
       _loadError == null &&
       (_canPreview || (!widget.demoMode && widget.operationsApi != null));
+
+  static const _categories = ['All', 'Hair', 'Skin', 'Nails', 'Beauty'];
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -83,11 +96,12 @@ class _WorkerAddExtraServiceScreenState
         _loading = false;
       });
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loading = false;
           _loadError = 'Unable to load services. Please retry.';
         });
+      }
     }
     final allowed = _catalog.map((item) => item.id).toSet();
     _selectedIds.addAll(
@@ -101,6 +115,49 @@ class _WorkerAddExtraServiceScreenState
 
   int get _extraTotal =>
       _selected.fold<int>(0, (sum, item) => sum + item.customerPrice);
+
+  void _toggleService(WorkerExtraServiceItem item) {
+    if (!_canManage) return;
+    setState(() {
+      if (_selectedIds.contains(item.id)) {
+        _selectedIds.remove(item.id);
+      } else {
+        _selectedIds.add(item.id);
+      }
+    });
+  }
+
+  List<WorkerExtraServiceItem> get _visibleCatalog {
+    final query = _searchController.text.trim().toLowerCase();
+    return _catalog
+        .where((item) {
+          final name = item.name.toLowerCase();
+          final matchesQuery = query.isEmpty || name.contains(query);
+          final matchesCategory =
+              _selectedCategory == 'All' ||
+              switch (_selectedCategory) {
+                'Hair' =>
+                  name.contains('hair') || name.contains('head massage'),
+                'Skin' =>
+                  name.contains('facial') ||
+                      name.contains('face') ||
+                      name.contains('skin') ||
+                      name.contains('thread'),
+                'Nails' =>
+                  name.contains('nail') ||
+                      name.contains('manicure') ||
+                      name.contains('pedicure'),
+                'Beauty' =>
+                  name.contains('makeup') ||
+                      name.contains('wax') ||
+                      name.contains('bleach') ||
+                      name.contains('beauty'),
+                _ => true,
+              };
+          return matchesQuery && matchesCategory;
+        })
+        .toList(growable: false);
+  }
 
   Future<void> _submitExtras() async {
     if (!_canManage || _confirming) return;
@@ -178,74 +235,104 @@ class _WorkerAddExtraServiceScreenState
 
   Widget _serviceRow(WorkerExtraServiceItem item) {
     final selected = _selectedIds.contains(item.id);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: selected ? const Color(0xFFFFF0F5) : Colors.white,
-        borderRadius: BorderRadius.circular(17),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: !_canManage
-              ? null
-              : () => setState(() {
-                  selected
-                      ? _selectedIds.remove(item.id)
-                      : _selectedIds.add(item.id);
-                }),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: selected ? _pink : _border),
-              borderRadius: BorderRadius.circular(17),
+    return Material(
+      color: selected ? const Color(0xFFFFF5F8) : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: Key('extra-service-${item.id}'),
+        onTap: !_canManage ? null : () => _toggleService(item),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: selected ? _pink : const Color(0xFFFFE4ED),
+              width: selected ? 1.4 : 1,
             ),
-            child: Row(
-              children: [
-                Container(
-                  height: 44,
-                  width: 44,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(13),
-                    color: const Color(0xFFFFE3EC),
-                  ),
-                  child: WorkerServiceImage(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0A6A2540),
+                blurRadius: 9,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) => WorkerServiceImage(
                     service: item.name,
                     imageUrl: item.imageUrl,
+                    width: constraints.maxWidth,
+                    height: constraints.maxHeight,
                     demoMode: _canPreview,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.name,
-                        style: const TextStyle(
-                          color: _deep,
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w800,
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(9, 7, 9, 8),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          selected
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          color: selected ? _pink : const Color(0xFFA8A9B7),
+                          size: 21,
                         ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Text(
+                            item.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: _deep,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 28, top: 3),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.access_time_rounded,
+                            color: _deep,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              '${item.durationMinutes} min',
+                              style: const TextStyle(
+                                color: _muted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            formatCustomerRupees(item.customerPrice),
+                            style: const TextStyle(
+                              color: _deep,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 5),
-                      Text(
-                        '${item.durationMinutes} mins · ${formatCustomerRupees(item.customerPrice)}',
-                        style: const TextStyle(color: _muted, fontSize: 12),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 6),
-                CircleAvatar(
-                  radius: 19,
-                  backgroundColor: selected ? _pink : const Color(0xFFFFEAF1),
-                  child: Icon(
-                    selected ? Icons.check_rounded : Icons.add_rounded,
-                    color: selected ? Colors.white : _pink,
-                    size: 23,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -257,18 +344,17 @@ class _WorkerAddExtraServiceScreenState
     return Scaffold(
       backgroundColor: _cream,
       appBar: AppBar(
-        title: const Text(
-          'Add Extra Service',
-          style: TextStyle(
-            color: _deep,
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-          ),
+        leading: IconButton(
+          key: const Key('extra-service-back'),
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
         ),
-        centerTitle: true,
+        title: const WorkerAuthBrand(subtitle: 'Worker App'),
+        centerTitle: false,
         backgroundColor: _cream,
         foregroundColor: _deep,
         surfaceTintColor: _cream,
+        toolbarHeight: 68,
       ),
       body: SafeArea(
         child: Center(
@@ -278,137 +364,303 @@ class _WorkerAddExtraServiceScreenState
               children: [
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(17, 7, 17, 12),
+                    padding: const EdgeInsets.fromLTRB(15, 5, 15, 14),
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFEAF1),
-                          border: Border.all(color: _border),
-                          borderRadius: BorderRadius.circular(15),
+                      const Text(
+                        'Add Extra Service',
+                        style: TextStyle(
+                          color: _deep,
+                          fontSize: 27,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -.55,
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.verified_user_outlined,
-                              color: _pink,
-                              size: 23,
-                            ),
-                            const SizedBox(width: 11),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Customer approval required',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      color: _deep,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    _canPreview
-                                        ? 'DEMO ONLY · Changes are local to this preview. '
-                                              'No real customer approval, charge, or booking update occurs.'
-                                        : 'Requests are sent to the customer for approval. '
-                                              'The final bill changes only when the customer approves.',
-                                    style: TextStyle(
-                                      color: _muted,
-                                      fontSize: 11.5,
-                                      height: 1.35,
-                                    ),
-                                  ),
-                                ],
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Enhance your client’s beauty experience',
+                        style: TextStyle(
+                          color: _muted,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 13),
+                      TextField(
+                        key: const Key('extra-service-search'),
+                        controller: _searchController,
+                        onChanged: (_) => setState(() {}),
+                        textInputAction: TextInputAction.search,
+                        decoration: InputDecoration(
+                          hintText: 'Search services...',
+                          hintStyle: const TextStyle(color: _muted),
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            color: _deep,
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFFFFF0F5),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 13,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(17),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(17),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(17),
+                            borderSide: const BorderSide(color: _pink),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 42,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _categories.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 7),
+                          itemBuilder: (context, index) {
+                            final category = _categories[index];
+                            final selected = category == _selectedCategory;
+                            final icon = switch (category) {
+                              'All' => Icons.grid_view_rounded,
+                              'Hair' => Icons.face_retouching_natural_outlined,
+                              'Skin' => Icons.face_3_outlined,
+                              'Nails' => Icons.back_hand_outlined,
+                              _ => Icons.local_florist_outlined,
+                            };
+                            return ChoiceChip(
+                              key: Key('extra-service-category-$category'),
+                              selected: selected,
+                              onSelected: (_) =>
+                                  setState(() => _selectedCategory = category),
+                              avatar: Icon(
+                                icon,
+                                size: 19,
+                                color: selected ? _pink : _muted,
                               ),
-                            ),
-                          ],
+                              label: Text(category),
+                              labelStyle: TextStyle(
+                                color: selected ? _pink : _muted,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              backgroundColor: Colors.white,
+                              selectedColor: const Color(0xFFFFE1EB),
+                              side: BorderSide(
+                                color: selected ? _pink : _border,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(22),
+                              ),
+                              showCheckmark: false,
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 3,
+                              ),
+                            );
+                          },
                         ),
                       ),
-                      const SizedBox(height: 11),
-                      Text(
-                        'Booking ${widget.order.id} · ${widget.order.customer}',
-                        style: const TextStyle(color: _muted, fontSize: 11.5),
-                      ),
-                      const SizedBox(height: 8),
-                      if (_loading)
-                        const Center(child: CircularProgressIndicator()),
+                      const SizedBox(height: 10),
                       if (_loadError != null) ...[
-                        Text(_loadError!),
+                        Text(
+                          _loadError!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: _deep),
+                        ),
                         TextButton(
                           onPressed: _loadCatalog,
                           child: const Text('Retry'),
                         ),
                       ],
-                      if (!_loading && _loadError == null && _catalog.isEmpty)
-                        const Text('No extra services are available.'),
-                      for (final item in _catalog) _serviceRow(item),
-                      const SizedBox(height: 8),
+                      if (_loading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 40),
+                          child: Center(
+                            child: CircularProgressIndicator(color: _pink),
+                          ),
+                        )
+                      else if (_loadError == null && _catalog.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 28),
+                          child: Text(
+                            'No extra services are available.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: _muted),
+                          ),
+                        )
+                      else if (_loadError == null && _visibleCatalog.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 28),
+                          child: Text(
+                            'No services match your search.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: _muted),
+                          ),
+                        )
+                      else if (_loadError == null)
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final ratio = constraints.maxWidth < 380 ? .9 : 1.1;
+                            return GridView.builder(
+                              key: const Key('extra-service-grid'),
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _visibleCatalog.length,
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 8,
+                                    childAspectRatio: ratio,
+                                  ),
+                              itemBuilder: (context, index) =>
+                                  _serviceRow(_visibleCatalog[index]),
+                            );
+                          },
+                        ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Add a note (optional)',
+                        style: TextStyle(
+                          color: _deep,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        key: const Key('extra-service-note'),
+                        controller: _noteController,
+                        maxLength: 200,
+                        maxLines: 2,
+                        minLines: 1,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: InputDecoration(
+                          hintText: 'Any special request for this service?',
+                          hintStyle: const TextStyle(
+                            color: Color(0xFF89839E),
+                            fontSize: 13,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.description_outlined,
+                            color: Color(0xFF89839E),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          counterStyle: const TextStyle(
+                            color: _muted,
+                            fontSize: 11,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 13,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: _border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: _border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: _pink),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.fromLTRB(17, 13, 17, 15),
-                  decoration: const BoxDecoration(
-                    color: _cream,
-                    border: Border(top: BorderSide(color: _border)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Selected extras: ${_selectedIds.length}',
-                            style: const TextStyle(
-                              color: _deep,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          Text(
-                            'Added: ${formatCustomerRupees(_extraTotal)}',
-                            style: const TextStyle(
-                              color: _pink,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        '${_canPreview ? 'Preview customer total' : 'Customer total if approved'}: '
-                        '${formatCustomerPaise(widget.order.exactCustomerPayablePaise + _extraTotal * 100)}',
-                        style: const TextStyle(color: _muted, fontSize: 11.5),
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: _canManage && !_confirming
-                            ? _submitExtras
-                            : null,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: _pink,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(0, 49),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: Text(
-                          _selectedIds.isEmpty
-                              ? (_canPreview
-                                    ? 'Save empty selection'
-                                    : 'Select extras')
-                              : _canPreview
-                              ? 'Add to Booking · Demo'
-                              : 'Send to Customer',
-                        ),
+                  padding: const EdgeInsets.fromLTRB(16, 11, 16, 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
+                    border: Border.all(color: _border),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0C6A2540),
+                        blurRadius: 14,
+                        offset: Offset(0, -4),
                       ),
                     ],
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Extra total',
+                                style: TextStyle(color: _muted, fontSize: 13),
+                              ),
+                              Text(
+                                formatCustomerRupees(_extraTotal),
+                                key: const Key('extra-service-total'),
+                                style: const TextStyle(
+                                  color: _deep,
+                                  fontSize: 25,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 5,
+                          child: FilledButton.icon(
+                            key: const Key('submit-extra-services'),
+                            onPressed:
+                                _canManage &&
+                                    !_confirming &&
+                                    _selectedIds.isNotEmpty
+                                ? _submitExtras
+                                : null,
+                            icon: _confirming
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.arrow_forward_rounded),
+                            label: Text(
+                              _confirming ? 'Sending...' : 'Add to Service',
+                            ),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _pink,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: const Color(0xFFF4BDD1),
+                              minimumSize: const Size(0, 56),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

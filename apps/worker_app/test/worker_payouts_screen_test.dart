@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:worker_app/features/home/worker_dashboard_screen.dart';
 import 'package:worker_app/features/home/worker_payout_data.dart';
 import 'package:worker_app/features/home/worker_payouts_screen.dart';
-import 'package:worker_app/features/widgets/worker_design.dart';
 
 void main() {
   testWidgets('unconfigured payout source shows an intentional empty state', (
@@ -12,8 +11,11 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: WorkerPayoutsScreen()));
     await tester.pumpAndSettle();
 
-    expect(find.text('My Earnings / Payouts'), findsOneWidget);
-    expect(find.byType(WorkerPageBanner), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('Payouts')),
+      findsOneWidget,
+    );
+    expect(find.text('Manage your earnings and payouts'), findsOneWidget);
     expect(find.text('Waiting for payout records'), findsOneWidget);
     expect(find.text('Your payout space is ready'), findsOneWidget);
     expect(find.text('PAYOUT DATA NOT CONNECTED'), findsOneWidget);
@@ -134,7 +136,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Could not load payouts'), findsOneWidget);
-    expect(find.text('—'), findsNWidgets(2));
+    expect(find.text('—'), findsOneWidget);
     expect(find.text('No payout records yet'), findsNothing);
   });
 
@@ -146,10 +148,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Payouts'));
+    await tester.tap(find.text('Earnings'));
     await tester.pumpAndSettle();
 
-    expect(find.text('My Earnings / Payouts'), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('Payouts')),
+      findsOneWidget,
+    );
     expect(find.text('Your payout space is ready'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
@@ -161,7 +166,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('Worker'), findsOneWidget);
-    expect(find.text('My Earnings / Payouts'), findsNothing);
+    expect(find.text('Payouts'), findsNothing);
   });
 
   testWidgets('payout screen fits supported phone widths', (tester) async {

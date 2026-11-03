@@ -5,6 +5,7 @@ import 'worker_booking_data.dart';
 import 'worker_booking_state_repository.dart';
 import 'worker_demo_booking_store.dart';
 import 'worker_extra_service_item.dart';
+import '../widgets/worker_auth_visuals.dart';
 
 const _pink = Color(0xFFFF1678);
 const _deep = Color(0xFF210B35);
@@ -92,6 +93,35 @@ class _WorkerWaitingCustomerPaymentScreenState
     ),
   );
 
+  Widget _methodLabel(IconData icon, String label, {bool selected = false}) =>
+      Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 3),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFFFE3ED) : Colors.white,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: selected ? _pink : _muted),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? _pink : _muted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
   Future<void> _simulateCustomerPayment() async {
     if (!_canPreview || _simulatedPaid || _saving) return;
     final agreed = await showDialog<bool>(
@@ -122,17 +152,19 @@ class _WorkerWaitingCustomerPaymentScreenState
       );
       if (mounted) setState(() => _simulatedPaid = true);
     } on WorkerBookingStateException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Could not save demo payment. Please retry.'),
           ),
         );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -156,11 +188,14 @@ class _WorkerWaitingCustomerPaymentScreenState
       child: Scaffold(
         backgroundColor: _cream,
         appBar: AppBar(
-          title: const Text(
-            'Customer Payment',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+          leading: IconButton(
+            onPressed: _simulatedPaid
+                ? null
+                : () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
           ),
-          centerTitle: true,
+          title: const WorkerAuthBrand(subtitle: 'Worker App'),
+          centerTitle: false,
           backgroundColor: _cream,
           foregroundColor: _deep,
           surfaceTintColor: _cream,
@@ -178,10 +213,154 @@ class _WorkerWaitingCustomerPaymentScreenState
                         if (_canPreview) ...[
                           const Text(
                             'DEVELOPMENT PREVIEW · NO PAYMENT REQUEST SENT',
-                            style: TextStyle(fontSize: 10, color: _muted),
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: _pink,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                         ],
+                        const Text(
+                          'Payment Collection',
+                          style: TextStyle(
+                            color: _deep,
+                            fontSize: 25,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -.4,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _panel(
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 32,
+                                backgroundColor: const Color(0xFFFFDCE9),
+                                backgroundImage:
+                                    widget.order.customerPhotoUrl?.isNotEmpty ==
+                                        true
+                                    ? NetworkImage(
+                                        widget.order.customerPhotoUrl!,
+                                      )
+                                    : null,
+                                child:
+                                    widget.order.customerPhotoUrl?.isNotEmpty ==
+                                        true
+                                    ? null
+                                    : const Icon(
+                                        Icons.person_rounded,
+                                        color: _pink,
+                                        size: 32,
+                                      ),
+                              ),
+                              const SizedBox(width: 11),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Customer',
+                                      style: TextStyle(
+                                        color: _muted,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    Text(
+                                      widget.order.customer,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: _deep,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    Text(
+                                      widget.order.customerPhone?.isNotEmpty ==
+                                              true
+                                          ? widget.order.customerPhone!
+                                          : widget.order.location,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: _muted,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          color: const Color(0xFFFFF0F5),
+                        ),
+                        const SizedBox(height: 9),
+                        _panel(
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Amount to collect',
+                                      style: TextStyle(
+                                        color: _muted,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      formatCustomerRupees(_customerTotal),
+                                      style: const TextStyle(
+                                        color: _deep,
+                                        fontSize: 29,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(
+                                width: 82,
+                                height: 74,
+                                child: Opacity(
+                                  opacity: .8,
+                                  child: WorkerLotusArtwork(),
+                                ),
+                              ),
+                            ],
+                          ),
+                          color: const Color(0xFFFFEFF5),
+                        ),
+                        const SizedBox(height: 8),
+                        _panel(
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _methodLabel(
+                                  Icons.send_rounded,
+                                  'UPI',
+                                  selected: true,
+                                ),
+                              ),
+                              Expanded(
+                                child: _methodLabel(
+                                  Icons.credit_card_outlined,
+                                  'Card · Soon',
+                                ),
+                              ),
+                              Expanded(
+                                child: _methodLabel(
+                                  Icons.payments_outlined,
+                                  'Cash',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         _panel(
                           Column(
                             children: [
@@ -251,15 +430,6 @@ class _WorkerWaitingCustomerPaymentScreenState
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                widget.order.customer,
-                                style: const TextStyle(
-                                  color: _deep,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 5),
                               Text(
                                 'Booking ${widget.order.id} · Finished preview at $finishTime',
                                 style: const TextStyle(
