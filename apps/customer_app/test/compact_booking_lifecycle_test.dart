@@ -1,3 +1,4 @@
+import 'support/load_customer_fonts.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -24,6 +25,7 @@ class _Storage implements CustomerTokenStorage {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
+    await loadCustomerFonts();
     for (final entry in {
       'Montserrat': 'assets/fonts/Montserrat-Regular.ttf',
       'MaterialIcons': 'fonts/MaterialIcons-Regular.otf',
@@ -51,7 +53,13 @@ void main() {
           'totalPaise': 170000,
           'subtotalPaise': 170000,
           'paymentStatus': 'pending',
-          'worker': {'fullName': 'Priya Sharma'},
+          'worker': {
+            'fullName': 'Priya Sharma',
+            'photoUrl': 'assets/images/home/professional.png',
+            'averageRating': 4.8,
+            'completedServices': 420,
+            'isVerified': true,
+          },
           'addressSnapshot': {
             'label': 'Home',
             'line1': '12 Rose Lane',
@@ -138,6 +146,10 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Priya Sharma'), findsOneWidget);
+        expect(find.text('Track Professional'), findsOneWidget);
+        expect(find.text('Beauty Expert'), findsOneWidget);
+        expect(find.text('4.8  (420 services)'), findsOneWidget);
+        expect(find.byIcon(Icons.verified), findsOneWidget);
         expect(find.byKey(const ValueKey('service-categories')), findsNothing);
         expect(tester.takeException(), isNull);
         await _capture(tester, '$width-assigned');
@@ -148,6 +160,12 @@ void main() {
           findsOneWidget,
         );
         await _capture(tester, '$width-tracking');
+        booking['status'] = 'travelling';
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
+        expect(find.text('On the Way'), findsWidgets);
+        expect(tester.takeException(), isNull);
+        await _capture(tester, '$width-on-the-way');
         expect(
           find.byKey(const ValueKey('view-service-start-code')),
           findsNothing,
@@ -162,7 +180,14 @@ void main() {
         await tester.pump(const Duration(seconds: 3));
         await tester.pumpAndSettle();
         expect(otpAttempts, greaterThanOrEqualTo(2));
-        expect(find.text('4826'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label == 'Service start code 4826',
+          ),
+          findsOneWidget,
+        );
         expect(tester.takeException(), isNull);
         await _capture(tester, '$width-otp');
         booking['status'] = 'in_progress';
@@ -247,6 +272,14 @@ void main() {
 
 Future<void> _capture(WidgetTester tester, String name) async {
   if (!const bool.fromEnvironment('CAPTURE_BOOKINGS')) return;
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 150)),
+  );
+  await tester.pump();
+  tester
+      .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger).first)
+      .removeCurrentSnackBar();
+  await tester.pumpAndSettle();
   final boundary = tester.renderObject<RenderRepaintBoundary>(
     find.byKey(const ValueKey('capture')),
   );

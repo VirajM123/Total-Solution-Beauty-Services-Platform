@@ -1,7 +1,7 @@
+import '../shared/customer_refinements.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
@@ -101,224 +101,250 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: _ivory,
-    resizeToAvoidBottomInset: true,
-    body: CustomerCanvas(
-      key: const ValueKey('customer-login-background'),
-      child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: IconButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        tooltip: 'Back',
-                        icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                      ),
+  Widget build(BuildContext context) => Theme(
+    data: CustomerRefinements.theme(Theme.of(context)),
+    child: Scaffold(
+      backgroundColor: _ivory,
+      resizeToAvoidBottomInset: true,
+      body: CustomerCanvas(
+        compact: true,
+        key: const ValueKey('customer-login-background'),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 440,
+                    minHeight: (constraints.maxHeight - 32).clamp(
+                      0,
+                      double.infinity,
                     ),
-                    const Center(child: AuthBrandMark()),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Welcome back',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: _berry,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Sign in to continue your beauty journey.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: _muted, fontSize: 13),
-                    ),
-                    const SizedBox(height: 32),
-                    const Text(
-                      'Mobile Number',
-                      style: TextStyle(
-                        color: _plum,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _phone,
-                      keyboardType: TextInputType.phone,
-                      textInputAction: TextInputAction.done,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(10),
-                      ],
-                      decoration: const InputDecoration(
-                        hintText: 'Enter mobile number',
-                        prefixIcon: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 14),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IndiaFlag(width: 22, height: 15),
-                              SizedBox(width: 10),
-                              Text(
-                                '+91',
-                                style: TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              SizedBox(width: 10),
-                              SizedBox(
-                                height: 20,
-                                child: VerticalDivider(width: 1, color: _line),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      onChanged: (_) {
-                        if (_error != null) setState(() => _error = null);
-                      },
-                      onSubmitted: (_) => _sendOtp(),
-                    ),
-                    if (_error != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          _error!,
-                          style: const TextStyle(
-                            color: Color(0xFFB3261E),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 18),
-                    FilledButton(
-                      onPressed: _loading ? null : _sendOtp,
-                      child: _loading
-                          ? const SizedBox.square(
-                              dimension: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text('Continue'),
-                                SizedBox(width: 12),
-                                Icon(Icons.arrow_forward_rounded, size: 20),
-                              ],
-                            ),
-                    ),
-                    if (kDebugMode) ...[
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        key: const ValueKey('customer-dev-bypass-button'),
-                        onPressed: _loading ? null : _devBypass,
-                        icon: const Icon(Icons.flash_on_rounded, size: 18),
-                        label: const Text(
-                          'Fast Test: Dev Bypass (Omkar Bhange)',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    const Row(
+                  ),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(child: Divider(color: _line)),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            'or continue with',
-                            style: TextStyle(color: _muted, fontSize: 12),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            onPressed: () => Navigator.of(context).maybePop(),
+                            tooltip: 'Back',
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new,
+                              size: 20,
+                            ),
                           ),
                         ),
-                        Expanded(child: Divider(color: _line)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _SocialSignIn(
-                      scale: 1,
-                      label: 'Continue with Google',
-                      icon: _GoogleIcon(size: 22),
-                      onPressed: null,
-                    ),
-                    const SizedBox(height: 10),
-                    _SocialSignIn(
-                      scale: 1,
-                      label: 'Continue with Apple',
-                      icon: const FaIcon(
-                        FontAwesomeIcons.apple,
-                        size: 23,
-                        color: _plum,
-                      ),
-                      onPressed: null,
-                    ),
-                    const SizedBox(height: 22),
-                    const Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(text: 'By continuing, you agree to our\n'),
-                          TextSpan(
-                            text: 'Terms of Service',
-                            style: TextStyle(
-                              color: _berry,
-                              decoration: TextDecoration.underline,
-                            ),
+                        const Center(child: AuthBrandMark()),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Welcome back',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: _berry,
+                            fontSize: 34,
+                            height: 1.15,
+                            fontWeight: FontWeight.w700,
                           ),
-                          TextSpan(text: ' and '),
-                          TextSpan(
-                            text: 'Privacy Policy',
-                            style: TextStyle(
-                              color: _berry,
-                              decoration: TextDecoration.underline,
-                            ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Sign in to continue your beauty journey.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: _muted, fontSize: 14),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'Mobile Number',
+                          style: TextStyle(
+                            color: _plum,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
-                          TextSpan(text: '.'),
-                        ],
-                      ),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: _muted,
-                        fontSize: 10,
-                        height: 1.6,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () =>
-                          Navigator.of(context).pushNamed(RouteNames.catalog),
-                      child: const Text('Browse services'),
-                    ),
-                    TextButton(
-                      onPressed: () =>
-                          Navigator.of(context).pushNamed(RouteNames.register),
-                      child: const Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: 'New here?  ',
-                              style: TextStyle(color: _muted),
-                            ),
-                            TextSpan(
-                              text: 'Create an account',
-                              style: TextStyle(
-                                color: _berry,
-                                fontWeight: FontWeight.w700,
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _phone,
+                          keyboardType: TextInputType.phone,
+                          textInputAction: TextInputAction.done,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(10),
+                          ],
+                          decoration: const InputDecoration(
+                            hintText: 'Enter mobile number',
+                            prefixIcon: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 14),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IndiaFlag(width: 22, height: 15),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    '+91',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  SizedBox(
+                                    height: 20,
+                                    child: VerticalDivider(
+                                      width: 1,
+                                      color: _line,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
+                          ),
+                          onChanged: (_) {
+                            if (_error != null) setState(() => _error = null);
+                          },
+                          onSubmitted: (_) => _sendOtp(),
+                        ),
+                        if (_error != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              _error!,
+                              style: const TextStyle(
+                                color: Color(0xFFB3261E),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 18),
+                        FilledButton(
+                          onPressed: _loading ? null : _sendOtp,
+                          child: _loading
+                              ? const SizedBox.square(
+                                  dimension: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text('Continue'),
+                                    SizedBox(width: 12),
+                                    Icon(Icons.arrow_forward_rounded, size: 20),
+                                  ],
+                                ),
+                        ),
+                        if (CustomerRefinements.showDevelopmentControls) ...[
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            key: const ValueKey('customer-dev-bypass-button'),
+                            onPressed: _loading ? null : _devBypass,
+                            icon: const Icon(Icons.flash_on_rounded, size: 18),
+                            label: const Text(
+                              'Fast Test: Dev Bypass (Omkar Bhange)',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        const Row(
+                          children: [
+                            Expanded(child: Divider(color: _line)),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              child: Text(
+                                'or continue with',
+                                style: TextStyle(color: _muted, fontSize: 12),
+                              ),
+                            ),
+                            Expanded(child: Divider(color: _line)),
                           ],
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        _SocialSignIn(
+                          scale: 1,
+                          label: 'Continue with Google',
+                          icon: _GoogleIcon(size: 22),
+                          onPressed: null,
+                        ),
+                        const SizedBox(height: 10),
+                        _SocialSignIn(
+                          scale: 1,
+                          label: 'Continue with Apple',
+                          icon: const FaIcon(
+                            FontAwesomeIcons.apple,
+                            size: 23,
+                            color: _plum,
+                          ),
+                          onPressed: null,
+                        ),
+                        const SizedBox(height: 16),
+                        const Spacer(),
+                        const Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'By continuing, you agree to our\n',
+                              ),
+                              TextSpan(
+                                text: 'Terms of Service',
+                                style: TextStyle(
+                                  color: _berry,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                              TextSpan(text: ' and '),
+                              TextSpan(
+                                text: 'Privacy Policy',
+                                style: TextStyle(
+                                  color: _berry,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                              TextSpan(text: '.'),
+                            ],
+                          ),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: _muted,
+                            fontSize: 12,
+                            height: 1.6,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(
+                            context,
+                          ).pushNamed(RouteNames.catalog),
+                          child: const Text('Browse services'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(
+                            context,
+                          ).pushNamed(RouteNames.register),
+                          child: const Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'New here?  ',
+                                  style: TextStyle(color: _muted),
+                                ),
+                                TextSpan(
+                                  text: 'Create an account',
+                                  style: TextStyle(
+                                    color: _berry,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -342,7 +368,7 @@ class _SocialSignIn extends StatelessWidget {
   final VoidCallback? onPressed;
   @override
   Widget build(BuildContext context) => SizedBox(
-    height: 46 * scale,
+    height: 52 * scale,
     child: OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
@@ -351,7 +377,7 @@ class _SocialSignIn extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 8 * scale),
         side: const BorderSide(color: _line),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28 * scale),
+          borderRadius: BorderRadius.circular(14 * scale),
         ),
       ),
       child: FittedBox(
@@ -365,8 +391,9 @@ class _SocialSignIn extends StatelessWidget {
               label,
               style: TextStyle(
                 color: const Color(0xFF28152B),
-                fontFamily: 'Montserrat',
-                fontSize: 17 * scale,
+                fontFamily: CustomerRefinements.fontFamily,
+                fontSize: 16 * scale,
+                fontWeight: FontWeight.w400,
               ),
             ),
           ],

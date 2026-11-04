@@ -1,7 +1,91 @@
+import '../shared/compact_customer_surface.dart';
 import 'package:flutter/material.dart';
 
 const bookingPink = Color(0xFFE90057);
 const bookingBlush = Color(0xFFFFF0F5);
+
+/// Presentation of the existing search state, with a connected step indicator.
+class CompactSearchProgress extends StatelessWidget {
+  const CompactSearchProgress({super.key});
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      for (var i = 0; i < 3; i++)
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: 20,
+                child: Column(
+                  children: [
+                    Icon(
+                      i == 0
+                          ? Icons.check_circle
+                          : i == 1
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      size: 16,
+                      color: i < 2 ? bookingPink : const Color(0xFFD7D0D6),
+                    ),
+                    if (i < 2)
+                      Expanded(
+                        child: Container(
+                          width: 1,
+                          color: const Color(0xFFF3DAE3),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    const [
+                      'Booking received',
+                      'Searching nearby professionals',
+                      'Expert assignment pending',
+                    ][i],
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: i == 1 ? bookingPink : const Color(0xFF66545D),
+                      fontWeight: i == 1 ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+    ],
+  );
+}
+
+class CompactBookingThumbnail extends StatelessWidget {
+  const CompactBookingThumbnail({super.key, this.image});
+  final String? image;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget fallback() => const ColoredBox(
+      color: bookingBlush,
+      child: Center(
+        child: Icon(Icons.spa_outlined, size: 23, color: bookingPink),
+      ),
+    );
+    if (image == null || image!.isEmpty) return fallback();
+    return Image(
+      image: image!.startsWith('http')
+          ? NetworkImage(image!)
+          : AssetImage(image!) as ImageProvider,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => fallback(),
+    );
+  }
+}
 
 /// Presentation only: booking state and actions remain owned by the caller.
 class CompactBookingPanel extends StatelessWidget {
@@ -9,18 +93,24 @@ class CompactBookingPanel extends StatelessWidget {
     super.key,
     required this.child,
     this.tinted = false,
+    this.flat = false,
   });
   final Widget child;
   final bool tinted;
+  final bool flat;
 
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
-    padding: const EdgeInsets.all(12),
+    padding: EdgeInsets.all(flat ? 0 : 10),
     decoration: BoxDecoration(
-      color: tinted ? bookingBlush : Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFF5D9E3)),
+      color: flat
+          ? Colors.transparent
+          : tinted
+          ? bookingBlush
+          : Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: flat ? null : Border.all(color: const Color(0xFFF5D9E3)),
     ),
     child: child,
   );
@@ -41,14 +131,14 @@ class CompactBookingService extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
+    padding: const EdgeInsets.symmetric(vertical: 3),
     child: Row(
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(9),
           child: SizedBox(
-            width: 48,
-            height: 46,
+            width: 44,
+            height: 44,
             child: image == null || image!.isEmpty
                 ? const ColoredBox(
                     color: bookingBlush,
@@ -76,7 +166,7 @@ class CompactBookingService extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -84,7 +174,7 @@ class CompactBookingService extends StatelessWidget {
                 Text(
                   subtitle!,
                   style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: 12,
                     color: Color(0xFF777078),
                   ),
                 ),
@@ -97,7 +187,7 @@ class CompactBookingService extends StatelessWidget {
           child: Text(
             amount,
             textAlign: TextAlign.end,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
         ),
       ],
@@ -119,7 +209,7 @@ class CompactBookingFact extends StatelessWidget {
         Icon(icon, size: 17, color: bookingPink),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(text, style: const TextStyle(fontSize: 11, height: 1.35)),
+          child: Text(text, style: const TextStyle(fontSize: 12, height: 1.35)),
         ),
       ],
     ),
@@ -147,10 +237,19 @@ class CompactBookingFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: const Color(0xFFFFFAFC),
+    color:
+        context.findAncestorWidgetOfExactType<CompactCustomerSurface>() != null
+        ? Colors.transparent
+        : const Color(0xFFFFFAFC),
     child: DecoratedBox(
       decoration: BoxDecoration(
-        gradient: decorated
+        gradient:
+            decorated &&
+                context
+                        .findAncestorWidgetOfExactType<
+                          CompactCustomerSurface
+                        >() ==
+                    null
             ? const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -165,8 +264,8 @@ class CompactBookingFrame extends StatelessWidget {
       ),
       child: Column(
         children: [
-          SizedBox(
-            height: 48,
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
             child: Row(
               children: [
                 IconButton(
@@ -184,7 +283,7 @@ class CompactBookingFrame extends StatelessWidget {
                     title,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 20,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -196,7 +295,8 @@ class CompactBookingFrame extends StatelessWidget {
           Expanded(
             child: ListView(
               key: ValueKey(contentKey),
-              padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               children: [body],
             ),
           ),
@@ -204,10 +304,12 @@ class CompactBookingFrame extends StatelessWidget {
             SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 46,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: double.infinity,
+                    minHeight: 48,
+                  ),
                   child: action,
                 ),
               ),

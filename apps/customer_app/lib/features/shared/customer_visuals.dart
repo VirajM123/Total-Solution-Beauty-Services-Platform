@@ -1,3 +1,4 @@
+import 'compact_customer_surface.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/pinkora_brand.dart';
@@ -130,26 +131,33 @@ abstract final class CustomerVisuals {
 
 /// Soft background decoration only; never used as service or offer content.
 class CustomerCanvas extends StatelessWidget {
-  const CustomerCanvas({super.key, required this.child});
+  const CustomerCanvas({super.key, required this.child, this.compact = false});
+  final bool compact;
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => SizedBox.expand(
-    child: DecoratedBox(
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(AppAssets.onboardingBackground),
-          fit: BoxFit.cover,
-          opacity: .2,
-        ),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFFF0F5), Color(0xFFFFFCFB), Color(0xFFFFF8FA)],
-          stops: [0, .38, 1],
-        ),
-      ),
-      child: child,
-    ),
-  );
+  Widget build(BuildContext context) => compact
+      ? CompactCustomerSurface(child: child)
+      : SizedBox.expand(
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage(AppAssets.onboardingBackground),
+                fit: BoxFit.cover,
+                opacity: .2,
+              ),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFFFF0F5),
+                  Color(0xFFFFFCFB),
+                  Color(0xFFFFF8FA),
+                ],
+                stops: [0, .38, 1],
+              ),
+            ),
+            child: child,
+          ),
+        );
 }

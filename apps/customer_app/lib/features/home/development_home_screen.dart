@@ -1,3 +1,7 @@
+import '../shared/customer_refinements.dart';
+import '../booking/service_start_code.dart';
+import '../booking/professional_portrait.dart';
+import '../booking/assigned_professional_details.dart';
 import '../../integration/mobile_push.dart';
 import 'dart:convert';
 import 'dart:async';
@@ -210,7 +214,7 @@ class _AddAddressDialogState extends State<_AddAddressDialog> {
         side: const BorderSide(color: _bookingLine),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         labelStyle: const TextStyle(
-          fontFamily: 'Montserrat',
+          fontFamily: CustomerRefinements.fontFamily,
           color: _bookingPink,
           fontSize: 11,
         ),
@@ -1436,6 +1440,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
           ? Colors.white
           : const Color(0xFFFFF9F8),
       body: CustomerCanvas(
+        compact:
+            !_showServiceCategories && (_tab == 1 || _tab == 2 || _tab == 3),
         child: SafeArea(
           child: _showServiceCategories
               ? _selectedServiceCategory != null
@@ -2273,7 +2279,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
       'Select Date & Time',
       'Select Address',
       'Booking Summary',
-      'Review Booking',
+      'Confirm Booking',
     ];
     return CompactBookingFrame(
       title: titles[step],
@@ -2452,6 +2458,89 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
       ],
     ),
   );
+  Widget _compactBookingTimeline({bool flat = false}) {
+    final status = _liveBookingStatus;
+    final stage = _serviceCompleted
+        ? 4
+        : _serviceStarted
+        ? 3
+        : status == 'arrived'
+        ? 2
+        : status == 'travelling' || status == 'on_the_way'
+        ? 2
+        : 1;
+    const labels = [
+      'Booking Confirmed',
+      'Professional Assigned',
+      'On the Way',
+      'Service in Progress',
+      'Completed',
+    ];
+    return CompactBookingPanel(
+      flat: flat,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Booking Timeline',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          for (var i = 0; i < labels.length; i++)
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    child: Column(
+                      children: [
+                        Icon(
+                          i < stage
+                              ? Icons.check_circle
+                              : i == stage
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          size: 15,
+                          color: i <= stage
+                              ? _bookingPink
+                              : const Color(0xFFD7D0D6),
+                        ),
+                        if (i < labels.length - 1)
+                          Expanded(
+                            child: Container(width: 1, color: _bookingLine),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        labels[i],
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: i == stage
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: i == stage
+                              ? _bookingPink
+                              : i < stage
+                              ? _muted
+                              : const Color(0xFF8C8188),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _professionalAssignmentScreen() {
     final assigned = _checkoutStep == 7;
     if (_checkoutPreview == null)
@@ -2468,14 +2557,24 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
       body: Column(
         children: [
           if (assigned) ...[
-            _assignedProfessionalCard(),
+            const CompactBookingPanel(
+              tinted: true,
+              child: CompactBookingFact(
+                icon: Icons.check_circle,
+                text: 'Your professional is assigned!',
+              ),
+            ),
+            const SizedBox(height: 8),
+            _referenceProfessionalCard(),
             const SizedBox(height: 10),
+            _compactBookingTimeline(flat: true),
+            const SizedBox(height: 8),
             _bookingPreviewDetailCard(),
           ] else ...[
             const Text(
               'We are looking for the best beauty professional near you.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: _muted),
+              style: TextStyle(fontSize: 13, color: _muted),
             ),
             const SizedBox(height: 12),
             Container(
@@ -2493,18 +2592,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
               ),
             ),
             const SizedBox(height: 12),
-            const CompactBookingFact(
-              icon: Icons.check_circle,
-              text: 'Booking received',
-            ),
-            const CompactBookingFact(
-              icon: Icons.search,
-              text: 'Searching nearby professionals',
-            ),
-            const CompactBookingFact(
-              icon: Icons.person_outline,
-              text: 'Expert assignment pending',
-            ),
+            const CompactSearchProgress(),
             const SizedBox(height: 10),
             _bookingPreviewDetailCard(),
             const SizedBox(height: 10),
@@ -2523,7 +2611,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
           ? FilledButton(
               key: const ValueKey('track-professional'),
               onPressed: () => setState(() => _checkoutStep = 8),
-              child: const Text('View Tracking  →'),
+              child: const Text('Track Professional'),
             )
           : null,
     );
@@ -2572,48 +2660,50 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
             child: Text(
               actionLabel!,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             ),
           ),
   );
   Widget _professionalTrackingScreen() => _lifecyclePage(
-    title: _liveBookingStatus == 'assigned'
-        ? 'Professional Assigned'
-        : 'Professional On The Way',
+    title: 'On the Way',
     contentKey: 'professional-tracking-content',
     body: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CompactBookingPanel(
-          tinted: true,
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
           child: Column(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.person_pin_circle_outlined,
-                    color: _bookingPink,
-                    size: 38,
+              SizedBox(
+                height: MediaQuery.sizeOf(context).height < 740 ? 104 : 124,
+                width: double.infinity,
+                child: ShaderMask(
+                  blendMode: BlendMode.dstIn,
+                  shaderCallback: (bounds) => const RadialGradient(
+                    radius: .72,
+                    colors: [Colors.white, Colors.white, Colors.transparent],
+                    stops: [0, .65, 1],
+                  ).createShader(bounds),
+                  child: Image.asset(
+                    'assets/images/illustrations/customer_compact_journey.png',
+                    fit: BoxFit.contain,
+                    cacheWidth: 720,
+                    excludeFromSemantics: true,
                   ),
-                  SizedBox(width: 14),
-                  Icon(Icons.more_horiz, color: _bookingPink, size: 30),
-                  SizedBox(width: 14),
-                  Icon(Icons.home_outlined, color: _bookingPink, size: 38),
-                ],
+                ),
               ),
               SizedBox(height: 6),
               Text(
                 _liveBookingStatus == 'assigned'
                     ? 'Your professional is assigned'
-                    : 'Professional is on the way',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    : 'Your expert is on the way',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
               ),
               SizedBox(height: 4),
               Text(
-                'Live map tracking is unavailable. Booking progress is updated from the server.',
+                "We'll update your booking status here.",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _muted, fontSize: 10),
+                style: TextStyle(color: _muted, fontSize: 12),
               ),
             ],
           ),
@@ -2621,7 +2711,11 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         const SizedBox(height: 8),
         _assignedProfessionalCard(),
         const SizedBox(height: 8),
+        _compactBookingTimeline(),
+        const SizedBox(height: 8),
         _bookingPreviewDetailCard(),
+        const SizedBox(height: 8),
+
         if (!_serviceStarted &&
             !_serviceCompleted &&
             _liveBookingStatus != 'arrived')
@@ -2695,7 +2789,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         const Text(
           'Only your assigned professional can start the service.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: _muted, fontSize: 12, height: 1.3),
+          style: TextStyle(color: _muted, fontSize: 13, height: 1.3),
         ),
         const SizedBox(height: 10),
         Container(
@@ -2712,22 +2806,16 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                 'SERVICE START CODE',
                 style: TextStyle(
                   color: _muted,
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.1,
                 ),
               ),
               const SizedBox(height: 6),
               if (_serviceOtp.isNotEmpty)
-                Text(
-                  _serviceOtp,
+                ServiceStartCode(
                   key: const ValueKey('service-start-code'),
-                  style: const TextStyle(
-                    color: _bookingBerry,
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 10,
-                  ),
+                  code: _serviceOtp,
                 )
               else
                 Text(
@@ -2735,7 +2823,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                       ? 'A start code is available only for live bookings.'
                       : 'The start code will appear here when the professional arrives.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: _muted, fontSize: 12),
+                  style: TextStyle(color: _muted, fontSize: 13),
                 ),
             ],
           ),
@@ -2765,10 +2853,10 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
 
   Widget _extraServiceApprovalCard() => Container(
     width: double.infinity,
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(12),
       border: Border.all(color: _bookingLine),
     ),
     child: Column(
@@ -2778,14 +2866,14 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
           'Extra service approval',
           style: TextStyle(
             color: _ink,
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: FontWeight.w800,
           ),
         ),
         const SizedBox(height: 5),
         const Text(
-          'Your worker has requested these additions. Approve only if you agree to the added price.',
-          style: TextStyle(color: _muted, fontSize: 12, height: 1.4),
+          'Your worker requested additions. Approve only if you agree to the added price.',
+          style: TextStyle(color: _muted, fontSize: 12, height: 1.35),
         ),
         const SizedBox(height: 8),
         _paymentDetailRow(
@@ -2801,7 +2889,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                   '${extra['name'] ?? 'Extra service'}',
                   style: const TextStyle(
                     color: _ink,
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -2810,7 +2898,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                 '₹${_formatServicePrice((int.tryParse('${extra['amountPaise']}') ?? 0) ~/ 100)}',
                 style: const TextStyle(
                   color: _bookingBerry,
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -2857,38 +2945,72 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     contentKey: 'service-in-progress-content',
     body: Column(
       children: [
-        Container(
-          width: 144,
-          height: 144,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFFFD5E5), width: 8),
-            color: _bookingBlush,
-            boxShadow: const [CustomerVisuals.shadow],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.timer_outlined, color: _bookingPink, size: 32),
-              const SizedBox(height: 6),
-              FittedBox(
-                child: Text(
-                  _serviceElapsedTime,
-                  key: const ValueKey('service-elapsed-time'),
-                  style: const TextStyle(
-                    color: _ink,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
+        Row(
+          children: [
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(color: const Color(0xFFFFC9DE), width: 7),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: FittedBox(
+                      child: Text(
+                        _serviceElapsedTime,
+                        key: const ValueKey('service-elapsed-time'),
+                        style: const TextStyle(
+                          color: _ink,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Elapsed time',
+                    style: TextStyle(color: _muted, fontSize: 12),
+                  ),
+                ],
               ),
-              const Text(
-                'Elapsed time',
-                style: TextStyle(color: _muted, fontSize: 10),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Your beauty session',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    _awaitingBookingPayment
+                        ? 'Service finished'
+                        : 'Service in progress',
+                    style: const TextStyle(fontSize: 12, color: _bookingPink),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Total: \u20b9${_formatServicePrice(_liveBookingTotal ?? _checkoutPreview?.total ?? 0)}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+        const SizedBox(height: 12),
+        _compactBookingTimeline(),
         const SizedBox(height: 10),
         if (_liveBookingId != null && _pendingExtraServices.isNotEmpty)
           _extraServiceApprovalCard(),
@@ -2924,7 +3046,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                   const SizedBox(height: 10),
                   const Text(
                     'Final bill',
-                    style: TextStyle(color: _muted, fontSize: 12),
+                    style: TextStyle(color: _muted, fontSize: 13),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -2938,7 +3060,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                   const Divider(height: 14, color: _bookingLine),
                   const Text(
                     'Scan the Razorpay QR shown by your worker to pay the final bill, including approved extras. Completion updates after payment is verified.',
-                    style: TextStyle(color: _muted, fontSize: 11, height: 1.35),
+                    style: TextStyle(color: _muted, fontSize: 12, height: 1.35),
                   ),
                 ],
               ),
@@ -2949,8 +3071,6 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
           _durationExtensionDecisionCard(),
         ],
         _bookingPreviewDetailCard(),
-        const SizedBox(height: 8),
-        _assignedProfessionalCard(),
       ],
     ),
     onBack: () => setState(() => _checkoutStep = 8),
@@ -2984,7 +3104,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         const Text(
           'Thank you for choosing Hi Beauty. We hope you loved your service.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: _muted, fontSize: 13, height: 1.45),
+          style: TextStyle(color: _muted, fontSize: 14, height: 1.45),
         ),
         const SizedBox(height: 10),
         _bookingPreviewDetailCard(),
@@ -3028,7 +3148,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         const SizedBox(height: 12),
         const Text(
           'Overall Experience',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -3051,7 +3171,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         const SizedBox(height: 8),
         const Text(
           'Share your experience (optional)',
-          style: TextStyle(color: _muted, fontSize: 12),
+          style: TextStyle(color: _muted, fontSize: 13),
         ),
         const SizedBox(height: 10),
         TextField(
@@ -3117,7 +3237,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         children: [
           const Text(
             'Booking details',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
           for (final service in preview.services)
@@ -3203,7 +3323,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                       overflow: TextOverflow.ellipsis,
                     ),
                     labelStyle: TextStyle(
-                      fontSize: 10,
+                      fontFamily: CustomerRefinements.fontFamily,
+                      fontSize: 12,
                       color: _bookingHistoryFilter == label
                           ? Colors.white
                           : _bookingBerry,
@@ -3269,73 +3390,85 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  items
-                      .map((item) => '${item['name'] ?? 'Service'}')
-                      .join(' + '),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
+              if (items.isNotEmpty)
+                SizedBox(
+                  width: 66,
+                  height: 70,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(9),
+                    child: CompactBookingThumbnail(
+                      image: _bookingServiceImage('${items.first['name']}'),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                CatalogService.formatPaise(
-                  BigInt.tryParse('${booking['totalPaise']}') ?? BigInt.zero,
-                ),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      items
+                          .map((item) => '${item['name'] ?? 'Service'}')
+                          .join(' + '),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    CompactBookingFact(
+                      icon: Icons.calendar_month_outlined,
+                      text: _bookingScheduleLabel(booking['startsAt']),
+                    ),
+                    if (address is Map)
+                      CompactBookingFact(
+                        icon: Icons.location_on_outlined,
+                        text: [
+                          address['label'],
+                          address['city'],
+                        ].where((v) => v != null && '$v'.isNotEmpty).join(', '),
+                      ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: _bookingBlush,
-              borderRadius: BorderRadius.circular(7),
-            ),
-            child: Text(
-              '${booking['status'] ?? 'Upcoming'}'.replaceAll('_', ' '),
-              style: const TextStyle(
-                fontSize: 10,
-                color: _bookingBerry,
-                fontWeight: FontWeight.w700,
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  CatalogService.formatPaise(
+                    BigInt.tryParse('${booking['totalPaise']}') ?? BigInt.zero,
+                  ),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: _bookingPink,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
-            ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _bookingBlush,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${booking['status'] ?? 'Upcoming'}'.replaceAll('_', ' '),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: _bookingBerry,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
-          for (final item in items.take(2))
-            CompactBookingService(
-              name: '${item['name'] ?? 'Service'}',
-              image: _bookingServiceImage('${item['name']}'),
-              amount: '',
-              subtitle: 'Quantity: ${item['quantity'] ?? 1}',
-            ),
-          if (items.length > 2)
-            Text(
-              '+ ${items.length - 2} more services',
-              style: const TextStyle(fontSize: 10, color: _muted),
-            ),
-          CompactBookingFact(
-            icon: Icons.calendar_month_outlined,
-            text: _bookingScheduleLabel(booking['startsAt']),
-          ),
-          if (address is Map)
-            CompactBookingFact(
-              icon: Icons.location_on_outlined,
-              text: [
-                address['label'],
-                address['line1'],
-                address['city'],
-              ].where((v) => v != null && '$v'.isNotEmpty).join(', '),
-            ),
           if (workerName != null)
             CompactBookingFact(
               icon: Icons.person_outline_rounded,
@@ -3349,7 +3482,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                   onPressed: () => _showHistoryBookingDetails(booking),
                   child: const Text(
                     'View Details',
-                    style: TextStyle(fontSize: 11),
+                    style: TextStyle(fontSize: 12),
                   ),
                 ),
               ),
@@ -3363,7 +3496,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                     }),
                     child: const Text(
                       'Track Now',
-                      style: TextStyle(fontSize: 11),
+                      style: TextStyle(fontSize: 12),
                     ),
                   ),
                 ),
@@ -3436,28 +3569,36 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     return '${MaterialLocalizations.of(context).formatMediumDate(date)} · ${TimeOfDay.fromDateTime(date).format(context)}';
   }
 
+  Widget _referenceProfessionalCard({bool compact = false}) {
+    final worker = _serverBooking?['worker'];
+    return AssignedProfessionalDetails(
+      name: _liveWorkerName ?? 'Awaiting admin allocation',
+      worker: worker is Map ? worker : const {},
+      compact: compact,
+      onTap: compact ? () => setState(() => _checkoutStep = 7) : null,
+      onContact: () {
+        final phone = worker is Map
+            ? worker['mobileNumber'] ?? worker['phoneNumber'] ?? worker['phone']
+            : null;
+        _showProfileInfo(
+          'Professional contact',
+          phone == null
+              ? 'Contact details are not available for this booking yet.'
+              : 'Contact ${_liveWorkerName ?? 'your professional'} at $phone.',
+        );
+      },
+    );
+  }
+
   Widget _assignedProfessionalCard() {
     final worker = _serverBooking?['worker'];
-    final photo = worker is Map
-        ? worker['photoUrl'] ?? worker['avatarUrl']
-        : null;
     return CompactBookingPanel(
       tinted: true,
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: Colors.white,
-            backgroundImage: photo is String && photo.startsWith('http')
-                ? NetworkImage(photo)
-                : null,
-            child: photo is String && photo.startsWith('http')
-                ? null
-                : const Icon(
-                    Icons.person_outline_rounded,
-                    size: 29,
-                    color: _bookingBerry,
-                  ),
+          ProfessionalPortrait(
+            worker: worker is Map ? worker : const {},
+            size: 48,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -3475,7 +3616,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                 Text(
                   (_liveBookingStatus ?? 'Booking status unavailable')
                       .replaceAll('_', ' '),
-                  style: const TextStyle(color: _bookingBerry, fontSize: 11),
+                  style: const TextStyle(color: _bookingBerry, fontSize: 12),
                 ),
               ],
             ),
@@ -3486,6 +3627,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
   }
 
   Widget _dateTimeStep() => DateSelectionScreen(
+    address: '${_selectedAddress.label} \u00b7 ${_selectedAddress.details}',
+    onAddressTap: () => setState(() => _checkoutStep = 2),
     date: _bookingDate,
     time: _bookingTime,
     preference: _bookingPreference,
@@ -4233,67 +4376,17 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
   Widget _bookingConfirmationStep() {
     final preview = _checkoutPreview;
     if (preview == null) {
-      return Container(
+      return Column(
         key: const ValueKey('booking-confirmation-review'),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _bookingLine),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Review your booking',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: _ink,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Your booking is confirmed only after it is saved successfully.',
-              style: TextStyle(color: _muted, fontSize: 12),
-            ),
-            const Divider(height: 28, color: _bookingLine),
-            for (final service in _plan) ...[
-              _paymentDetailRow(
-                '${service.name} × ${_cartQuantities[service.id] ?? 1}',
-                '₹${_formatServicePrice(service.price * (_cartQuantities[service.id] ?? 1))}',
-              ),
-              const SizedBox(height: 10),
-            ],
-            const Divider(height: 24, color: _bookingLine),
-            _paymentDetailRow(
-              'Date',
-              '${_formatWeekday(_bookingDate)}, ${_formatShortDate(_bookingDate)}',
-            ),
-            const SizedBox(height: 10),
-            _paymentDetailRow('Time', _bookingTime),
-            const SizedBox(height: 10),
-            Text(
-              _selectedAddress.label,
-              style: const TextStyle(fontWeight: FontWeight.w700, color: _ink),
-            ),
-            Text(
-              _selectedAddress.details,
-              style: const TextStyle(color: _muted, fontSize: 12),
-            ),
-            const Divider(height: 24, color: _bookingLine),
-            _paymentDetailRow(
-              'Total',
-              '₹${_formatServicePrice(_checkoutTotal)}',
-              emphasize: true,
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Pay after service completion.',
-              style: TextStyle(color: _muted, fontSize: 12),
-            ),
-          ],
-        ),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _bookingSummaryStep(),
+          const SizedBox(height: 8),
+          const Text(
+            'Your booking is confirmed only after it is saved successfully.',
+            style: TextStyle(color: _muted, fontSize: 10),
+          ),
+        ],
       );
     }
     return Column(
@@ -4343,87 +4436,170 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
           children: [
             SizedBox(
               height: 52,
-              child: Stack(alignment: Alignment.center, children: [
-                Align(alignment: Alignment.centerLeft, child: IconButton(
-                  key: const ValueKey('offers-back'), tooltip: 'Back to Home',
-                  onPressed: () => setState(() => _tab = 0),
-                  style: IconButton.styleFrom(backgroundColor: const Color(0xFFFFE8EE),
-                    foregroundColor: _berry, fixedSize: const Size(42, 42), padding: EdgeInsets.zero),
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20))),
-                const Padding(padding: EdgeInsets.symmetric(horizontal: 46), child: Text('Offers & Packages',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.w700))),
-                Align(alignment: Alignment.centerRight, child: IconButton(
-                  key: const ValueKey('toggle-offers-search'),
-                  tooltip: _offerSearchVisible ? 'Close search' : 'Search offers',
-                  onPressed: () => setState(() {
-                    _offerSearchVisible = !_offerSearchVisible;
-                    if (!_offerSearchVisible) _offerSearchQuery = '';
-                  }),
-                  style: IconButton.styleFrom(backgroundColor: const Color(0xFFFFE8EE),
-                    foregroundColor: _berry, fixedSize: const Size(42, 42), padding: EdgeInsets.zero),
-                  icon: Icon(_offerSearchVisible ? Icons.close_rounded : Icons.search_rounded, size: 20))),
-              ]),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      key: const ValueKey('offers-back'),
+                      tooltip: 'Back to Home',
+                      onPressed: () => setState(() => _tab = 0),
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFFFE8EE),
+                        foregroundColor: _berry,
+                        fixedSize: const Size(42, 42),
+                        padding: EdgeInsets.zero,
+                      ),
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 46),
+                    child: Text(
+                      'Offers & Packages',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _ink,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      key: const ValueKey('toggle-offers-search'),
+                      tooltip: _offerSearchVisible
+                          ? 'Close search'
+                          : 'Search offers',
+                      onPressed: () => setState(() {
+                        _offerSearchVisible = !_offerSearchVisible;
+                        if (!_offerSearchVisible) _offerSearchQuery = '';
+                      }),
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFFFE8EE),
+                        foregroundColor: _berry,
+                        fixedSize: const Size(42, 42),
+                        padding: EdgeInsets.zero,
+                      ),
+                      icon: Icon(
+                        _offerSearchVisible
+                            ? Icons.close_rounded
+                            : Icons.search_rounded,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             if (_offerSearchVisible) ...[
               const SizedBox(height: 8),
               TextField(
-                key: const ValueKey('offers-search'), autofocus: true,
+                key: const ValueKey('offers-search'),
+                autofocus: true,
                 onChanged: (value) => setState(() => _offerSearchQuery = value),
                 decoration: InputDecoration(
-                  hintText: 'Search offers', hintStyle: const TextStyle(fontSize: 11),
-                  prefixIcon: const Icon(Icons.search, size: 19), isDense: true,
-                  filled: true, fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none)),
+                  hintText: 'Search offers',
+                  hintStyle: const TextStyle(fontSize: 11),
+                  prefixIcon: const Icon(Icons.search, size: 19),
+                  isDense: true,
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ],
             const SizedBox(height: 10),
-            Row(children: [
-              for (final tab in const ['Offers', 'Packages'])
-                Expanded(child: Padding(
-                  padding: EdgeInsets.only(right: tab == 'Offers' ? 5 : 0, left: tab == 'Packages' ? 5 : 0),
-                  child: ChoiceChip(
-                    key: ValueKey('offers-tab-$tab'), label: Center(child: Text(tab)),
-                    selected: _offersTab == tab, showCheckmark: false,
-                    onSelected: (_) => setState(() => _offersTab = tab),
-                    selectedColor: _berry, backgroundColor: const Color(0xFFFFE8EE),
-                    side: const BorderSide(color: Color(0xFFFFDCE6)),
-                    shape: const StadiumBorder(),
-                    labelStyle: TextStyle(color: _offersTab == tab ? Colors.white : _berry,
-                      fontSize: 12, fontWeight: FontWeight.w600),
+            Row(
+              children: [
+                for (final tab in const ['Offers', 'Packages'])
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        right: tab == 'Offers' ? 5 : 0,
+                        left: tab == 'Packages' ? 5 : 0,
+                      ),
+                      child: ChoiceChip(
+                        key: ValueKey('offers-tab-$tab'),
+                        label: Center(child: Text(tab)),
+                        selected: _offersTab == tab,
+                        showCheckmark: false,
+                        onSelected: (_) => setState(() => _offersTab = tab),
+                        selectedColor: _berry,
+                        backgroundColor: const Color(0xFFFFE8EE),
+                        side: const BorderSide(color: Color(0xFFFFDCE6)),
+                        shape: const StadiumBorder(),
+                        labelStyle: TextStyle(
+                          color: _offersTab == tab ? Colors.white : _berry,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
-                )),
-            ]),
+              ],
+            ),
             if (!showPackages) ...[
               const SizedBox(height: 10),
-              SizedBox(height: 38, child: ListView(
-                key: const ValueKey('offers-category-list'), scrollDirection: Axis.horizontal,
-                children: [
-                  _offerCategoryChip('All', Icons.auto_awesome_rounded),
-                  _offerCategoryChip('Facial', Icons.face_retouching_natural),
-                  _offerCategoryChip('Hair Care', Icons.face_3_outlined),
-                  _offerCategoryChip('Makeup', Icons.brush_outlined),
-                  _offerCategoryChip('Waxing', Icons.auto_fix_high_outlined),
-                  _offerCategoryChip('Manicure', Icons.back_hand_outlined),
-                  _offerCategoryChip('Spa', Icons.spa_outlined),
-                ])),
+              SizedBox(
+                height: 38,
+                child: ListView(
+                  key: const ValueKey('offers-category-list'),
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    _offerCategoryChip('All', Icons.auto_awesome_rounded),
+                    _offerCategoryChip('Facial', Icons.face_retouching_natural),
+                    _offerCategoryChip('Hair Care', Icons.face_3_outlined),
+                    _offerCategoryChip('Makeup', Icons.brush_outlined),
+                    _offerCategoryChip('Waxing', Icons.auto_fix_high_outlined),
+                    _offerCategoryChip('Manicure', Icons.back_hand_outlined),
+                    _offerCategoryChip('Spa', Icons.spa_outlined),
+                  ],
+                ),
+              ),
               const SizedBox(height: 10),
               _offerGrid([
                 for (final offer in visibleOffers) _offerPromotionTile(offer),
-                for (final service in discountedServices) _offerServiceTile(service),
+                for (final service in discountedServices)
+                  _offerServiceTile(service),
               ]),
               if (visibleOffers.isEmpty && discountedServices.isEmpty)
-                Padding(padding: const EdgeInsets.symmetric(vertical: 32), child: Text(
-                  _offerSearchQuery.isEmpty ? 'No offers in this category yet.' : 'No offers match "$_offerSearchQuery".',
-                  textAlign: TextAlign.center, style: const TextStyle(color: _muted, fontSize: 13))),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  child: Text(
+                    _offerSearchQuery.isEmpty
+                        ? 'No offers in this category yet.'
+                        : 'No offers match "$_offerSearchQuery".',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: _muted, fontSize: 13),
+                  ),
+                ),
             ] else ...[
               const SizedBox(height: 10),
               if (_packagesData.isEmpty)
-                const Padding(padding: EdgeInsets.symmetric(vertical: 32), child: Text(
-                  'No packages are available right now.', textAlign: TextAlign.center,
-                  style: TextStyle(color: _muted, fontSize: 13))),
-              _offerGrid([for (final package in _packagesData) _offerPackageTile(package)]),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Text(
+                    'No packages are available right now.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: _muted, fontSize: 13),
+                  ),
+                ),
+              _offerGrid([
+                for (final package in _packagesData) _offerPackageTile(package),
+              ]),
             ],
           ],
         ),
@@ -4463,26 +4639,46 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     padding: const EdgeInsets.only(right: 7),
     child: ChoiceChip(
       key: ValueKey('offers-category-$label'),
-      avatar: Icon(icon, size: 14, color: _offersCategory == label ? Colors.white : _berry),
-      label: Text(label), selected: _offersCategory == label, showCheckmark: false,
+      avatar: Icon(
+        icon,
+        size: 14,
+        color: _offersCategory == label ? Colors.white : _berry,
+      ),
+      label: Text(label),
+      selected: _offersCategory == label,
+      showCheckmark: false,
       onSelected: (_) => setState(() => _offersCategory = label),
-      selectedColor: _berry, backgroundColor: const Color(0xFFFFE8EE),
-      side: const BorderSide(color: Color(0xFFFFDCE6)), shape: const StadiumBorder(),
+      selectedColor: _berry,
+      backgroundColor: const Color(0xFFFFE8EE),
+      side: const BorderSide(color: Color(0xFFFFDCE6)),
+      shape: const StadiumBorder(),
       visualDensity: VisualDensity.compact,
-      labelStyle: TextStyle(fontSize: 10, color: _offersCategory == label ? Colors.white : _berry),
+      labelStyle: TextStyle(
+        fontSize: 10,
+        color: _offersCategory == label ? Colors.white : _berry,
+      ),
     ),
   );
 
   Widget _offerPromotionTile(Map<String, dynamic> offer) => OfferCatalogCard(
     key: ValueKey('offer-promotion-${offer['code'] ?? offer['name']}'),
-    image: _catalogCover(offer['thumbnail'] ??
-      ((offer['images'] as List?)?.firstOrNull is Map ? ((offer['images'] as List).first as Map)['url'] : null)),
-    title: '${offer['name'] ?? ''}', description: '${offer['description'] ?? ''}',
-    price: 'Code ${offer['code'] ?? ''}', badge: _offerDiscountLabel(offer),
-    caption: offer['minimumOrderPaise'] == null ? null :
-      'Minimum spend ${CatalogService.formatPaise(BigInt.parse('${offer['minimumOrderPaise']}'))}',
+    image: _catalogCover(
+      offer['thumbnail'] ??
+          ((offer['images'] as List?)?.firstOrNull is Map
+              ? ((offer['images'] as List).first as Map)['url']
+              : null),
+    ),
+    title: '${offer['name'] ?? ''}',
+    description: '${offer['description'] ?? ''}',
+    price: 'Code ${offer['code'] ?? ''}',
+    badge: _offerDiscountLabel(offer),
+    caption: offer['minimumOrderPaise'] == null
+        ? null
+        : 'Minimum spend ${CatalogService.formatPaise(BigInt.parse('${offer['minimumOrderPaise']}'))}',
     action: 'View Details',
-    actionKey: ValueKey('offer-promotion-details-${offer['code'] ?? offer['name']}'),
+    actionKey: ValueKey(
+      'offer-promotion-details-${offer['code'] ?? offer['name']}',
+    ),
     onPressed: () => _showOfferDetails(offer),
   );
 
@@ -4569,11 +4765,16 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
   Widget _offerServiceTile(_Service service) => OfferCatalogCard(
     key: ValueKey('offer-service-deal-${service.id}'),
     image: _ServicePhoto(service: service, width: double.infinity, height: 92),
-    title: service.name, description: service.description, badge: service.discount,
+    title: service.name,
+    description: service.description,
+    badge: service.discount,
     price: '₹${_formatServicePrice(service.price)}',
-    originalPrice: service.originalPrice == null ? null : '₹${_formatServicePrice(service.originalPrice!)}',
+    originalPrice: service.originalPrice == null
+        ? null
+        : '₹${_formatServicePrice(service.originalPrice!)}',
     caption: '${service.minutes} mins · At Home',
-    action: 'View Details', actionKey: ValueKey('offer-details-${service.id}'),
+    action: 'View Details',
+    actionKey: ValueKey('offer-details-${service.id}'),
     onPressed: () => _details(service),
   );
 
@@ -4600,14 +4801,20 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     final price = num.tryParse('${package['pricePaise'] ?? ''}') ?? 0;
     final duration = package['durationMinutes'];
     return OfferCatalogCard(
-      key: ValueKey('offer-package-${package['_id'] ?? package['id'] ?? package['name']}'),
-      image: _catalogCover(image), title: '${package['name'] ?? ''}',
-      description: serviceNames.isEmpty ? '${package['description'] ?? ''}'
-        : '${serviceNames.join(' · ')} · ${package['description'] ?? ''}',
+      key: ValueKey(
+        'offer-package-${package['_id'] ?? package['id'] ?? package['name']}',
+      ),
+      image: _catalogCover(image),
+      title: '${package['name'] ?? ''}',
+      description: serviceNames.isEmpty
+          ? '${package['description'] ?? ''}'
+          : '${serviceNames.join(' · ')} · ${package['description'] ?? ''}',
       price: CatalogService.formatPaise(BigInt.from(price.toInt())),
       caption: duration == null ? null : '$duration mins · At Home',
       action: 'Add Package to Cart',
-      actionKey: ValueKey('add-package-${'${package['name'] ?? ''}'.toLowerCase()}'),
+      actionKey: ValueKey(
+        'add-package-${'${package['name'] ?? ''}'.toLowerCase()}',
+      ),
       onPressed: () => _addCatalogPackage(package),
     );
   }
@@ -4675,74 +4882,61 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     onRefresh: _loadAccount,
     child: ListView(
       key: const ValueKey('profile-settings-screen'),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
         const Text(
           'My Profile',
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: _ink,
-            fontSize: 21,
+            fontSize: 22,
             fontWeight: FontWeight.w800,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 20),
         Container(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            image: const DecorationImage(
-              image: AssetImage(AppAssets.onboardingBackground),
-              fit: BoxFit.cover,
-              opacity: .4,
-            ),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFFFDEE9), Color(0xFFFFF5F8), Colors.white],
-            ),
-            borderRadius: BorderRadius.circular(24),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: _bookingLine),
-            boxShadow: const [CustomerVisuals.shadow],
           ),
-          child: Column(
+          child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
+              _customerAvatar(),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _customerName.isEmpty
+                          ? 'Customer account'
+                          : _customerName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_account['mobileNumber'] ?? _account['email'] ?? 'Customer account'}',
+                      style: const TextStyle(color: _muted, fontSize: 14),
+                    ),
+                  ],
                 ),
-                child: _customerAvatar(),
               ),
-              const SizedBox(height: 12),
-              Text(
-                _customerName.isEmpty ? 'Customer account' : _customerName,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: _ink,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '${_account['mobileNumber'] ?? _account['email'] ?? 'Customer account'}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: _muted, fontSize: 12),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  key: const ValueKey('edit-customer-profile'),
-                  onPressed: _editCustomerProfile,
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('Edit Profile'),
-                ),
+              const SizedBox(width: 6),
+              OutlinedButton.icon(
+                key: const ValueKey('edit-customer-profile'),
+                onPressed: _editCustomerProfile,
+                icon: const Icon(Icons.edit_outlined, size: 14),
+                label: const Text('Edit'),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 14),
         _profileMenuGroup([
           _ProfileMenuEntry(
             Icons.location_on_outlined,
@@ -4818,12 +5012,13 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
           ),
         ]),
         const SizedBox(height: 12),
-        const Center(
-          child: Text(
-            'Hi Beauty · Development preview',
-            style: TextStyle(color: _muted, fontSize: 10),
+        if (CustomerRefinements.showDevelopmentControls)
+          const Center(
+            child: Text(
+              'Hi Beauty · Development preview',
+              style: TextStyle(color: _muted, fontSize: 12),
+            ),
           ),
-        ),
       ],
     ),
   );
@@ -4831,7 +5026,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
   Widget _profileMenuGroup(List<_ProfileMenuEntry> entries) => Material(
     color: Colors.white,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(17),
+      borderRadius: BorderRadius.circular(10),
       side: const BorderSide(color: _bookingLine),
     ),
     clipBehavior: Clip.antiAlias,
@@ -4840,23 +5035,23 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         for (var index = 0; index < entries.length; index++) ...[
           ListTile(
             key: ValueKey('profile-menu-${entries[index].title}'),
-            dense: false,
+            dense: true,
+            visualDensity: VisualDensity.standard,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+            minLeadingWidth: 22,
+            minTileHeight: 50,
             leading: Icon(
               entries[index].icon,
               color: entries[index].color ?? _bookingBerry,
-              size: 22,
+              size: 19,
             ),
             title: Text(
               entries[index].title,
               style: TextStyle(
                 color: entries[index].color ?? _ink,
                 fontSize: 14,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
-            ),
-            subtitle: Text(
-              entries[index].subtitle,
-              style: const TextStyle(color: _muted, fontSize: 11),
             ),
             trailing: const Icon(Icons.chevron_right_rounded, size: 19),
             onTap: entries[index].onTap,
@@ -4879,7 +5074,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
           orElse: () => '',
         );
     return CircleAvatar(
-      radius: 30,
+      radius: 24,
       backgroundColor: const Color(0xFFFFE8EF),
       backgroundImage: image.isEmpty ? null : NetworkImage(image),
       child: image.isEmpty
@@ -4898,57 +5093,68 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
   void _showProfileSettings() => showDialog<void>(
     context: context,
     builder: (dialogContext) => StatefulBuilder(
-      builder: (context, setDialogState) => AlertDialog(
-        title: const Text('Settings'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              secondary: const Icon(
-                Icons.notifications_outlined,
-                color: _bookingPink,
+      builder: (context, setDialogState) => Theme(
+        data: CustomerRefinements.theme(Theme.of(context)),
+        child: AlertDialog(
+          title: const Center(child: Text('Settings')),
+          constraints: const BoxConstraints(minWidth: 320, maxWidth: 420),
+          scrollable: true,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                secondary: const Icon(
+                  Icons.notifications_outlined,
+                  color: _bookingPink,
+                ),
+                title: const Text('Notifications'),
+                value: _notificationsEnabled,
+                onChanged: _savingPreferences
+                    ? null
+                    : (value) => _saveNotificationPreferences(
+                        value,
+                        _profilePromotionsEnabled,
+                        (fn) {
+                          if (dialogContext.mounted) setDialogState(fn);
+                        },
+                      ),
               ),
-              title: const Text('Notifications'),
-              value: _notificationsEnabled,
-              onChanged: _savingPreferences
-                  ? null
-                  : (value) => _saveNotificationPreferences(
-                      value,
-                      _profilePromotionsEnabled,
-                      (fn) {
-                        if (dialogContext.mounted) setDialogState(fn);
-                      },
-                    ),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              secondary: const Icon(
-                Icons.local_offer_outlined,
-                color: _bookingPink,
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                secondary: const Icon(
+                  Icons.local_offer_outlined,
+                  color: _bookingPink,
+                ),
+                title: const Text('Offer updates'),
+                value: _profilePromotionsEnabled,
+                onChanged: _savingPreferences
+                    ? null
+                    : (value) => _saveNotificationPreferences(
+                        _notificationsEnabled,
+                        value,
+                        (fn) {
+                          if (dialogContext.mounted) setDialogState(fn);
+                        },
+                      ),
               ),
-              title: const Text('Offer updates'),
-              value: _profilePromotionsEnabled,
-              onChanged: _savingPreferences
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: _savingPreferences
                   ? null
-                  : (value) => _saveNotificationPreferences(
-                      _notificationsEnabled,
-                      value,
-                      (fn) {
-                        if (dialogContext.mounted) setDialogState(fn);
-                      },
-                    ),
+                  : () => Navigator.pop(dialogContext),
+              child: const Text('Done'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: _savingPreferences
-                ? null
-                : () => Navigator.pop(dialogContext),
-            child: const Text('Done'),
-          ),
-        ],
       ),
     ),
   );
@@ -5044,73 +5250,119 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Edit profile'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(child: photoBytes == null ? _customerAvatar() : CircleAvatar(radius: 30, backgroundImage: MemoryImage(photoBytes!))),
-                TextButton.icon(
-                  onPressed: saving ? null : () async {
-                    try {
-                      final photo = await ImagePicker().pickImage(source: ImageSource.gallery,
-                        maxWidth: 1200, maxHeight: 1200, imageQuality: 85, requestFullMetadata: false);
-                      if (photo == null) return;
-                      final bytes = await photo.readAsBytes();
-                      if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
-                        throw const FormatException('Choose a photo smaller than 5 MB.');
-                      }
-                      final decoded = await decodeImageFromList(bytes);
-                      decoded.dispose();
-                      if (dialogContext.mounted) setDialogState(() => photoBytes = bytes);
-                    } catch (error) {
-                      if (mounted) _message('Unable to select photo: $error');
-                    }
-                  },
-                  icon: const Icon(Icons.add_a_photo_outlined),
-                  label: const Text('Change photo'),
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  key: const ValueKey('profile-name-input'),
-                  initialValue: name,
-                  textCapitalization: TextCapitalization.words,
-                  onChanged: (value) => setDialogState(() => name = value),
-                  decoration: const InputDecoration(labelText: 'Your name'),
-                ),
-              ],
+        builder: (context, setDialogState) => Theme(
+          data: CustomerRefinements.theme(Theme.of(context)),
+          child: AlertDialog(
+            title: const Center(child: Text('Edit profile')),
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 24,
             ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: photoBytes == null
+                        ? _customerAvatar()
+                        : CircleAvatar(
+                            radius: 30,
+                            backgroundImage: MemoryImage(photoBytes!),
+                          ),
+                  ),
+                  TextButton.icon(
+                    onPressed: saving
+                        ? null
+                        : () async {
+                            try {
+                              final photo = await ImagePicker().pickImage(
+                                source: ImageSource.gallery,
+                                maxWidth: 1200,
+                                maxHeight: 1200,
+                                imageQuality: 85,
+                                requestFullMetadata: false,
+                              );
+                              if (photo == null) return;
+                              final bytes = await photo.readAsBytes();
+                              if (bytes.isEmpty ||
+                                  bytes.length > 5 * 1024 * 1024) {
+                                throw const FormatException(
+                                  'Choose a photo smaller than 5 MB.',
+                                );
+                              }
+                              final decoded = await decodeImageFromList(bytes);
+                              decoded.dispose();
+                              if (dialogContext.mounted)
+                                setDialogState(() => photoBytes = bytes);
+                            } catch (error) {
+                              if (mounted)
+                                _message('Unable to select photo: $error');
+                            }
+                          },
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: const Text('Change photo'),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Your name',
+                    style: TextStyle(fontSize: 13, color: _muted),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    key: const ValueKey('profile-name-input'),
+                    style: const TextStyle(fontSize: 14),
+                    initialValue: name,
+                    textCapitalization: TextCapitalization.words,
+                    onChanged: (value) => setDialogState(() => name = value),
+                    decoration: const InputDecoration(hintText: 'Your name'),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                key: const ValueKey('save-profile-name'),
+                onPressed: saving
+                    ? null
+                    : () async {
+                        final updatedName = name.trim();
+                        if (updatedName.length < 2) {
+                          _message('Enter your name to save your profile.');
+                          return;
+                        }
+                        try {
+                          setDialogState(() => saving = true);
+                          final imageId = photoBytes == null
+                              ? null
+                              : await _operationsApi.uploadProfilePhoto(
+                                  photoBytes!,
+                                );
+                          final updated = await _operationsApi.updateProfile(
+                            updatedName,
+                            profileImageId: imageId,
+                          );
+                          if (!mounted || !dialogContext.mounted) return;
+                          setState(() {
+                            _customerName = updatedName;
+                            _account.addAll(updated);
+                          });
+                          Navigator.pop(dialogContext);
+                        } catch (error) {
+                          if (mounted)
+                            _message('Unable to save profile: $error');
+                          if (dialogContext.mounted)
+                            setDialogState(() => saving = false);
+                        }
+                      },
+                child: const Text('Save'),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              key: const ValueKey('save-profile-name'),
-              onPressed: saving ? null : () async {
-                final updatedName = name.trim();
-                if (updatedName.length < 2) {
-                  _message('Enter your name to save your profile.');
-                  return;
-                }
-                try {
-                  setDialogState(() => saving = true);
-                  final imageId = photoBytes == null ? null : await _operationsApi.uploadProfilePhoto(photoBytes!);
-                  final updated = await _operationsApi.updateProfile(updatedName, profileImageId: imageId);
-                  if (!mounted || !dialogContext.mounted) return;
-                  setState(() { _customerName = updatedName; _account.addAll(updated); });
-                  Navigator.pop(dialogContext);
-                } catch (error) {
-                  if (mounted) _message('Unable to save profile: $error');
-                  if (dialogContext.mounted) setDialogState(() => saving = false);
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
         ),
       ),
     );

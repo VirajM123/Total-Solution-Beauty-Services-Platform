@@ -1,3 +1,4 @@
+import 'support/load_customer_fonts.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -23,6 +24,7 @@ class _Storage implements CustomerTokenStorage {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
+    await loadCustomerFonts();
     for (final entry in {
       'Montserrat': 'assets/fonts/Montserrat-Regular.ttf',
       'MaterialIcons': 'fonts/MaterialIcons-Regular.otf',
@@ -291,6 +293,7 @@ void main() {
           find.byKey(const ValueKey('continue-to-booking-confirmation')),
         );
         await tester.pumpAndSettle();
+        await _capture(tester, '${size.width}-confirm-booking');
         await tester.tap(find.byKey(const ValueKey('confirm-booking')));
         await tester.tap(find.byKey(const ValueKey('confirm-booking')));
         await tester.pumpAndSettle();
@@ -352,6 +355,10 @@ Future<void> _capture(WidgetTester tester, String name) async {
       .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger).first)
       .removeCurrentSnackBar();
   await tester.pumpAndSettle();
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 150)),
+  );
+  await tester.pump();
   final boundary = tester.renderObject<RenderRepaintBoundary>(
     find.byKey(const ValueKey('checkout-capture')),
   );

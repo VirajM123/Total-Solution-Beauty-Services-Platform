@@ -1,3 +1,4 @@
+import 'support/load_customer_fonts.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -27,12 +28,13 @@ class _DesignApi extends CustomerMobileOperationsApi {
   Future<List<Map<String, dynamic>>> getCatalogServices() async => [
     {
       'id': '123456789012345678901234',
-      'name': 'API Facial Treatment',
+      'name': 'Gold Facial',
       'category': {'name': 'Skin Care'},
       'pricePaise': 120000,
       'durationMinutes': 60,
       'description': 'A treatment supplied by the catalog.',
       'benefits': ['Gentle skin care'],
+      'thumbnail': 'assets/images/home/gold_facial.png',
     },
   ];
   @override
@@ -40,7 +42,7 @@ class _DesignApi extends CustomerMobileOperationsApi {
     {
       '_id': 'address-1',
       'label': 'Home',
-      'line1': 'Account address',
+      'line1': '12 Rose Lane',
       'city': 'Latur',
       'postalCode': '413512',
       'serviceAreaId': 'area-1',
@@ -50,7 +52,7 @@ class _DesignApi extends CustomerMobileOperationsApi {
   Future<List<Map<String, dynamic>>> getBookings() async => [];
   @override
   Future<Map<String, dynamic>> getProfile() async => {
-    'user': {'fullName': 'API Customer', 'mobileNumber': '+91 9876543210'},
+    'user': {'fullName': 'Sneha Patil', 'mobileNumber': '+91 9876543210'},
   };
   @override
   Future<List<Map<String, dynamic>>> getRecords(String path) async {
@@ -85,34 +87,43 @@ class _DesignApi extends CustomerMobileOperationsApi {
 }
 
 class _LifecycleApi extends _DesignApi {
+  @override
+  Future<List<Map<String, dynamic>>> getCatalogServices() async => [
+    ...await super.getCatalogServices(),
+    {
+      'id': '123456789012345678901235',
+      'name': 'Manicure',
+      'category': {'name': 'Skin Care'},
+      'pricePaise': 50000,
+      'durationMinutes': 45,
+      'thumbnail': 'assets/images/home/manicure.png',
+    },
+  ];
   String status = 'assigned';
   bool finished = false;
   Map<String, dynamic> get booking => {
     '_id': '123456789012345678901239',
     'status': status,
     'assignmentStatus': 'accepted',
-    'startsAt': '2026-11-04T04:30:00Z',
-    'worker': {'fullName': 'API Professional'},
+    'startsAt': '2026-11-03T04:30:00Z',
+    'worker': {'fullName': 'Priya Sharma'},
     'addressSnapshot': {
       'label': 'Home',
       'line1': 'Account address',
       'city': 'Latur',
     },
     'items': [
-      {'name': 'API Facial Treatment', 'pricePaise': 120000, 'quantity': 1},
+      {'name': 'Gold Facial', 'pricePaise': 120000, 'quantity': 1},
+      {'name': 'Manicure', 'pricePaise': 50000, 'quantity': 1},
     ],
-    'subtotalPaise': 120000,
-    'totalPaise': 120000,
+    'subtotalPaise': 170000,
+    'totalPaise': 170000,
     'discountPaise': 0,
     'paymentStatus': status == 'completed' ? 'paid' : 'pending',
     if (finished) 'serviceFinishedAt': '2026-11-04T05:30:00Z',
     'pendingExtraServices': status == 'in_progress' && !finished
         ? [
-            {
-              '_id': 'extra-1',
-              'name': 'API Extra Treatment',
-              'amountPaise': 30000,
-            },
+            {'_id': 'extra-1', 'name': 'Head Massage', 'amountPaise': 30000},
           ]
         : [],
   };
@@ -134,14 +145,24 @@ class _LifecycleApi extends _DesignApi {
 }
 
 void main() {
-  for (final size in const [Size(320, 680), Size(393, 852), Size(412, 915)]) {
-    testWidgets('customer design keeps API actions usable at $size', (
+  for (final variant in const [
+    (Size(320, 680), 1.0),
+    (Size(360, 800), 1.0),
+    (Size(393, 852), 1.0),
+    (Size(412, 915), 1.0),
+    (Size(430, 932), 1.0),
+    (Size(320, 680), 1.4),
+  ]) {
+    final size = variant.$1;
+    final scale = variant.$2;
+    testWidgets('customer design keeps API actions usable at $size text $scale', (
       tester,
     ) async {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+      await loadCustomerFonts();
       final api = _DesignApi();
       addTearDown(api.close);
       final boundaryKey = GlobalKey();
@@ -171,6 +192,12 @@ void main() {
               ),
             ),
           ),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(scale)),
+            child: child!,
+          ),
           home: child,
         ),
       );
@@ -194,7 +221,7 @@ void main() {
             '../../../output/customer-app-design-review',
           )..createSync(recursive: true);
           File(
-            '${directory.path}/${size.width.toInt()}-$name.png',
+            '${directory.path}/${size.width.toInt()}-${scale == 1 ? '' : 'large-text-'}$name.png',
           ).writeAsBytesSync(bytes!.buffer.asUint8List());
         });
       }
@@ -245,6 +272,12 @@ void main() {
       await tester.ensureVisible(find.text('Continue'));
       await capture('login-keyboard');
       tester.view.resetViewInsets();
+      // Home/Services are deliberately unchanged; large-text coverage here is
+      // for the refined authentication views. Booking components are tested separately.
+      if (scale > 1) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        return;
+      }
 
       await tester.pumpWidget(shell(DevelopmentHomeScreen(operationsApi: api)));
       await tester.pumpAndSettle();
@@ -257,9 +290,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       await capture('category');
-      await tester.tap(
-        find.byKey(const ValueKey('subservice-API Facial Treatment')),
-      );
+      await tester.tap(find.byKey(const ValueKey('subservice-Gold Facial')));
       await tester.pumpAndSettle();
       await capture('service-details');
       await tester.tap(find.byKey(const ValueKey('close-service-details')));
@@ -270,10 +301,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Back'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(
-        find.byKey(const ValueKey('add-API Facial Treatment')),
-      );
-      await tester.tap(find.byKey(const ValueKey('add-API Facial Treatment')));
+      await tester.ensureVisible(find.byKey(const ValueKey('add-Gold Facial')));
+      await tester.tap(find.byKey(const ValueKey('add-Gold Facial')));
       await tester.tap(find.text('My Cart').last);
       await tester.pumpAndSettle();
       await tester.pump(const Duration(seconds: 5));
@@ -308,7 +337,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Profile').last);
       await tester.pumpAndSettle();
-      expect(find.text('API Customer'), findsOneWidget);
+      expect(find.text('Sneha Patil'), findsOneWidget);
       expect(find.text('+91 9876543210'), findsOneWidget);
       await capture('profile');
       await tester.tap(find.byKey(const ValueKey('edit-customer-profile')));
@@ -341,7 +370,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('My Cart').last);
       await tester.pumpAndSettle();
-      expect(find.text('API Professional'), findsOneWidget);
+      expect(find.text('Priya Sharma'), findsOneWidget);
       await capture('expert-assigned');
       lifecycleApi.status = 'travelling';
       await tester.pump(const Duration(seconds: 3));
@@ -350,7 +379,14 @@ void main() {
       lifecycleApi.status = 'arrived';
       await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();
-      expect(find.text('483261'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label == 'Service start code 483261',
+        ),
+        findsOneWidget,
+      );
       await capture('service-start-code');
       lifecycleApi.status = 'in_progress';
       await tester.pump(const Duration(seconds: 3));

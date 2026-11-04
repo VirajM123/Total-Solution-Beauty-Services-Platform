@@ -66,6 +66,14 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   fonts:
+    - family: HiBeautySans
+      fonts:
+        - asset: assets/fonts/HiBeautySans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/HiBeautySans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/HiBeautySans-Bold.ttf
+          weight: 700
     - family: Montserrat
       fonts:
         - asset: assets/fonts/Montserrat-Regular.ttf

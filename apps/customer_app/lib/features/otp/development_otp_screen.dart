@@ -1,3 +1,4 @@
+import '../shared/customer_refinements.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -144,7 +145,7 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
     builder: (context, constraints) {
       final code = _code.text;
       return SizedBox(
-        height: 48,
+        height: 52,
         child: Stack(
           children: [
             Row(
@@ -154,7 +155,7 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
                 final isActive = index == code.length && code.length < 6;
                 return Container(
                   width: (constraints.maxWidth - 35) / 6,
-                  height: 44,
+                  height: 48,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -231,163 +232,140 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: PinkoraBrand.ivory,
-    appBar: AppBar(
+  Widget build(BuildContext context) => Theme(
+    data: CustomerRefinements.theme(Theme.of(context)),
+    child: Scaffold(
       backgroundColor: PinkoraBrand.ivory,
-      elevation: 0,
-      title: const Text(
-        'Verify mobile number',
-        style: TextStyle(
-          color: PinkoraBrand.charcoal,
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
+      appBar: AppBar(
+        backgroundColor: PinkoraBrand.ivory,
+        elevation: 0,
+        title: const Text(
+          'Verify mobile number',
+          style: TextStyle(
+            color: PinkoraBrand.charcoal,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
-    ),
-    body: CustomerCanvas(
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 4, 24, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 4),
-              Center(
-                child: Image.asset(
-                  AppAssets.customerOtpHero,
-                  key: const ValueKey('customer-otp-hero'),
-                  width: 148,
-                  height: 148,
-                  fit: BoxFit.contain,
-                  excludeFromSemantics: true,
+      body: CustomerCanvas(
+        compact: true,
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 4, 24, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 4),
+                Center(
+                  child: Image.asset(
+                    AppAssets.customerOtpHero,
+                    key: const ValueKey('customer-otp-hero'),
+                    width: 132,
+                    height: 132,
+                    fit: BoxFit.contain,
+                    excludeFromSemantics: true,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'One step closer',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF5B092D),
-                  fontSize: 25,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -.7,
+                const SizedBox(height: 6),
+                const Text(
+                  'One step closer',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF5B092D),
+                    fontSize: 30,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.7,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 7),
-              Text(
-                'Enter the 6-digit code sent to\n+91 ${widget.args.phone}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: PinkoraBrand.muted,
-                  fontSize: 12,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'VERIFICATION CODE',
-                style: TextStyle(
-                  color: Color(0xFF5B092D),
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1,
-                ),
-              ),
-              const SizedBox(height: 8),
-              _codeBoxes(),
-              if (_error != null) ...[
                 const SizedBox(height: 7),
                 Text(
-                  _error!,
+                  'Enter the 6-digit code sent to\n+91 ${widget.args.phone}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red, fontSize: 11),
-                ),
-              ],
-              const SizedBox(height: 24),
-              SizedBox(
-                height: 50,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [PinkoraBrand.rose, PinkoraBrand.berry],
-                    ),
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x338D214D),
-                        blurRadius: 12,
-                        offset: Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: _verify,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      foregroundColor: Colors.white,
-                      shape: const StadiumBorder(),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Verify & Continue',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward_rounded, size: 17),
-                      ],
-                    ),
+                  style: const TextStyle(
+                    color: PinkoraBrand.muted,
+                    fontSize: 14,
+                    height: 1.5,
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: _remaining == 0 ? _resend : null,
-                child: const Text(
-                  'Resend code',
+                const SizedBox(height: 24),
+                const Text(
+                  'VERIFICATION CODE',
                   style: TextStyle(
-                    color: Color(0xFFB00045),
+                    color: Color(0xFF5B092D),
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _remaining > 0 ? 'Resend available in ${_remaining}s' : '',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: PinkoraBrand.muted, fontSize: 10),
-              ),
-              const SizedBox(height: 28),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.shield_outlined,
-                    color: PinkoraBrand.rose,
-                    size: 22,
-                  ),
-                  SizedBox(width: 10),
-                  Flexible(
-                    child: Text(
-                      'Keep your verification\ncode private.',
-                      style: TextStyle(
-                        color: PinkoraBrand.muted,
-                        fontSize: 11,
-                        height: 1.4,
-                      ),
-                    ),
+                const SizedBox(height: 8),
+                _codeBoxes(),
+                if (_error != null) ...[
+                  const SizedBox(height: 7),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red, fontSize: 11),
                   ),
                 ],
-              ),
-            ],
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: _verify,
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(child: Text('Verify & Continue')),
+                      SizedBox(width: 8),
+                      Icon(Icons.arrow_forward_rounded, size: 18),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: _remaining == 0 ? _resend : null,
+                  child: const Text(
+                    'Resend code',
+                    style: TextStyle(
+                      color: Color(0xFFB00045),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _remaining > 0 ? 'Resend available in ${_remaining}s' : '',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: PinkoraBrand.muted,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.shield_outlined,
+                      color: PinkoraBrand.rose,
+                      size: 22,
+                    ),
+                    SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        'Keep your verification\ncode private.',
+                        style: TextStyle(
+                          color: PinkoraBrand.muted,
+                          fontSize: 11,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

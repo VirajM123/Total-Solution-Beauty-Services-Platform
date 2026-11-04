@@ -32,14 +32,8 @@ class CompactCheckoutCalendar extends StatelessWidget {
       padding: EdgeInsets.all(dense ? 8 : 10),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: .96),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x125A2E81),
-            blurRadius: 20,
-            offset: Offset(0, 7),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE8DDE5)),
       ),
       child: Column(
         children: [
@@ -74,7 +68,7 @@ class CompactCheckoutCalendar extends StatelessWidget {
                   child: Text(
                     MaterialLocalizations.of(context).formatMonthYear(first),
                     style: const TextStyle(
-                      fontSize: 17,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF17152E),
                     ),
@@ -168,7 +162,7 @@ class CompactCheckoutCalendar extends StatelessWidget {
                                   height: dense ? 22 : 27,
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
+                                    borderRadius: BorderRadius.circular(6),
                                     color: selected
                                         ? bookingPink
                                         : Colors.transparent,

@@ -93,7 +93,7 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
     expect(find.text('Get Started'), findsOneWidget);
-    expect(find.text('Hi Beauty'), findsOneWidget);
+    expect(find.byKey(const ValueKey('hi-beauty-logo')), findsOneWidget);
     expect(find.textContaining('Total Solution'), findsNothing);
   });
 
