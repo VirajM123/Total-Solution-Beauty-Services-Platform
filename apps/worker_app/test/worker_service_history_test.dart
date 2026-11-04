@@ -205,14 +205,9 @@ void main() {
     expect(find.text('Pooja Sharma'), findsOneWidget);
     expect(find.textContaining('+919876543210'), findsOneWidget);
     expect(find.textContaining('Worker Compensation: ₹800'), findsOneWidget);
-    expect(find.text('Generate Payment QR'), findsOneWidget);
+    expect(find.text('Payment reconciliation required'), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byKey(const Key('start-service-entry'))).onPressed, isNull);
 
-    await tester.tap(find.text('Generate Payment QR'));
-    await tester.pumpAndSettle();
-    expect(find.text('Customer Payment'), findsOneWidget);
-
-    await tester.pageBack();
-    await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.text('Service History'), findsOneWidget);

@@ -46,20 +46,19 @@ class WorkerBookingSession {
     this.paymentStage = WorkerPaymentStage.notRequested,
     this.startedAt,
     this.finishedAt,
-    this.demoPaidAt,
     this.extras = const [],
   });
 
   final String bookingId;
+
   /// Snapshot of customer base amount, not worker earnings.
   final int baseCustomerPayable;
   final WorkerServiceStage serviceStage;
+
   /// Only the backend may eventually set this to `paid`.
   final WorkerPaymentStage paymentStage;
   final DateTime? startedAt;
   final DateTime? finishedAt;
-  /// Separate demo marker. Does not change paymentStage to `paid`.
-  final DateTime? demoPaidAt;
   final List<WorkerExtraSnapshot> extras;
 
   int get demoCustomerTotal => baseCustomerPayable +
@@ -71,7 +70,6 @@ class WorkerBookingSession {
     WorkerPaymentStage? paymentStage,
     DateTime? startedAt,
     DateTime? finishedAt,
-    DateTime? demoPaidAt,
     List<WorkerExtraSnapshot>? extras,
   }) => WorkerBookingSession(
         bookingId: bookingId,
@@ -80,7 +78,6 @@ class WorkerBookingSession {
         paymentStage: paymentStage ?? this.paymentStage,
         startedAt: startedAt ?? this.startedAt,
         finishedAt: finishedAt ?? this.finishedAt,
-        demoPaidAt: demoPaidAt ?? this.demoPaidAt,
         extras: extras ?? this.extras,
       );
 
@@ -91,7 +88,6 @@ class WorkerBookingSession {
         'paymentStage': paymentStage.name,
         'startedAt': startedAt?.toUtc().toIso8601String(),
         'finishedAt': finishedAt?.toUtc().toIso8601String(),
-        'demoPaidAt': demoPaidAt?.toUtc().toIso8601String(),
         'extras': extras.map((e) => e.toJson()).toList(),
       };
 
@@ -107,7 +103,6 @@ class WorkerBookingSession {
           _requiredString(json, 'paymentStage')),
       startedAt: _readDate(json['startedAt']),
       finishedAt: _readDate(json['finishedAt']),
-      demoPaidAt: _readDate(json['demoPaidAt']),
       extras: List.unmodifiable(rawExtras.map((value) {
         if (value is! Map<String, dynamic>) {
           throw const FormatException('Invalid extra item');

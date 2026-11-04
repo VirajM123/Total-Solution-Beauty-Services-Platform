@@ -1,15 +1,13 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 
-/// Opt in explicitly; profile/release builds can never activate local previews.
+/// Application entrypoints always use authenticated backend data.
 abstract final class WorkerEnvironment {
   static const legacyWorkerOffersEnabled = bool.fromEnvironment(
     'LEGACY_WORKER_OFFERS_ENABLED',
     defaultValue: false,
   );
-  static const developmentPreview =
-      kDebugMode &&
-      bool.fromEnvironment('WORKER_DEVELOPMENT_PREVIEW', defaultValue: false);
+  static const developmentPreview = false;
   static String get apiBaseUrl {
     const configured = String.fromEnvironment('API_BASE_URL');
     if (configured.isNotEmpty) return configured;

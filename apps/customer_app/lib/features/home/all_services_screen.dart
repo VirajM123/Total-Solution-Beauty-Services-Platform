@@ -1,3 +1,4 @@
+import '../shared/customer_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/pinkora_brand.dart';
@@ -338,7 +339,7 @@ class _CategoryCard extends StatelessWidget {
                   )
                 : Image(
                     image: Uri.tryParse(category.image)?.hasAuthority == true
-                        ? NetworkImage(category.image)
+                        ? customerImageProvider(category.image)
                         : AssetImage(category.image) as ImageProvider,
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => const ColoredBox(

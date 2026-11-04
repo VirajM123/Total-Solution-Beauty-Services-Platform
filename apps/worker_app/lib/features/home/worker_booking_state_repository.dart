@@ -214,22 +214,6 @@ class WorkerBookingStateRepository extends ChangeNotifier {
     );
   }
 
-  /// Local visual marker only. Never sets the authoritative paymentStage to paid.
-  Future<WorkerBookingSession> simulatePayment({
-    required String bookingId,
-    DateTime? at,
-  }) {
-    _ensureReady();
-    final old = _sessions[bookingId];
-    if (old == null || old.serviceStage != WorkerServiceStage.finished) {
-      throw const WorkerBookingStateException('Service must be finished first');
-    }
-    if (old.demoPaidAt != null) {
-      throw const WorkerBookingStateException('Demo payment already simulated');
-    }
-    return _commit(old.copyWith(demoPaidAt: at ?? DateTime.now()));
-  }
-
   /// Used only to explicitly reset DEMO fixtures, never on routine app startup.
   Future<void> clearDemoSessions() async {
     _ensureReady();

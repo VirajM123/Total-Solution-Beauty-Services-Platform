@@ -29,7 +29,6 @@ class WorkerDemoBookingStore {
     if (!kDebugMode) return order.status;
     final s = session(order.id);
     if (s == null) return order.status;
-    if (s.demoPaidAt != null) return 'Demo Completed';
     if (s.serviceStage == WorkerServiceStage.finished) return 'Payment Pending';
     if (s.serviceStage == WorkerServiceStage.inProgress) return 'In Progress';
     return order.status;

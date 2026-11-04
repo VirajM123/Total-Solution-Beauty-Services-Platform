@@ -1,1 +1,9 @@
-# TODO: Configure backend CI workflow.
+name: Compatibility backend boundary
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  canonical-target:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'The canonical backend and its CI live in the separate admin web panel repository. Do not deploy this compatibility copy.'

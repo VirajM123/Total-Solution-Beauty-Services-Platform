@@ -1,3 +1,6 @@
+import 'customer_account_screen.dart';
+import '../../app/route_names.dart';
+import '../shared/customer_image.dart';
 import '../shared/customer_refinements.dart';
 import '../booking/service_start_code.dart';
 import '../booking/professional_portrait.dart';
@@ -376,6 +379,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
   bool _appActive = true;
   bool _savingPreferences = false;
   bool _catalogSyncing = false;
+  final Map<int, List<Map<String, dynamic>>> _catalogSnapshots = {};
   late final _operationsApi =
       widget.operationsApi ?? CustomerMobileOperationsApi();
   String? _liveBookingId;
@@ -409,6 +413,10 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
   bool _catalogLoading = true;
   String? _catalogError;
   Timer? _catalogRefreshTimer;
+  DateTime? _catalogLoadedAt;
+  Timer? _cartSaveTimer;
+  bool _cartEdited = false;
+  Future<void> _cartWrites = Future<void>.value();
   List<_Service> get _serviceDetails => _services;
   int _serviceElapsedSeconds = 0;
   final _plan = <_Service>[];
@@ -416,6 +424,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
   final _savedAddresses = <_SavedAddress>[];
 
   int _tab = 0;
+  final Set<int> _visitedTabs = {0};
   int _checkoutStep = 0;
   String _category = 'All Services';
   String _location = 'Select an address';
@@ -454,7 +463,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
   bool _offerSearchVisible = false;
   bool _notificationsEnabled = true;
   bool _profilePromotionsEnabled = true;
-  final bool _favoriteProfessional = false;
+  bool _loggingOut = false;
 
   bool _showServiceCategories = false;
   String? _selectedServiceCategory;
@@ -466,21 +475,24 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     MobilePush.pendingOpen.addListener(_handlePushOpen);
     WidgetsBinding.instance.addPostFrameCallback((_) => _handlePushOpen());
     _loadNotificationPreferences();
-    _syncCustomerBackendData();
-    _syncBookingCatalog();
+    _initializeCustomerData();
     _loadAccount();
-    _catalogRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+    _catalogRefreshTimer = Timer.periodic(const Duration(minutes: 5), (_) {
       if (_appActive && (ModalRoute.of(context)?.isCurrent ?? true))
-        _syncBookingCatalog();
+        _refreshCatalogIfStale();
     });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _appActive = state == AppLifecycleState.resumed;
+    if (!_appActive && (_cartSaveTimer?.isActive ?? false)) {
+      _cartSaveTimer?.cancel();
+      unawaited(_saveCartDraft());
+    }
     if (_appActive && mounted) {
       _syncCustomerBackendData();
-      _syncBookingCatalog();
+      _refreshCatalogIfStale();
     }
   }
 
@@ -558,6 +570,122 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     } finally {
       _savingPreferences = false;
       if (mounted) refreshDialog(() {});
+    }
+  }
+
+  Future<void> _refreshCatalogIfStale() async {
+    if (_catalogLoadedAt == null ||
+        DateTime.now().difference(_catalogLoadedAt!) >=
+            const Duration(minutes: 5))
+      await _syncBookingCatalog();
+  }
+
+  Future<void> _initializeCustomerData() async {
+    await Future.wait([_syncCustomerBackendData(), _syncBookingCatalog()]);
+    if (!mounted) return;
+    try {
+      final preferences = await _operationsApi.getAccountData(
+        'account-preferences',
+      );
+      if (!mounted) return;
+      final selected = _savedAddresses.where(
+        (a) => a.id == preferences['defaultAddressId'],
+      );
+      if (selected.isNotEmpty)
+        setState(() {
+          _selectedAddressId = selected.first.id;
+          _location = selected.first.city;
+        });
+    } catch (_) {
+      /* Existing address fallback remains usable. */
+    }
+    try {
+      final draft = await _operationsApi.getAccountData('cart-draft');
+      if (!mounted || _cartEdited || _plan.isNotEmpty) return;
+      setState(() {
+        for (final line in (draft['items'] as List? ?? []).whereType<Map>()) {
+          final services = _services.where(
+            (s) => s.backendId == line['serviceId'],
+          );
+          if (services.isEmpty) continue;
+          final service = services.first;
+          if (_plan.contains(service)) continue;
+          _plan.add(service);
+          _cartQuantities[service.id] =
+              (int.tryParse(line['quantity'].toString()) ?? 1).clamp(1, 10);
+        }
+      });
+    } catch (_) {
+      if (mounted)
+        _message(
+          'Unable to restore your cart. Please retry after reconnecting.',
+        );
+    }
+  }
+
+  void _scheduleCartSave() {
+    _cartEdited = true;
+    _cartSaveTimer?.cancel();
+    _cartSaveTimer = Timer(const Duration(milliseconds: 350), _saveCartDraft);
+  }
+
+  Future<void> _saveCartDraft() async {
+    final lines = [
+      for (final service in _plan)
+        <String, dynamic>{
+          'serviceId': service.backendId,
+          'quantity': _cartQuantities[service.id] ?? 1,
+        },
+    ];
+    _cartWrites = _cartWrites
+        .then((_) => _operationsApi.saveCartDraft(lines))
+        .catchError((Object _) {
+          if (mounted)
+            _message(
+              'Your cart could not be saved. Please retry after reconnecting.',
+            );
+        });
+    await _cartWrites;
+  }
+
+  Future<void> _selectDefaultAddress(_SavedAddress address) async {
+    try {
+      await _operationsApi.setDefaultAddress(address.id);
+      if (!mounted) return;
+      setState(() {
+        _selectedAddressId = address.id;
+        _location = address.city;
+      });
+    } catch (_) {
+      if (mounted)
+        _message('Unable to save your selected address. Please retry.');
+    }
+  }
+
+  Future<void> _deleteSavedAddress(_SavedAddress address) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete address?'),
+        content: Text(address.details),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _operationsApi.deleteAddress(address.id);
+      await _syncCustomerBackendData();
+    } catch (_) {
+      if (mounted) _message('Unable to delete address. Please retry.');
     }
   }
 
@@ -650,12 +778,27 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     if (_catalogSyncing || !mounted) return;
     _catalogSyncing = true;
     try {
+      final failed = <int>[];
+      Future<List<Map<String, dynamic>>> load(
+        int index,
+        Future<List<Map<String, dynamic>>> request,
+      ) async {
+        try {
+          final records = await request;
+          _catalogSnapshots[index] = records;
+          return records;
+        } catch (_) {
+          failed.add(index);
+          return _catalogSnapshots[index] ?? [];
+        }
+      }
+
       final results = await Future.wait([
-        _operationsApi.getCatalogServices(),
-        _operationsApi.getRecords('/api/catalog/categories'),
-        _operationsApi.getRecords('/api/catalog/offers'),
-        _operationsApi.getRecords('/api/catalog/packages'),
-        _operationsApi.getRecords('/api/catalog/banners'),
+        load(0, _operationsApi.getCatalogServices()),
+        load(1, _operationsApi.getRecords('/api/catalog/categories')),
+        load(2, _operationsApi.getRecords('/api/catalog/offers')),
+        load(3, _operationsApi.getRecords('/api/catalog/packages')),
+        load(4, _operationsApi.getRecords('/api/catalog/banners')),
       ]);
       final catalogServices = results[0],
           categories = results[1],
@@ -745,7 +888,10 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                 ),
           ];
           _catalogLoading = false;
-          _catalogError = null;
+          _catalogError = failed.isEmpty
+              ? null
+              : 'Some content could not be refreshed. Please retry.';
+          if (failed.isEmpty) _catalogLoadedAt = DateTime.now();
         });
       }
     } catch (e) {
@@ -766,6 +912,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     WidgetsBinding.instance.removeObserver(this);
     if (widget.operationsApi == null || widget.ownsOperationsApi)
       _operationsApi.close();
+    _cartSaveTimer?.cancel();
     _catalogRefreshTimer?.cancel();
     _bookingSyncTimer?.cancel();
     _confirmationTimer?.cancel();
@@ -851,6 +998,19 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                 const ListTile(title: Text('No notifications yet.')),
               for (final record in records)
                 ListTile(
+                  onTap: () async {
+                    try {
+                      await _operationsApi.markNotificationRead(
+                        (record['_id'] ?? record['id']).toString(),
+                      );
+                      if (mounted) _message('Notification marked as read.');
+                    } catch (_) {
+                      if (mounted)
+                        _message(
+                          'Unable to update notification. Please retry.',
+                        );
+                    }
+                  },
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 8,
@@ -969,6 +1129,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
       _plan.add(cartService);
       _cartQuantities[cartService.id] = 1;
     });
+    _scheduleCartSave();
     _message('${service.name} added to your cart.');
   }
 
@@ -976,7 +1137,9 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     final current = _cartQuantities[service.id] ?? 1;
     final updated = current + change;
     if (updated < 1) return;
+    if (updated > 10) return;
     setState(() => _cartQuantities[service.id] = updated);
+    _scheduleCartSave();
   }
 
   void _removeFromCart(_Service service) {
@@ -984,6 +1147,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
       _plan.remove(service);
       _cartQuantities.remove(service.id);
     });
+    _scheduleCartSave();
   }
 
   int get _cartSubtotal => _plan.fold<int>(
@@ -1065,6 +1229,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
       _serviceEndsAt = null;
       _liveBookingTotal = null;
     });
+    _scheduleCartSave();
   }
 
   bool get _hasValidCheckoutSelection =>
@@ -1231,6 +1396,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         _selectedAddressId = result.id;
         _location = result.city;
       });
+      await _selectDefaultAddress(result);
     } catch (error) {
       if (mounted) _message('Unable to save address: $error');
     }
@@ -1493,10 +1659,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                             ],
                         },
                       )
-              : IndexedStack(
-                  index: _tab,
-                  children: [_home(), _bookings(), _offers(), _profile()],
-                ),
+              : IndexedStack(index: _tab, children: _tabChildren()),
         ),
       ),
       bottomNavigationBar:
@@ -1529,6 +1692,15 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
             ),
     ),
   );
+
+  List<Widget> _tabChildren() {
+    _visitedTabs.add(_tab);
+    final builders = <Widget Function()>[_home, _bookings, _offers, _profile];
+    return [
+      for (var i = 0; i < builders.length; i++)
+        _visitedTabs.contains(i) ? builders[i]() : const SizedBox.shrink(),
+    ];
+  }
 
   Widget _home() {
     final width = MediaQuery.sizeOf(context).width - 32;
@@ -1628,8 +1800,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                         ),
                         child: entry.$3 == null || entry.$3!.isEmpty
                             ? Icon(entry.$2, color: _berry, size: 21)
-                            : Image.network(
-                                entry.$3!,
+                            : CustomerImage(
+                                url: entry.$3!,
                                 width: 34,
                                 height: 34,
                                 fit: BoxFit.cover,
@@ -3697,7 +3869,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           key: ValueKey('saved-address-${address.id}'),
-          onTap: () => setState(() => _selectedAddressId = address.id),
+          onTap: () => _selectDefaultAddress(address),
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.all(12),
@@ -3978,6 +4150,16 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
       _liveBookingStatus = '${booking['status'] ?? 'confirmed'}';
       _liveWorkerName = null;
       _startLiveBookingSync(bid);
+      _cartSaveTimer?.cancel();
+      _cartEdited = false;
+      _cartWrites = _cartWrites
+          .then((_) => _operationsApi.clearCart())
+          .catchError((Object _) {
+            if (mounted)
+              _message(
+                'Booking confirmed. Your saved cart could not be cleared.',
+              );
+          });
       return true;
     } catch (e) {
       debugPrint('[CustomerApp] Booking creation failed: $e');
@@ -4429,194 +4611,219 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
       color: const Color(0xFFFFF7F8),
       child: RefreshIndicator(
         onRefresh: _syncBookingCatalog,
-        child: ListView(
-          key: const ValueKey('offers-packages-screen'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(14, 6, 14, 24),
-          children: [
+        child: _offerScrollView([
+          SizedBox(
+            height: 52,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    key: const ValueKey('offers-back'),
+                    tooltip: 'Back to Home',
+                    onPressed: () => setState(() => _tab = 0),
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFE8EE),
+                      foregroundColor: _berry,
+                      fixedSize: const Size(42, 42),
+                      padding: EdgeInsets.zero,
+                    ),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 46),
+                  child: Text(
+                    'Offers & Packages',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _ink,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    key: const ValueKey('toggle-offers-search'),
+                    tooltip: _offerSearchVisible
+                        ? 'Close search'
+                        : 'Search offers',
+                    onPressed: () => setState(() {
+                      _offerSearchVisible = !_offerSearchVisible;
+                      if (!_offerSearchVisible) _offerSearchQuery = '';
+                    }),
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFE8EE),
+                      foregroundColor: _berry,
+                      fixedSize: const Size(42, 42),
+                      padding: EdgeInsets.zero,
+                    ),
+                    icon: Icon(
+                      _offerSearchVisible
+                          ? Icons.close_rounded
+                          : Icons.search_rounded,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_offerSearchVisible) ...[
+            const SizedBox(height: 8),
+            TextField(
+              key: const ValueKey('offers-search'),
+              autofocus: true,
+              onChanged: (value) => setState(() => _offerSearchQuery = value),
+              decoration: InputDecoration(
+                hintText: 'Search offers',
+                hintStyle: const TextStyle(fontSize: 11),
+                prefixIcon: const Icon(Icons.search, size: 19),
+                isDense: true,
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (final tab in const ['Offers', 'Packages'])
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      right: tab == 'Offers' ? 5 : 0,
+                      left: tab == 'Packages' ? 5 : 0,
+                    ),
+                    child: ChoiceChip(
+                      key: ValueKey('offers-tab-$tab'),
+                      label: Center(child: Text(tab)),
+                      selected: _offersTab == tab,
+                      showCheckmark: false,
+                      onSelected: (_) => setState(() => _offersTab = tab),
+                      selectedColor: _berry,
+                      backgroundColor: const Color(0xFFFFE8EE),
+                      side: const BorderSide(color: Color(0xFFFFDCE6)),
+                      shape: const StadiumBorder(),
+                      labelStyle: TextStyle(
+                        color: _offersTab == tab ? Colors.white : _berry,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (!showPackages) ...[
+            const SizedBox(height: 10),
             SizedBox(
-              height: 52,
-              child: Stack(
-                alignment: Alignment.center,
+              height: 38,
+              child: ListView(
+                key: const ValueKey('offers-category-list'),
+                scrollDirection: Axis.horizontal,
                 children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      key: const ValueKey('offers-back'),
-                      tooltip: 'Back to Home',
-                      onPressed: () => setState(() => _tab = 0),
-                      style: IconButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFE8EE),
-                        foregroundColor: _berry,
-                        fixedSize: const Size(42, 42),
-                        padding: EdgeInsets.zero,
-                      ),
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 46),
-                    child: Text(
-                      'Offers & Packages',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: _ink,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: IconButton(
-                      key: const ValueKey('toggle-offers-search'),
-                      tooltip: _offerSearchVisible
-                          ? 'Close search'
-                          : 'Search offers',
-                      onPressed: () => setState(() {
-                        _offerSearchVisible = !_offerSearchVisible;
-                        if (!_offerSearchVisible) _offerSearchQuery = '';
-                      }),
-                      style: IconButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFE8EE),
-                        foregroundColor: _berry,
-                        fixedSize: const Size(42, 42),
-                        padding: EdgeInsets.zero,
-                      ),
-                      icon: Icon(
-                        _offerSearchVisible
-                            ? Icons.close_rounded
-                            : Icons.search_rounded,
-                        size: 20,
-                      ),
-                    ),
-                  ),
+                  _offerCategoryChip('All', Icons.auto_awesome_rounded),
+                  _offerCategoryChip('Facial', Icons.face_retouching_natural),
+                  _offerCategoryChip('Hair Care', Icons.face_3_outlined),
+                  _offerCategoryChip('Makeup', Icons.brush_outlined),
+                  _offerCategoryChip('Waxing', Icons.auto_fix_high_outlined),
+                  _offerCategoryChip('Manicure', Icons.back_hand_outlined),
+                  _offerCategoryChip('Spa', Icons.spa_outlined),
                 ],
               ),
             ),
-            if (_offerSearchVisible) ...[
-              const SizedBox(height: 8),
-              TextField(
-                key: const ValueKey('offers-search'),
-                autofocus: true,
-                onChanged: (value) => setState(() => _offerSearchQuery = value),
-                decoration: InputDecoration(
-                  hintText: 'Search offers',
-                  hintStyle: const TextStyle(fontSize: 11),
-                  prefixIcon: const Icon(Icons.search, size: 19),
-                  isDense: true,
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-            ],
             const SizedBox(height: 10),
-            Row(
-              children: [
-                for (final tab in const ['Offers', 'Packages'])
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        right: tab == 'Offers' ? 5 : 0,
-                        left: tab == 'Packages' ? 5 : 0,
-                      ),
-                      child: ChoiceChip(
-                        key: ValueKey('offers-tab-$tab'),
-                        label: Center(child: Text(tab)),
-                        selected: _offersTab == tab,
-                        showCheckmark: false,
-                        onSelected: (_) => setState(() => _offersTab = tab),
-                        selectedColor: _berry,
-                        backgroundColor: const Color(0xFFFFE8EE),
-                        side: const BorderSide(color: Color(0xFFFFDCE6)),
-                        shape: const StadiumBorder(),
-                        labelStyle: TextStyle(
-                          color: _offersTab == tab ? Colors.white : _berry,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            if (!showPackages) ...[
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 38,
-                child: ListView(
-                  key: const ValueKey('offers-category-list'),
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _offerCategoryChip('All', Icons.auto_awesome_rounded),
-                    _offerCategoryChip('Facial', Icons.face_retouching_natural),
-                    _offerCategoryChip('Hair Care', Icons.face_3_outlined),
-                    _offerCategoryChip('Makeup', Icons.brush_outlined),
-                    _offerCategoryChip('Waxing', Icons.auto_fix_high_outlined),
-                    _offerCategoryChip('Manicure', Icons.back_hand_outlined),
-                    _offerCategoryChip('Spa', Icons.spa_outlined),
-                  ],
+            _offerGrid([
+              for (final offer in visibleOffers) _offerPromotionTile(offer),
+              for (final service in discountedServices)
+                _offerServiceTile(service),
+            ]),
+            if (visibleOffers.isEmpty && discountedServices.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Text(
+                  _offerSearchQuery.isEmpty
+                      ? 'No offers in this category yet.'
+                      : 'No offers match "$_offerSearchQuery".',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: _muted, fontSize: 13),
                 ),
               ),
-              const SizedBox(height: 10),
-              _offerGrid([
-                for (final offer in visibleOffers) _offerPromotionTile(offer),
-                for (final service in discountedServices)
-                  _offerServiceTile(service),
-              ]),
-              if (visibleOffers.isEmpty && discountedServices.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 32),
-                  child: Text(
-                    _offerSearchQuery.isEmpty
-                        ? 'No offers in this category yet.'
-                        : 'No offers match "$_offerSearchQuery".',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: _muted, fontSize: 13),
-                  ),
+          ] else ...[
+            const SizedBox(height: 10),
+            if (_packagesData.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Text(
+                  'No packages are available right now.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: _muted, fontSize: 13),
                 ),
-            ] else ...[
-              const SizedBox(height: 10),
-              if (_packagesData.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32),
-                  child: Text(
-                    'No packages are available right now.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: _muted, fontSize: 13),
-                  ),
-                ),
-              _offerGrid([
-                for (final package in _packagesData) _offerPackageTile(package),
-              ]),
-            ],
+              ),
+            _offerGrid([
+              for (final package in _packagesData) _offerPackageTile(package),
+            ]),
           ],
-        ),
+        ]),
       ),
     );
   }
 
-  Widget _offerGrid(List<Widget> cards) => LayoutBuilder(
+  Widget _offerScrollView(List<Widget> sections) => CustomScrollView(
+    key: const ValueKey('offers-packages-screen'),
+    physics: const AlwaysScrollableScrollPhysics(),
+    slivers: [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(14, 6, 14, 24),
+        sliver: SliverMainAxisGroup(
+          slivers: [
+            for (final section in sections)
+              if (section is SliverLayoutBuilder)
+                section
+              else
+                SliverToBoxAdapter(child: section),
+          ],
+        ),
+      ),
+    ],
+  );
+
+  Widget _offerGrid(List<Widget> cards) => SliverLayoutBuilder(
     builder: (context, constraints) {
       final columns = MediaQuery.sizeOf(context).width >= 600 ? 3 : 2;
-      final width = (constraints.maxWidth - (columns - 1) * 10) / columns;
-      return Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: [
-          for (final card in cards) SizedBox(width: width, child: card),
-        ],
+      return SliverList.builder(
+        itemCount: (cards.length / columns).ceil(),
+        itemBuilder: (context, row) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var column = 0; column < columns; column++) ...[
+                if (column > 0) const SizedBox(width: 10),
+                Expanded(
+                  child: row * columns + column < cards.length
+                      ? cards[row * columns + column]
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ],
+          ),
+        ),
       );
     },
   );
@@ -4691,58 +4898,61 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: Text('${offer['name'] ?? 'Offer details'}'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (Uri.tryParse('${offer['thumbnail'] ?? ''}')?.hasAuthority ==
-                  true) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 130,
-                    child: _catalogCover(offer['thumbnail']),
+        content: SizedBox(
+          width: MediaQuery.sizeOf(context).width.clamp(0, 420).toDouble(),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (Uri.tryParse('${offer['thumbnail'] ?? ''}')?.hasAuthority ==
+                    true) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 130,
+                      child: _catalogCover(offer['thumbnail']),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                Text('${offer['description'] ?? ''}'),
+                const SizedBox(height: 12),
+                Text('Discount: ${_offerDiscountLabel(offer)}'),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _bookingBlush,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _bookingLine),
+                  ),
+                  child: Text(
+                    'Code: ${offer['code'] ?? 'Not provided'}',
+                    style: const TextStyle(
+                      color: _bookingBerry,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
-              ],
-              Text('${offer['description'] ?? ''}'),
-              const SizedBox(height: 12),
-              Text('Discount: ${_offerDiscountLabel(offer)}'),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _bookingBlush,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: _bookingLine),
-                ),
-                child: Text(
-                  'Code: ${offer['code'] ?? 'Not provided'}',
-                  style: const TextStyle(
-                    color: _bookingBerry,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                const SizedBox(height: 12),
+                if (minimumOrderPaise != null)
+                  Text(
+                    'Minimum spend: ${CatalogService.formatPaise(BigInt.from(minimumOrderPaise.toInt()))}',
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (minimumOrderPaise != null)
-                Text(
-                  'Minimum spend: ${CatalogService.formatPaise(BigInt.from(minimumOrderPaise.toInt()))}',
-                ),
-              if (endsAt != null)
-                Text(
-                  'Valid until: ${MaterialLocalizations.of(context).formatMediumDate(endsAt.toLocal())}',
-                ),
-              if ('${offer['terms'] ?? ''}'.trim().isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text('${offer['terms']}'),
+                if (endsAt != null)
+                  Text(
+                    'Valid until: ${MaterialLocalizations.of(context).formatMediumDate(endsAt.toLocal())}',
+                  ),
+                if ('${offer['terms'] ?? ''}'.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text('${offer['terms']}'),
+                ],
               ],
-            ],
+            ),
           ),
         ),
         actions: [
@@ -4850,6 +5060,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
       }
       _tab = 1;
     });
+    _scheduleCartSave();
     _message('${package['name']} services added to your cart.');
   }
 
@@ -4868,8 +5079,8 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
         child: Center(child: Icon(Icons.local_offer_outlined, color: _berry)),
       );
     }
-    return Image.network(
-      value as String,
+    return CustomerImage(
+      url: value as String,
       fit: fit,
       errorBuilder: (_, _, _) => const ColoredBox(
         color: Color(0xFFFFE9ED),
@@ -4947,7 +5158,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
           _ProfileMenuEntry(
             Icons.favorite_border_rounded,
             'Saved Professionals',
-            _favoriteProfessional ? '1 saved' : 'None yet',
+            'View your saved professionals',
             _showSavedProfessionals,
           ),
           _ProfileMenuEntry(
@@ -4961,17 +5172,14 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
           _ProfileMenuEntry(
             Icons.local_offer_outlined,
             'Offers & Wallet',
-            'View current offers and packages',
-            () => setState(() => _tab = 2),
+            'View current offers and wallet availability',
+            _showOffersAndWallet,
           ),
           _ProfileMenuEntry(
             Icons.card_giftcard_outlined,
             'Refer & Earn',
             'Invite friends to Hi Beauty',
-            () => _showProfileInfo(
-              'Refer & Earn',
-              'Referral rewards are not connected in this preview.',
-            ),
+            () => _openAccountSection('referrals', 'Refer & Earn'),
           ),
         ]),
         const SizedBox(height: 10),
@@ -4980,10 +5188,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
             Icons.support_agent_outlined,
             'Help & Support',
             'Get help with your account',
-            () => _showProfileInfo(
-              'Help & Support',
-              'Support contact is not connected in this development preview.',
-            ),
+            () => _openAccountSection('support', 'Help & Support'),
           ),
           _ProfileMenuEntry(
             Icons.settings_outlined,
@@ -4995,19 +5200,22 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
             Icons.privacy_tip_outlined,
             'Terms & Privacy',
             'Review app terms and privacy information',
-            () => _showProfileInfo(
-              'Terms & Privacy',
-              'Terms and privacy documents are not connected in this preview.',
-            ),
+            () => _openAccountSection('legal', 'Terms & Privacy'),
           ),
         ]),
         const SizedBox(height: 10),
         _profileMenuGroup([
           _ProfileMenuEntry(
+            Icons.delete_outline,
+            'Request account deletion',
+            'Ask support to review deletion of your account',
+            () => _openAccountSection('deletion', 'Account deletion'),
+          ),
+          _ProfileMenuEntry(
             Icons.logout_rounded,
             'Logout',
-            'Return to the development home',
-            () => setState(() => _tab = 0),
+            'Sign out of your account',
+            _logout,
             color: _bookingPink,
           ),
         ]),
@@ -5076,19 +5284,79 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     return CircleAvatar(
       radius: 24,
       backgroundColor: const Color(0xFFFFE8EF),
-      backgroundImage: image.isEmpty ? null : NetworkImage(image),
       child: image.isEmpty
           ? const Icon(Icons.person_outline_rounded, color: _bookingBerry)
-          : null,
+          : ClipOval(
+              child: CustomerImage(
+                url: image,
+                width: 48,
+                height: 48,
+                errorBuilder: (_, _, _) => const Icon(
+                  Icons.person_outline_rounded,
+                  color: _bookingBerry,
+                ),
+              ),
+            ),
     );
   }
 
-  void _showSavedProfessionals() => _showProfileInfo(
-    'Saved Professionals',
-    _favoriteProfessional
-        ? 'Your saved professional is available from the Professionals screen.'
-        : 'You have not saved any professionals yet.',
-  );
+  void _openAccountSection(String section, String title) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CustomerAccountScreen(
+          api: _operationsApi,
+          section: section,
+          title: title,
+        ),
+      ),
+    );
+  }
+
+  void _showSavedProfessionals() =>
+      _openAccountSection('saved-professionals', 'Saved Professionals');
+
+  Future<void> _showOffersAndWallet() async {
+    final selection = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('Offers & Packages'),
+              leading: const Icon(Icons.local_offer_outlined),
+              onTap: () => Navigator.pop(context, 'offers'),
+            ),
+            ListTile(
+              title: const Text('Wallet'),
+              leading: const Icon(Icons.account_balance_wallet_outlined),
+              onTap: () => Navigator.pop(context, 'wallet'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (selection == 'offers') setState(() => _tab = 2);
+    if (selection == 'wallet') _openAccountSection('wallet', 'Wallet');
+  }
+
+  Future<void> _logout() async {
+    if (_loggingOut) return;
+    _loggingOut = true;
+    _cartSaveTimer?.cancel();
+    if (_cartEdited) await _saveCartDraft();
+    try {
+      await _operationsApi.logout();
+    } catch (_) {
+      /* The local token is always removed, even if offline. */
+    }
+    await MobilePush.instance?.signedOut();
+    if (mounted)
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(RouteNames.login, (_) => false);
+  }
 
   void _showProfileSettings() => showDialog<void>(
     context: context,
@@ -5204,9 +5472,21 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                 ),
                 title: Text(saved.label),
                 subtitle: Text(saved.details),
-                trailing: saved.id == _selectedAddressId
-                    ? const Icon(Icons.check_circle, color: _bookingPink)
-                    : null,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (saved.id == _selectedAddressId)
+                      const Icon(Icons.check_circle, color: _bookingPink),
+                    PopupMenuButton<String>(
+                      onSelected: (action) =>
+                          Navigator.pop(context, action + ':' + saved.id),
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(value: 'edit', child: Text('Edit')),
+                        PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      ],
+                    ),
+                  ],
+                ),
                 onTap: () => Navigator.pop(context, saved),
               ),
             ListTile(
@@ -5220,12 +5500,21 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
     );
     if (selection == 'add-address' && mounted) {
       await _addAddress();
+    } else if (selection is String &&
+        selection.startsWith('edit:') &&
+        mounted) {
+      await _addAddress(
+        _savedAddresses.firstWhere((a) => a.id == selection.substring(5)),
+      );
+    } else if (selection is String &&
+        selection.startsWith('delete:') &&
+        mounted) {
+      await _deleteSavedAddress(
+        _savedAddresses.firstWhere((a) => a.id == selection.substring(7)),
+      );
     } else if (selection is _SavedAddress && mounted) {
       final address = selection;
-      setState(() {
-        _selectedAddressId = address.id;
-        _location = address.city;
-      });
+      await _selectDefaultAddress(address);
       _message('${address.label} selected as your address.');
     }
   }
@@ -5239,8 +5528,12 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
   }
 
   Future<void> _syncCustomerHistory() async {
-    final records = await _operationsApi.getBookings();
-    if (mounted) setState(() => _bookingsData = records);
+    try {
+      final records = await _operationsApi.getBookings();
+      if (mounted) setState(() => _bookingsData = records);
+    } catch (_) {
+      if (mounted) _message('Unable to load booking history. Please retry.');
+    }
   }
 
   void _editCustomerProfile() {
@@ -5311,6 +5604,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                   const SizedBox(height: 6),
                   TextFormField(
                     key: const ValueKey('profile-name-input'),
+                    maxLength: 120,
                     style: const TextStyle(fontSize: 14),
                     initialValue: name,
                     textCapitalization: TextCapitalization.words,
@@ -5322,7 +5616,7 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
+                onPressed: saving ? null : () => Navigator.pop(dialogContext),
                 child: const Text('Cancel'),
               ),
               FilledButton(
@@ -5349,7 +5643,13 @@ class _DevelopmentHomeScreenState extends State<DevelopmentHomeScreen>
                           if (!mounted || !dialogContext.mounted) return;
                           setState(() {
                             _customerName = updatedName;
-                            _account.addAll(updated);
+                            _account.addAll(
+                              updated['user'] is Map
+                                  ? Map<String, dynamic>.from(
+                                      updated['user'] as Map,
+                                    )
+                                  : updated,
+                            );
                           });
                           Navigator.pop(dialogContext);
                         } catch (error) {
@@ -5431,8 +5731,8 @@ class _CategoryServicesScreen extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.network(
-                  (heroImage?.isNotEmpty == true
+                CustomerImage(
+                  url: (heroImage?.isNotEmpty == true
                       ? heroImage!
                       : services.first.image),
                   key: ValueKey('category-hero-$category'),
@@ -6145,8 +6445,8 @@ class _ServicePhoto extends StatelessWidget {
     );
     if (service.image.isEmpty) return fallback();
     if (Uri.tryParse(service.image)?.hasAuthority == true) {
-      return Image.network(
-        service.image,
+      return CustomerImage(
+        url: service.image,
         width: width,
         height: height,
         fit: fit,

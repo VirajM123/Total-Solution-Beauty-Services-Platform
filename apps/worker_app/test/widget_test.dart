@@ -78,7 +78,7 @@ void main() {
     },
   );
 
-  test('extras, finish and demo-paid marker survive restart', () async {
+  test('extras and finish state survive restart without changing payment', () async {
     final store = _MemoryStore();
     final repo = WorkerBookingStateRepository(store, demoMode: true);
     await repo.initialize();
@@ -104,15 +104,12 @@ void main() {
       bookingId: 'P-002',
       at: DateTime.utc(2026, 10, 17, 10),
     );
-    await repo.simulatePayment(bookingId: 'P-002');
-
     final restored = WorkerBookingStateRepository(store, demoMode: true);
     await restored.initialize();
     final saved = restored.byId('P-002')!;
-    expect(saved.demoCustomerTotal, 1900);
     expect(saved.serviceStage, WorkerServiceStage.finished);
     expect(saved.paymentStage, WorkerPaymentStage.pending);
-    expect(saved.demoPaidAt, isNotNull);
+    expect(saved.demoCustomerTotal, 1900);
     expect(restored.hasActivePhysicalService, isFalse);
 
     expect(

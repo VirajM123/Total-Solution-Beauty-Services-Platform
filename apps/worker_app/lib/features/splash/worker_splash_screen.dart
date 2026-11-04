@@ -6,9 +6,7 @@ import '../home/worker_home_screen.dart';
 import '../login/worker_login_screen.dart';
 
 class WorkerSplashScreen extends StatefulWidget {
-  const WorkerSplashScreen({super.key, required this.demoEnabled});
-
-  final bool demoEnabled;
+  const WorkerSplashScreen({super.key});
 
   @override
   State<WorkerSplashScreen> createState() => _WorkerSplashScreenState();
@@ -88,7 +86,7 @@ class _WorkerSplashScreenState extends State<WorkerSplashScreen>
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
         pageBuilder: (context, animation, secondaryAnimation) {
-          return WorkerLoginScreen(demoEnabled: widget.demoEnabled);
+          return const WorkerLoginScreen();
         },
         transitionDuration: const Duration(milliseconds: 500),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {

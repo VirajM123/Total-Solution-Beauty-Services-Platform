@@ -54,10 +54,17 @@ void main() {
       expect(find.text('Head Massage'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Customer notes'), 300);
       expect(find.text('Customer notes'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Payment method'), 300);
-      expect(find.text('Payment method'), findsOneWidget);
-      expect(find.text('Cash on Service'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Payment collection'), 300);
+      expect(find.text('Payment collection'), findsOneWidget);
+      expect(
+        find.text('Customer can pay via UPI (QR) or Cash.'),
+        findsOneWidget,
+      );
       expect(find.text('₹1,600'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('finish-service-continue')),
+        300,
+      );
       expect(
         tester
             .widget<FilledButton>(
@@ -71,8 +78,16 @@ void main() {
         find.byKey(const Key('finish-review-confirmation')),
         findsOneWidget,
       );
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('finish-review-confirmation')),
+        300,
+      );
       await tester.tap(find.byKey(const Key('finish-review-confirmation')));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('finish-service-continue')),
+        300,
+      );
       expect(
         tester
             .widget<FilledButton>(

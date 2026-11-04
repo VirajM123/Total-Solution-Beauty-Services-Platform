@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:worker_app/features/home/worker_booking_data.dart';
@@ -47,6 +48,10 @@ class PaymentApi extends WorkerMobileOperationsApi {
   }
 
   @override
+  Future<Uint8List> fetchBookingPaymentQrImage(String id) async =>
+      Uint8List.fromList([137, 80, 78, 71]);
+
+  @override
   Future<Map<String, dynamic>> createBookingPaymentQr(String id) async {
     creates++;
     return {'imageUrl': 'https://provider.test/qr.png', 'amountPaise': 17055};
@@ -79,45 +84,53 @@ class PaymentApi extends WorkerMobileOperationsApi {
 }
 
 void main() {
-  testWidgets('demo payment status follows the collection-screen styling', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetDevicePixelRatio);
-    addTearDown(tester.view.resetPhysicalSize);
+  testWidgets(
+    'pending payment preview is read-only and has no simulation action',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
 
-    for (final width in [320.0, 390.0]) {
-      tester.view.physicalSize = Size(width, 844);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: WorkerWaitingCustomerPaymentScreen(
-            order: order.copyWith(status: 'Payment Pending'),
-            extraServices: const [
-              WorkerExtraServiceItem(
-                id: 'preview-extra',
-                name: 'Head Massage',
-                customerPrice: 400,
-                durationMinutes: 15,
-              ),
-            ],
-            demoFinishedAt: DateTime(2026, 11, 3, 10),
+      for (final width in [320.0, 390.0]) {
+        tester.view.physicalSize = Size(width, 844);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: WorkerWaitingCustomerPaymentScreen(
+              order: order.copyWith(status: 'Payment Pending'),
+              extraServices: const [
+                WorkerExtraServiceItem(
+                  id: 'preview-extra',
+                  name: 'Head Massage',
+                  customerPrice: 400,
+                  durationMinutes: 15,
+                ),
+              ],
+              demoFinishedAt: DateTime(2026, 11, 3, 10),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Payment Collection'), findsOneWidget);
-      expect(find.text('Amount to collect'), findsOneWidget);
-      expect(find.text('Card · Soon'), findsOneWidget);
-      expect(find.text('PAYMENT PENDING · NOT SENT'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox());
-    }
-  });
+        expect(find.text('Payment Collection'), findsOneWidget);
+        expect(find.text('Amount to collect'), findsOneWidget);
+        expect(find.textContaining('Card'), findsNothing);
+        expect(find.text('Awaiting verified payment'), findsOneWidget);
+        expect(
+          find.textContaining(
+            'Payment and service completion must be verified through the booking workflow.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Cash'), findsNothing);
+        expect(find.textContaining('Simulate Payment'), findsNothing);
+        expect(find.textContaining('Demo payment completed'), findsNothing);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      }
+    },
+  );
 
-  testWidgets('payment collection keeps future card UI inactive', (
-    tester,
-  ) async {
+  testWidgets('payment collection offers only UPI QR and cash', (tester) async {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
@@ -130,27 +143,20 @@ void main() {
           home: WorkerPaymentQrScreen(
             order: order,
             operationsApi: api,
-            onCashCollection: () {},
+            onCashCollection: () async {},
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.text('Payment Collection'), findsOneWidget);
-      expect(find.text('UPI'), findsOneWidget);
-      expect(find.text('Card · Soon'), findsOneWidget);
+      expect(find.text('UPI (QR)'), findsOneWidget);
+      expect(find.textContaining('Simulate Payment'), findsNothing);
+      expect(find.textContaining('Demo payment completed'), findsNothing);
+      expect(find.textContaining('Card'), findsNothing);
       expect(find.text('Cash'), findsOneWidget);
-      expect(
-        tester
-            .widget<TextButton>(
-              find.ancestor(
-                of: find.text('Card · Soon'),
-                matching: find.byType(TextButton),
-              ),
-            )
-            .onPressed,
-        isNull,
-      );
+      expect(find.text('Card / Link'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       api.close();
@@ -175,6 +181,7 @@ void main() {
       expect(find.text('Payment received · Service completed'), findsNothing);
       api.readFails = false;
       await tester.ensureVisible(find.text('Check payment status'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Check payment status'));
       await tester.pump();
       expect(
@@ -209,12 +216,26 @@ void main() {
     await tester.tap(find.byKey(const Key('finish-service')));
     await tester.pumpAndSettle();
     expect(find.text('Services provided'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('finish-review-confirmation')),
+      200,
+    );
+    await tester.tap(find.byKey(const Key('finish-review-confirmation')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('finish-service-continue')),
+      200,
+    );
     await tester.tap(find.byKey(const Key('finish-service-continue')));
     await tester.pumpAndSettle();
     expect(find.text('Payment Collection'), findsOneWidget);
     await tester.tap(find.text('Cash'));
     await tester.pumpAndSettle();
-    expect(find.text('Report cash collection'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Report cash collection'), 200);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Report cash collection'));
+    await tester.pumpAndSettle();
+    expect(find.text('Report cash collection'), findsWidgets);
     await tester.enterText(find.byType(TextField).last, 'cash-receipt-1');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -222,15 +243,30 @@ void main() {
     expect(api.cashReported, isTrue);
     expect(api.cashReference, 'cash-receipt-1');
     expect(api.cashAmountPaise, 17055);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Awaiting Admin Cash Reconciliation'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.text('Awaiting Admin Cash Reconciliation'), findsOneWidget);
     api.paid = true;
     await tester.pump(const Duration(seconds: 20));
     await tester.pumpAndSettle();
-    expect(find.text('Enter Admin Completion OTP'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('start-service-entry')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('service-completion-otp')),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).last, '123456');
-    await tester.tap(find.text('Verify'));
+    await tester.enterText(
+      find.byKey(const Key('service-completion-otp')),
+      '123456',
+    );
+    await tester.ensureVisible(find.text('Verify OTP & complete service'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Verify OTP & complete service'));
     await tester.pumpAndSettle();
     expect(api.completed, isTrue);
     expect(find.text('Service completed!'), findsOneWidget);
@@ -256,7 +292,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        find.text(finished ? 'View Payment QR' : 'Finish Service'),
+        find.text(finished ? 'Collect Payment' : 'Finish Service'),
         findsOneWidget,
       );
       await tester.tap(
@@ -265,6 +301,16 @@ void main() {
       await tester.pumpAndSettle();
       if (!finished) {
         expect(find.text('Services provided'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.byKey(const Key('finish-review-confirmation')),
+          200,
+        );
+        await tester.tap(find.byKey(const Key('finish-review-confirmation')));
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.byKey(const Key('finish-service-continue')),
+          200,
+        );
         await tester.tap(find.byKey(const Key('finish-service-continue')));
         await tester.pumpAndSettle();
       }
@@ -293,13 +339,14 @@ void main() {
     await tester.ensureVisible(
       find.byKey(const Key('generate-payment-qr-action')),
     );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('generate-payment-qr-action')));
     await tester.pumpAndSettle();
     expect(api.creates, 0);
     await tester.tap(find.text('Generate QR'));
     await tester.pumpAndSettle();
     expect(api.creates, 1);
-    expect(find.text('₹170.55'), findsOneWidget);
+    expect(find.textContaining('170.55'), findsWidgets);
     expect(find.text('Payment received · Service completed'), findsNothing);
     api.paid = true;
     await tester.pump(const Duration(seconds: 5));

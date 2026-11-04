@@ -1,3 +1,4 @@
+import 'package:worker_app/integration/worker_environment.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -324,7 +325,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('online workers keep offer polling if booking history fails', (
+  testWidgets('legacy offer availability follows configuration if booking history fails', (
     tester,
   ) async {
     final api = WorkerMobileOperationsApi(
@@ -373,7 +374,7 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await tester.pump();
 
-    expect(find.text('New Booking Request'), findsOneWidget);
+    expect(find.text('New Booking Request'), WorkerEnvironment.legacyWorkerOffersEnabled ? findsOneWidget : findsNothing);
     expect(tester.takeException(), isNull);
     api.close();
   });
@@ -400,8 +401,7 @@ void main() {
       const MaterialApp(home: WorkerTermsPrivacyScreen()),
     );
     expect(
-      find.text('Approved terms and privacy content is not configured.'),
-      findsOneWidget,
+      find.text('Document is not configured. Contact support.'), findsNWidgets(2),
     );
   });
 

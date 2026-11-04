@@ -63,6 +63,10 @@ void main() {
       await tester.tap(find.text(tab).last);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: tab);
+      if (tab == 'My Cart') {
+        await tester.tap(find.byKey(const ValueKey('cart-back')));
+        await tester.pumpAndSettle();
+      }
       if (tab == 'Offers') {
         expect(find.text('50% OFF'), findsOneWidget);
         expect(

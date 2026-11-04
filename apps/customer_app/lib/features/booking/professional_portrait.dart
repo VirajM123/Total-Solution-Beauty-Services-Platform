@@ -1,3 +1,4 @@
+import '../shared/customer_image.dart';
 import 'package:flutter/material.dart';
 
 /// All booking cards use the same saved-photo fields and failure fallback.
@@ -49,7 +50,7 @@ class ProfessionalPortrait extends StatelessWidget {
             : Image(
                 image: photo.startsWith('assets/')
                     ? AssetImage(photo) as ImageProvider
-                    : NetworkImage(photo),
+                    : customerImageProvider(photo),
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => placeholder(),
               ),

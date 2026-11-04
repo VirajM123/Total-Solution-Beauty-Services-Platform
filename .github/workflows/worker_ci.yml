@@ -1,1 +1,21 @@
-# TODO: Configure worker CI workflow.
+name: worker app
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/worker_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.41.6
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos
+      - run: flutter test --no-pub
+      - run: flutter build apk --debug --dart-define=API_BASE_URL=https://api.example.invalid/api/v1

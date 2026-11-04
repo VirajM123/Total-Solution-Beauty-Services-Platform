@@ -18,8 +18,8 @@ void main() {
     for (final size in [const Size(320, 568), const Size(390, 844)]) {
       tester.view.physicalSize = size;
       for (final screen in <Widget>[
-        const WorkerSplashScreen(demoEnabled: false),
-        const WorkerLoginScreen(demoEnabled: false),
+        const WorkerSplashScreen(),
+        const WorkerLoginScreen(),
         const WorkerOtpScreen(phone: '9876543210'),
       ]) {
         await tester.pumpWidget(

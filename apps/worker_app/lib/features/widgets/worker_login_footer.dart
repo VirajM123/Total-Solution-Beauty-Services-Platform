@@ -17,8 +17,8 @@ class WorkerLoginFooter extends StatelessWidget {
     required this.onPrivacy,
   });
 
-  final VoidCallback onGoogle;
-  final VoidCallback onApple;
+  final VoidCallback? onGoogle;
+  final VoidCallback? onApple;
   final VoidCallback onRegister;
   final VoidCallback onTerms;
   final VoidCallback onPrivacy;
@@ -178,7 +178,7 @@ class _SocialButton extends StatelessWidget {
 
   final String label;
   final Widget icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {

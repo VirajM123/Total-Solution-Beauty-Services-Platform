@@ -806,7 +806,6 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
     WorkerBookingSession session,
   ) {
     final isFinished = session.serviceStage == WorkerServiceStage.finished;
-    final demoPaid = session.demoPaidAt != null;
     return Column(
       children: [
         _card(
@@ -848,26 +847,18 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
               ),
               _info(
                 Icons.credit_card_outlined,
-                demoPaid
-                    ? 'Payment simulation: ${_formatSavedTime(context, session.demoPaidAt)}'
-                    : isFinished
+                isFinished
                     ? 'Payment pending · No request sent'
                     : 'Payment not requested',
               ),
               const Divider(color: _border),
               Row(
                 children: [
-                  Icon(
-                    demoPaid ? Icons.check_circle_outline : Icons.info_outline,
-                    size: 18,
-                    color: demoPaid ? const Color(0xFF12875A) : _pink,
-                  ),
+                  Icon(Icons.info_outline, size: 18, color: _pink),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      demoPaid
-                          ? 'Demo payment completed · NOT VERIFIED'
-                          : isFinished
+                      isFinished
                           ? 'Service finished · Payment pending'
                           : 'Service in progress',
                       style: const TextStyle(
@@ -1197,7 +1188,10 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                                     onPressed: _updatingProgress
                                         ? null
                                         : _openPaymentQr,
-                                    icon: const Icon(Icons.payment_rounded, size: 20),
+                                    icon: const Icon(
+                                      Icons.payment_rounded,
+                                      size: 20,
+                                    ),
                                     label: const Text(
                                       'Collect Payment',
                                       style: TextStyle(
@@ -1208,7 +1202,10 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                                     style: FilledButton.styleFrom(
                                       backgroundColor: _pink,
                                       foregroundColor: Colors.white,
-                                      minimumSize: const Size(double.infinity, 50),
+                                      minimumSize: const Size(
+                                        double.infinity,
+                                        50,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(14),
                                       ),
@@ -1227,7 +1224,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                                                     ? () => Navigator.of(
                                                         context,
                                                       ).maybePop()
-                                                    : _openPaymentQr
+                                                    : null
                                               : _canAct(order.status)
                                               ? _handleProgressAction
                                               : () => Navigator.of(
@@ -1264,7 +1261,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
                                                     'completed'
                                                 ? order.paymentStatus == 'paid'
                                                       ? 'Service Completed - Payment Received'
-                                                      : 'Generate Payment QR'
+                                                      : 'Payment reconciliation required'
                                                 : {
                                                     'accepted',
                                                     'assigned',

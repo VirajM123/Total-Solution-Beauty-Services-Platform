@@ -1,3 +1,4 @@
+import '../shared/customer_image.dart';
 import '../shared/compact_customer_surface.dart';
 import 'package:flutter/material.dart';
 
@@ -79,7 +80,7 @@ class CompactBookingThumbnail extends StatelessWidget {
     if (image == null || image!.isEmpty) return fallback();
     return Image(
       image: image!.startsWith('http')
-          ? NetworkImage(image!)
+          ? customerImageProvider(image!)
           : AssetImage(image!) as ImageProvider,
       fit: BoxFit.cover,
       errorBuilder: (_, _, _) => fallback(),
@@ -146,7 +147,7 @@ class CompactBookingService extends StatelessWidget {
                   )
                 : Image(
                     image: image!.startsWith('http')
-                        ? NetworkImage(image!)
+                        ? customerImageProvider(image!)
                         : AssetImage(image!) as ImageProvider,
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => const ColoredBox(

@@ -57,6 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final request = await widget.auth.requestLoginOtp(value);
       if (!mounted) return;
       if (request.registrationRequired) {
+        setState(() => _loading = false);
         await Navigator.of(context).pushNamed(
           RouteNames.register,
           arguments: CustomerRegistrationArgs(phone: value),
@@ -70,6 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
           'Missing OTP challenge.',
         );
       }
+      setState(() => _loading = false);
       await Navigator.of(context).pushNamed(
         RouteNames.otp,
         arguments: CustomerOtpRouteArgs(phone: value, challengeId: challengeId),

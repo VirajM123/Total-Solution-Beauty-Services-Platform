@@ -103,6 +103,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       } else {
         final challengeId = await widget.auth.requestRegistrationOtp(phone);
         if (!mounted) return;
+        setState(() => _loading = false);
         await Navigator.of(context).pushNamed(
           RouteNames.otp,
           arguments: CustomerOtpRouteArgs(

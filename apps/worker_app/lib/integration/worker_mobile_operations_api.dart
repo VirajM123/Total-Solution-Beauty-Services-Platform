@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:async';
 import 'cancellable_http.dart';
 import 'dart:convert';
@@ -403,38 +404,46 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
     );
   }
 
-  Future<Map<String, dynamic>> createBookingPaymentLink(String bookingId) async {
-    return _request(
-      'POST',
-      '/mobile/payments/razorpay/create-link',
-      idempotencyKey: 'link_$bookingId',
-      body: {'bookingId': bookingId},
-    );
-  }
-
-  Future<Map<String, dynamic>> simulatePaymentSuccess(String bookingId) async {
-    return _request(
-      'POST',
-      '/mobile/payments/razorpay/simulate-success',
-      idempotencyKey: 'sim_${bookingId}_${DateTime.now().millisecondsSinceEpoch}',
-      body: {'bookingId': bookingId},
-    );
-  }
-
-  Future<Map<String, dynamic>> confirmCashPayment(
-    String bookingId, {
-    String reference = 'Cash Collected by Worker',
-  }) async {
+  Future<Uint8List> fetchBookingPaymentQrImage(String bookingId) async {
     final token = await _storage.read();
-    if (token == null) {
-      throw const WorkerAuthException('UNAUTHENTICATED', 'Sign in is required.');
+    if (token == null)
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
+    final response = await _transport.request(
+      'GET',
+      _uri('/mobile/worker/bookings/$bookingId/payment-qr/image'),
+      headers: {'Authorization': 'Bearer $token'},
+      timeout: const Duration(seconds: 12),
+    );
+    if (response.statusCode != 200 ||
+        !<String>[
+          'image/png',
+          'image/jpeg',
+          'image/webp',
+        ].contains(response.headers['content-type']?.split(';').first)) {
+      throw const WorkerAuthException(
+        'QR_FETCH_FAILED',
+        'Payment QR image could not be loaded.',
+      );
     }
-    return _request(
+    return response.bodyBytes;
+  }
+
+  Future<void> requestAccountDeletion() async {
+    final token = await _storage.read();
+    if (token == null)
+      throw const WorkerAuthException(
+        'UNAUTHENTICATED',
+        'Sign in is required.',
+      );
+    await _request(
       'POST',
-      '/mobile/worker/bookings/$bookingId/confirm-cash',
+      '/mobile/worker/account-deletion-request',
       token: token,
-      idempotencyKey: 'cash_$bookingId',
-      body: {'reference': reference},
+      body: const {},
+      idempotencyKey: 'account-deletion-request-v1',
     );
   }
 

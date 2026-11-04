@@ -1,3 +1,4 @@
+import '../shared/customer_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -243,8 +244,8 @@ class _BannerImage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (banner.imageAsset.trim().isEmpty) return const _BannerFallback();
     if (Uri.tryParse(banner.imageAsset)?.hasAuthority == true) {
-      return Image.network(
-        banner.imageAsset,
+      return CustomerImage(
+        url: banner.imageAsset,
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) => const _BannerFallback(),
       );

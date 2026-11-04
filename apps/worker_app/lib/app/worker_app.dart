@@ -1,5 +1,3 @@
-import '../integration/worker_environment.dart';
-
 import 'package:flutter/material.dart';
 
 import '../features/splash/worker_splash_screen.dart';
@@ -63,9 +61,7 @@ class WorkerApp extends StatelessWidget {
         ),
       ),
 
-      home: const WorkerSplashScreen(
-        demoEnabled: WorkerEnvironment.developmentPreview,
-      ),
+      home: const WorkerSplashScreen(),
     );
   }
 }

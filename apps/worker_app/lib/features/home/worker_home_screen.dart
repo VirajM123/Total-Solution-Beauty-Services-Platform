@@ -419,9 +419,7 @@ class _WorkerHomeScreenState extends State<WorkerHomeScreen>
   void _exitPreview() {
     _stopOfferPolling();
     Navigator.of(context).pushAndRemoveUntil<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const WorkerLoginScreen(demoEnabled: false),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const WorkerLoginScreen()),
       (_) => false,
     );
   }

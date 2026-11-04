@@ -1,3 +1,5 @@
+import '../widgets/worker_legal_screen.dart';
+import '../../integration/worker_mobile_operations_api.dart';
 import '../widgets/worker_images.dart';
 import 'dart:convert';
 import 'dart:ui' show instantiateImageCodec;
@@ -491,6 +493,61 @@ class _WorkerProfileSettingsScreenState
                   ]),
                   const SizedBox(height: 12),
                   _section('Support & Legal', [
+                    _item(
+                      Icons.delete_outline,
+                      'Request account deletion',
+                      subtitle: 'Ask support to review your account',
+                      onTap: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Request account deletion?'),
+                            content: const Text(
+                              'Support will review active services and required record retention. This submits a request; your account remains active until processed.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Send request'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed != true || !mounted) return;
+                        final api =
+                            widget.operationsApi is WorkerMobileOperationsApi
+                            ? widget.operationsApi as WorkerMobileOperationsApi
+                            : WorkerMobileOperationsApi();
+                        try {
+                          await api.requestAccountDeletion();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Account deletion request received.',
+                                ),
+                              ),
+                            );
+}
+                        } catch (_) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Unable to send request. Please retry.',
+                                ),
+                              ),
+                            );
+}
+                        } finally {
+                          if (!identical(api, widget.operationsApi)) { api.close(); }
+                        }
+                      },
+                    ),
                     _item(
                       Icons.help_outline_rounded,
                       'Help & Support',
@@ -1231,46 +1288,8 @@ class _WorkerHelpSupportScreenState extends State<WorkerHelpSupportScreen> {
   );
 }
 
-class WorkerTermsPrivacyScreen extends StatelessWidget {
+class WorkerTermsPrivacyScreen extends WorkerLegalScreen {
   const WorkerTermsPrivacyScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: _background,
-    appBar: AppBar(
-      backgroundColor: _background,
-      title: const Text('Terms & Privacy'),
-    ),
-    body: const SafeArea(
-      child: Center(
-        child: Padding(
-          padding: EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.description_outlined, color: _pink, size: 36),
-              SizedBox(height: 10),
-              Text(
-                'Approved terms and privacy content is not configured.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _deep,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'No legal policy text or external URL is available in this app preview.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: _muted),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 class _LoadError extends StatelessWidget {

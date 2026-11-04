@@ -28,7 +28,7 @@ void main() {
       await icons.load();
       final auth = WorkerMobileAuthApi();
       final pages = <String, Widget>{
-        'login': const WorkerLoginScreen(demoEnabled: false),
+        'login': const WorkerLoginScreen(),
         'otp': const WorkerOtpScreen(phone: '9876543210'),
         'account': WorkerAccountRegistrationScreen(
           phone: '9876543210',

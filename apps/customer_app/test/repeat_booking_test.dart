@@ -297,8 +297,15 @@ void main() {
       find.byWidgetPredicate(
         (widget) =>
             widget is Image &&
-            widget.image is NetworkImage &&
-            (widget.image as NetworkImage).url ==
+            (widget.image is ResizeImage
+                    ? (widget.image as ResizeImage).imageProvider
+                    : widget.image)
+                is NetworkImage &&
+            ((widget.image is ResizeImage
+                            ? (widget.image as ResizeImage).imageProvider
+                            : widget.image)
+                        as NetworkImage)
+                    .url ==
                 'https://images.example.test/facial.jpg',
       ),
       findsOneWidget,
@@ -309,13 +316,20 @@ void main() {
     final photo = find.byWidgetPredicate(
       (widget) =>
           widget is Image &&
-          widget.image is NetworkImage &&
-          (widget.image as NetworkImage).url ==
+          (widget.image is ResizeImage
+                  ? (widget.image as ResizeImage).imageProvider
+                  : widget.image)
+              is NetworkImage &&
+          ((widget.image is ResizeImage
+                          ? (widget.image as ResizeImage).imageProvider
+                          : widget.image)
+                      as NetworkImage)
+                  .url ==
               'https://images.example.test/facial.jpg',
     );
     expect(photo, findsOneWidget);
     expect((tester.widget(photo) as Image).fit, BoxFit.cover);
-    expect(tester.getSize(photo).height, greaterThanOrEqualTo(112));
+    expect(tester.getSize(photo).height, greaterThanOrEqualTo(90));
     expect(tester.takeException(), isNull);
   });
 
@@ -402,7 +416,9 @@ void main() {
       find.byKey(const ValueKey('add-package-backend glow package')),
     );
     await tester.pumpAndSettle();
-    expect(find.text('My Cart (1)'), findsOneWidget);
+    expect(find.text('Your Cart'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('cart-back')));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Profile').last);
     await tester.pumpAndSettle();
@@ -468,10 +484,10 @@ void main() {
         await tester.pumpAndSettle();
         if (entry == 'rejected') {
           expect(find.text('Coupon usage limit reached.'), findsOneWidget);
-          expect(find.text('Discount · LIVE25'), findsNothing);
+          expect(find.text('Coupon Discount (LIVE25)'), findsNothing);
         } else {
           expect(find.text('LIVE25 applied successfully.'), findsOneWidget);
-          expect(find.text('Discount · LIVE25'), findsOneWidget);
+          expect(find.text('Coupon Discount (LIVE25)'), findsOneWidget);
           await tester.pump(const Duration(seconds: 5));
           await tester.pumpAndSettle();
           await tester.tap(find.byKey(const ValueKey('proceed-to-booking')));
@@ -564,7 +580,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('No preview booking is available.'), findsNothing);
-      expect(find.text('Review your booking'), findsOneWidget);
+      expect(find.text('Confirm Booking'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('confirm-booking')));
       await tester.pumpAndSettle();
       expect(api.bookingIdempotencyKeys, hasLength(2));

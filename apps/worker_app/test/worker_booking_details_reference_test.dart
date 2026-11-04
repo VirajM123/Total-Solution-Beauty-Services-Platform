@@ -93,6 +93,28 @@ void main() {
       await tester.tap(find.byKey(const Key('finish-service')));
       await tester.pumpAndSettle();
       expect(find.text('Services provided'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('finish-service-continue')),
+        200,
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('finish-service-continue')),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('finish-review-confirmation')),
+        200,
+      );
+      await tester.tap(find.byKey(const Key('finish-review-confirmation')));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('finish-service-continue')),
+        200,
+      );
       expect(
         tester
             .widget<FilledButton>(
@@ -107,6 +129,10 @@ void main() {
       await tester.tap(find.text('Cash'));
       await tester.pumpAndSettle();
       expect(find.text('Report cash collection'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Report cash collection'), 200);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Report cash collection'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
       await tester.pumpWidget(const SizedBox());

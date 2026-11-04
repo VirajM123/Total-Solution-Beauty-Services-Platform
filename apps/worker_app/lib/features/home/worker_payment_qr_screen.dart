@@ -1,9 +1,6 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../../integration/worker_environment.dart';
 
 import '../../integration/worker_mobile_operations_api.dart';
 import 'worker_booking_data.dart';
@@ -19,14 +16,15 @@ class WorkerPaymentQrScreen extends StatefulWidget {
 
   final WorkerDashboardOrder order;
   final WorkerMobileOperationsApi operationsApi;
-  final VoidCallback? onCashCollection;
+  final Future<void> Function()? onCashCollection;
 
   @override
   State<WorkerPaymentQrScreen> createState() => _WorkerPaymentQrScreenState();
 }
 
-class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
-  String _activeTab = 'upi'; // 'upi', 'card', 'cash'
+class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen>
+    with WidgetsBindingObserver {
+  String _activeTab = 'upi'; // 'upi', 'cash'
   bool _loading = false;
   String? _error;
   String? _imageUrl;
@@ -37,33 +35,45 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
   bool _paid = false;
   bool _completing = false;
   final _completionOtp = TextEditingController();
-  final _cashReferenceController = TextEditingController();
   String? _paymentMessage;
-  String? _cardPaymentUrl;
-  bool _generatingLink = false;
-  bool _simulating = false;
+  bool _appActive = true;
+  bool _cashReported = false;
+  bool _qrLocked = false;
+  Uint8List? _imageBytes;
   bool _submittingCash = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _cashReported = widget.order.cashCollectionReportedAt != null;
+    _qrLocked =
+        widget.order.paymentMethod == 'razorpay_qr' &&
+        widget.order.serviceFinishedAt != null;
     _paid =
         widget.order.paymentStatus == 'paid' &&
         widget.order.status.toLowerCase() == 'completed';
     _paymentVerified = widget.order.paymentStatus == 'paid';
     _checkPayment();
-    _paymentTimer = Timer.periodic(
-      const Duration(seconds: 5),
-      (_) => _checkPayment(),
-    );
+    _paymentTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (_appActive && (ModalRoute.of(context)?.isCurrent ?? true)) {
+        _checkPayment();
+      }
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _paymentTimer?.cancel();
     _completionOtp.dispose();
-    _cashReferenceController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appActive = state == AppLifecycleState.resumed;
+    if (_appActive) unawaited(_checkPayment());
   }
 
   Future<void> _checkPayment() async {
@@ -75,6 +85,10 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
       );
       if (!mounted) return;
       setState(() {
+        _cashReported = booking?.cashCollectionReportedAt != null;
+        _qrLocked =
+            booking?.paymentMethod == 'razorpay_qr' &&
+            booking?.serviceFinishedAt != null;
         _paymentVerified = booking?.paymentStatus == 'paid';
         _paid =
             booking?.paymentStatus == 'paid' &&
@@ -84,7 +98,7 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
             : _paid
             ? 'Payment received. Service completed.'
             : _paymentVerified
-            ? 'Payment verified. Complete service below.'
+            ? 'Payment verified. Ask your administrator for the completion OTP.'
             : 'Awaiting verified payment from Razorpay.';
       });
       if (_paid) _paymentTimer?.cancel();
@@ -102,6 +116,26 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
 
   Future<void> _generateQr() async {
     if (_loading || _paid || _paymentVerified) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Generate final payment QR?'),
+        content: const Text(
+          'This locks the final bill. Resolve any extra services or time extension before continuing.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Generate QR'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -125,8 +159,10 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
       if (!mounted) return;
       setState(() {
         _imageUrl = imageUrl;
+        _qrLocked = true;
         _amountPaise = amount;
       });
+      unawaited(_loadQrImage());
       await _checkPayment();
     } catch (error) {
       if (mounted) setState(() => _error = '$error');
@@ -135,85 +171,31 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
     }
   }
 
-  Future<void> _simulatePaymentSuccess() async {
-    if (_simulating || _paid || _paymentVerified) return;
-    setState(() {
-      _simulating = true;
-      _error = null;
-    });
+  Future<void> _loadQrImage() async {
     try {
-      await widget.operationsApi.simulatePaymentSuccess(widget.order.id);
-      await _checkPayment();
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Simulation failed: $e');
-    } finally {
-      if (mounted) setState(() => _simulating = false);
-    }
-  }
-
-  Future<void> _openPaymentUrl(String url) async {
-    final uri = Uri.parse(url);
-    try {
-      final launched = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-        webOnlyWindowName: '_blank',
+      final bytes = await widget.operationsApi.fetchBookingPaymentQrImage(
+        widget.order.id,
       );
-      if (!launched) {
-        await launchUrl(uri);
-      }
+      if (mounted) setState(() => _imageBytes = bytes);
     } catch (_) {
-      try {
-        await launchUrl(uri);
-      } catch (e) {
-        if (mounted) setState(() => _error = 'Could not open checkout: $e');
+      if (mounted) {
+        setState(() => _error = 'Unable to load the payment QR. Retry when connected.');
       }
     }
   }
 
-  Future<void> _generateCardLink() async {
-    if (_generatingLink || _paid || _paymentVerified) return;
-    if (_cardPaymentUrl != null && _cardPaymentUrl!.isNotEmpty) {
-      await _openPaymentUrl(_cardPaymentUrl!);
+  Future<void> _reportCashCollection() async {
+    if (_submittingCash || _paid || _paymentVerified || _qrLocked) return;
+    if (widget.onCashCollection == null) {
+      setState(
+        () => _error = 'Return to booking details to report cash collection.',
+      );
       return;
     }
-    setState(() {
-      _generatingLink = true;
-      _error = null;
-    });
+    setState(() => _submittingCash = true);
     try {
-      final res = await widget.operationsApi.createBookingPaymentLink(
-        widget.order.id,
-      );
-      final url = res['shortUrl']?.toString();
-      if (url != null && url.isNotEmpty) {
-        if (mounted) setState(() => _cardPaymentUrl = url);
-        await _openPaymentUrl(url);
-      } else {
-        if (mounted) setState(() => _error = 'Could not generate card checkout link.');
-      }
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Card link generation failed: $e');
-    } finally {
-      if (mounted) setState(() => _generatingLink = false);
-    }
-  }
-
-  Future<void> _confirmCashPayment() async {
-    if (_submittingCash || _paid || _paymentVerified) return;
-    setState(() {
-      _submittingCash = true;
-      _error = null;
-    });
-    try {
-      final ref = _cashReferenceController.text.trim();
-      await widget.operationsApi.confirmCashPayment(
-        widget.order.id,
-        reference: ref.isNotEmpty ? ref : 'Cash Collected on Site',
-      );
+      await widget.onCashCollection!();
       await _checkPayment();
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Cash confirmation failed: $e');
     } finally {
       if (mounted) setState(() => _submittingCash = false);
     }
@@ -293,12 +275,7 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
       const SizedBox(height: 12),
       _paymentMethods(context),
       const SizedBox(height: 12),
-      if (_activeTab == 'upi')
-        _qrCard()
-      else if (_activeTab == 'card')
-        _cardPaymentCard()
-      else
-        _cashPaymentCard(),
+      if (_activeTab == 'upi') _qrCard() else _cashPaymentCard(),
       if (_error != null) ...[
         const SizedBox(height: 8),
         Container(
@@ -317,6 +294,10 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
         const SizedBox(height: 12),
         _completionOtpCard(),
       ],
+      if (_activeTab == 'cash' && _cashReported)
+        const Text(
+          'Cash report sent. Waiting for administrator reconciliation.',
+        ),
       const SizedBox(height: 10),
       Container(
         padding: const EdgeInsets.all(12),
@@ -330,7 +311,7 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
             SizedBox(width: 9),
             Expanded(
               child: Text(
-                'Payments are securely processed by Razorpay. Service completes automatically upon payment verification.',
+                'Payment verification is followed by administrator OTP confirmation to complete the service.',
                 style: TextStyle(
                   color: WorkerDesign.muted,
                   fontSize: 11.5,
@@ -467,17 +448,6 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
         ),
         Expanded(
           child: _methodButton(
-            icon: Icons.credit_card_rounded,
-            label: 'Card / Link',
-            selected: _activeTab == 'card',
-            onPressed: () {
-              setState(() => _activeTab = 'card');
-              if (_cardPaymentUrl == null) _generateCardLink();
-            },
-          ),
-        ),
-        Expanded(
-          child: _methodButton(
             icon: Icons.payments_outlined,
             label: 'Cash',
             selected: _activeTab == 'cash',
@@ -561,7 +531,7 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
               color: const Color(0xFFE9FAF2),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: const Color(0xFF14965F).withOpacity(0.3),
+                color: const Color(0xFF14965F).withValues(alpha: 0.3),
               ),
             ),
             child: const Row(
@@ -574,7 +544,7 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
                 SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Payment verified successfully! Appointment ready for completion.',
+                    'Payment verified. Ask your administrator for the completion OTP.',
                     style: TextStyle(
                       color: Color(0xFF0F5A38),
                       fontSize: 13,
@@ -586,13 +556,13 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
             ),
           )
         else ...[
-          // Big Centered QR Box (260x260)
+          // Use the available square without cropping the scannable image.
           Center(
             child: Container(
-              width: 260,
-              height: 260,
+              width: 320,
+              constraints: const BoxConstraints(maxWidth: 320),
               alignment: Alignment.center,
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: WorkerDesign.border, width: 2),
@@ -605,42 +575,44 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
                   ),
                 ],
               ),
-              child: _imageUrl == null
-                  ? const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.qr_code_2_rounded,
-                          color: Color(0xFFB8B3C5),
-                          size: 100,
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Tap below to generate QR',
-                          style: TextStyle(
-                            color: WorkerDesign.muted,
-                            fontSize: 12,
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: _imageUrl == null
+                    ? const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.qr_code_2_rounded,
+                            color: Color(0xFFB8B3C5),
+                            size: 100,
                           ),
-                        ),
-                      ],
-                    )
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: Image.network(
-                        kIsWeb
-                            ? '${WorkerEnvironment.apiBaseUrl}/mobile/payments/razorpay/qr-image?url=${Uri.encodeComponent(_imageUrl!)}'
-                            : _imageUrl!,
-                        width: 240,
-                        height: 240,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(
-                              Icons.broken_image_outlined,
+                          SizedBox(height: 8),
+                          Text(
+                            'Tap below to generate QR',
+                            style: TextStyle(
                               color: WorkerDesign.muted,
-                              size: 50,
+                              fontSize: 12,
                             ),
+                          ),
+                        ],
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: _imageBytes == null
+                            ? TextButton(
+                                onPressed: _loadQrImage,
+                                child: const Text('Retry QR image'),
+                              )
+                            : Image.memory(
+                                _imageBytes!,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, _, _) => TextButton(
+                                  onPressed: _loadQrImage,
+                                  child: const Text('Retry QR image'),
+                                ),
+                              ),
                       ),
-                    ),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -653,23 +625,18 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(
-                  width: 8,
-                  height: 8,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Color(0xFFB85E00),
-                  ),
-                ),
+                const Icon(Icons.schedule, size: 12, color: Color(0xFFB85E00)),
                 const SizedBox(width: 8),
-                Text(
-                  _imageUrl == null
-                      ? 'Ready to generate payment'
-                      : 'Waiting for payment (${formatCustomerPaise(_amountPaise ?? widget.order.exactCustomerPayablePaise)})',
-                  style: const TextStyle(
-                    color: Color(0xFFB85E00),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                Flexible(
+                  child: Text(
+                    _imageUrl == null
+                        ? 'Ready to generate payment'
+                        : 'Waiting for payment (${formatCustomerPaise(_amountPaise ?? widget.order.exactCustomerPayablePaise)})',
+                    style: const TextStyle(
+                      color: Color(0xFFB85E00),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -711,34 +678,6 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
             ),
             const SizedBox(height: 8),
           ],
-          // Problem 3 Fix: Simulation Button for Test Mode
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _simulating ? null : _simulatePaymentSuccess,
-              icon: _simulating
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(
-                      Icons.bolt_rounded,
-                      color: Colors.orange,
-                      size: 20,
-                    ),
-              label: const Text('⚡ Simulate Payment Success (Test Mode)'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFC05621),
-                side: const BorderSide(color: Color(0xFFFBD38D), width: 1.5),
-                backgroundColor: const Color(0xFFFFFAF0),
-                minimumSize: const Size(0, 44),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
           Align(
             alignment: Alignment.center,
             child: TextButton.icon(
@@ -751,216 +690,13 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
             Text(
               _paymentMessage!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: WorkerDesign.muted,
-                fontSize: 11,
-              ),
+              style: const TextStyle(color: WorkerDesign.muted, fontSize: 11),
             ),
         ],
       ],
     ),
   );
 
-  /// Problem 4 Fix: Full Card Payment Tab with Live Razorpay Link & Test Mode
-  Widget _cardPaymentCard() => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: WorkerDesign.surface(radius: 20),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const Icon(
-          Icons.credit_card_rounded,
-          size: 54,
-          color: WorkerDesign.pink,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Online Card & Netbanking Payment',
-          style: TextStyle(
-            color: WorkerDesign.deep,
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Amount to collect: ${formatCustomerPaise(_amountPaise ?? widget.order.exactCustomerPayablePaise)}',
-          style: const TextStyle(
-            color: WorkerDesign.pink,
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (_paymentVerified)
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE9FAF2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.verified_rounded, color: Color(0xFF14965F)),
-                SizedBox(width: 8),
-                Text(
-                  'Card payment verified successfully!',
-                  style: TextStyle(
-                    color: Color(0xFF0F5A38),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          )
-        else ...[
-          const Text(
-            'Customer can pay using Debit/Credit Card, Netbanking, or Wallet via Razorpay Secure Checkout.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: WorkerDesign.muted,
-              fontSize: 12,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 14),
-          if (_cardPaymentUrl != null) ...[
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () => _openPaymentUrl(_cardPaymentUrl!),
-                icon: const Icon(Icons.open_in_new_rounded, size: 20),
-                label: const Text('Open Razorpay Card Checkout ↗'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: WorkerDesign.pink,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(0, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F0FA),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2DDF0)),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info_outline_rounded, size: 16, color: WorkerDesign.deep),
-                      SizedBox(width: 6),
-                      Text(
-                        'Razorpay Test Mode Card Details:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: WorkerDesign.deep,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    '• Card Number: 4111 • 1111 • 1111 • 1111\n• Expiry: 12/28 | CVV: 123 | OTP: 123456',
-                    style: TextStyle(fontSize: 11.5, color: WorkerDesign.deep, height: 1.4),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextButton.icon(
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: _cardPaymentUrl!));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Payment link copied to clipboard!')),
-                    );
-                  },
-                  icon: const Icon(Icons.copy_rounded, size: 15),
-                  label: const Text('Copy Link', style: TextStyle(fontSize: 12)),
-                  style: TextButton.styleFrom(foregroundColor: WorkerDesign.muted),
-                ),
-                const SizedBox(width: 12),
-                TextButton.icon(
-                  onPressed: () => _openPaymentUrl(_cardPaymentUrl!),
-                  icon: const Icon(Icons.refresh_rounded, size: 15),
-                  label: const Text('Re-open Checkout', style: TextStyle(fontSize: 12)),
-                  style: TextButton.styleFrom(foregroundColor: WorkerDesign.pink),
-                ),
-              ],
-            ),
-          ] else
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _generatingLink ? null : _generateCardLink,
-                icon: _generatingLink
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.credit_card_rounded),
-                label: Text(
-                  _generatingLink ? 'Opening Checkout…' : 'Pay with Card / Online Checkout 💳',
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: WorkerDesign.pink,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(0, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-            ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _simulating ? null : _simulatePaymentSuccess,
-              icon: _simulating
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(
-                      Icons.bolt_rounded,
-                      color: Colors.orange,
-                      size: 20,
-                    ),
-              label: const Text('⚡ Simulate Card Payment (Test Mode)'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFC05621),
-                side: const BorderSide(color: Color(0xFFFBD38D), width: 1.5),
-                backgroundColor: const Color(0xFFFFFAF0),
-                minimumSize: const Size(0, 44),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ],
-    ),
-  );
-
-  /// Problem 1 Fix: Embedded Cash Collection Tab on the Same Screen!
   Widget _cashPaymentCard() => Container(
     padding: const EdgeInsets.all(16),
     decoration: WorkerDesign.surface(radius: 20),
@@ -990,7 +726,7 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFFE9FAF2),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF14965F).withOpacity(0.3)),
+            border: Border.all(color: const Color(0xFF14965F).withValues(alpha: 0.3)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1024,7 +760,7 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
           )
         else ...[
           const Text(
-            'Collection Reference / Receipt Note (Optional):',
+            'Cash collection requires administrator reconciliation.',
             style: TextStyle(
               color: WorkerDesign.muted,
               fontSize: 12,
@@ -1032,34 +768,18 @@ class _WorkerPaymentQrScreenState extends State<WorkerPaymentQrScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          TextField(
-            controller: _cashReferenceController,
-            decoration: const InputDecoration(
-              hintText: 'e.g. Received in cash from customer',
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 10,
-              ),
-            ),
-          ),
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: _submittingCash ? null : _confirmCashPayment,
-              icon: _submittingCash
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.check_circle_rounded),
+              onPressed: _submittingCash || _cashReported || _qrLocked
+                  ? null
+                  : _reportCashCollection,
+              icon: const Icon(Icons.check_circle_rounded),
               label: Text(
-                _submittingCash ? 'Confirming…' : 'Confirm Cash Received',
+                _cashReported
+                    ? 'Awaiting Admin Cash Reconciliation'
+                    : 'Report cash collection',
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF14965F),

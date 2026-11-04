@@ -1,3 +1,4 @@
+import '../shared/customer_image.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/api/mobile_api.dart';
@@ -536,8 +537,8 @@ class CatalogImage extends StatelessWidget {
         uri.userInfo.isNotEmpty) {
       return placeholder;
     }
-    return Image.network(
-      uri.toString(),
+    return CustomerImage(
+      url: uri.toString(),
       height: height,
       width: double.infinity,
       fit: BoxFit.cover,

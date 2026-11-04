@@ -373,5 +373,84 @@ class CustomerMobileOperationsApi {
     );
   }
 
+  Future<Map<String, dynamic>> getAccountData(String section) =>
+      _request('GET', '/api/mobile/customer/$section');
+
+  Future<void> deleteAddress(String id) async {
+    await _request(
+      'DELETE',
+      '/api/mobile/customer/addresses/${Uri.encodeComponent(id)}',
+    );
+  }
+
+  Future<void> setDefaultAddress(String? id) async {
+    await _request(
+      'PATCH',
+      '/api/mobile/customer/account-preferences',
+      body: {'defaultAddressId': id},
+    );
+  }
+
+  Future<void> saveProfessional(String id, bool saved) async {
+    await _request(
+      saved ? 'PUT' : 'DELETE',
+      '/api/mobile/customer/saved-professionals/${Uri.encodeComponent(id)}',
+    );
+  }
+
+  Future<void> markNotificationRead(String id) async {
+    await _request(
+      'PATCH',
+      '/api/mobile/customer/notifications/${Uri.encodeComponent(id)}/read',
+    );
+  }
+
+  Future<void> clearCart() async {
+    await _request('DELETE', '/api/mobile/customer/cart');
+  }
+
+  Future<void> saveCartDraft(List<Map<String, dynamic>> items) async {
+    await _request(
+      'PUT',
+      '/api/mobile/customer/cart-draft',
+      body: {'items': items},
+    );
+  }
+
+  Future<void> createSupportTicket({
+    required String subject,
+    String? bookingId,
+    required String category,
+    required String idempotencyKey,
+  }) async {
+    await _request(
+      'POST',
+      '/api/mobile/customer/support',
+      body: {
+        'subject': subject,
+        if (bookingId != null) 'bookingId': bookingId,
+        'category': category,
+      },
+      idempotencyKey: idempotencyKey,
+    );
+  }
+
+  Future<void> requestAccountDeletion() async {
+    await _request(
+      'POST',
+      '/api/mobile/customer/account-deletion-request',
+      body: const {},
+      idempotencyKey: 'account-deletion-request-v1',
+    );
+  }
+
+  Future<void> logout() async {
+    try {
+      await _request('POST', '/api/mobile/customer/logout');
+    } finally {
+      await _storage.delete();
+    }
+  }
+
   void close() => _transport.close();
 }
