@@ -331,9 +331,6 @@ class _WorkerFinishServiceScreenState extends State<WorkerFinishServiceScreen> {
   @override
   Widget build(BuildContext context) {
     final order = widget.order;
-    final paymentLabel = order.paymentMethod?.toLowerCase() == 'cash'
-        ? 'Cash on Service'
-        : 'Online payment';
     return Scaffold(
       backgroundColor: _cream,
       appBar: AppBar(
@@ -649,7 +646,7 @@ class _WorkerFinishServiceScreenState extends State<WorkerFinishServiceScreen> {
                                 ),
                                 SizedBox(width: 8),
                                 Text(
-                                  'Payment method',
+                                  'Payment collection',
                                   style: TextStyle(
                                     color: _deep,
                                     fontSize: 15,
@@ -660,42 +657,34 @@ class _WorkerFinishServiceScreenState extends State<WorkerFinishServiceScreen> {
                             ),
                             const SizedBox(height: 8),
                             Container(
-                              padding: const EdgeInsets.all(10),
+                              padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFFF0F5),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Row(
+                              child: const Row(
                                 children: [
-                                  const Icon(
-                                    Icons.radio_button_checked_rounded,
-                                    color: _pink,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 9),
                                   Icon(
-                                    order.paymentMethod?.toLowerCase() == 'cash'
-                                        ? Icons.payments_outlined
-                                        : Icons.qr_code_2_rounded,
-                                    color: const Color(0xFF21885C),
+                                    Icons.payment_rounded,
+                                    color: _pink,
                                     size: 22,
                                   ),
-                                  const SizedBox(width: 8),
+                                  SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          paymentLabel,
-                                          style: const TextStyle(
+                                          'Collected at next step',
+                                          style: TextStyle(
                                             color: _deep,
                                             fontSize: 13,
                                             fontWeight: FontWeight.w800,
                                           ),
                                         ),
-                                        const Text(
-                                          'Payment is verified separately.',
+                                        Text(
+                                          'Customer can pay via UPI (QR), Card / Link, or Cash.',
                                           style: TextStyle(
                                             color: _muted,
                                             fontSize: 10.5,
@@ -787,7 +776,7 @@ class _WorkerFinishServiceScreenState extends State<WorkerFinishServiceScreen> {
                                   ),
                             label: Text(
                               widget.liveMode
-                                  ? 'Complete Service'
+                                  ? 'Complete Service & Collect Payment'
                                   : _simulatedFinished
                                   ? 'View Payment Collection · Demo'
                                   : 'Complete Service',

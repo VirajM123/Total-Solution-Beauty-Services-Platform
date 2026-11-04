@@ -77,17 +77,6 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
     if (s == 'travelling') return 'I Have Arrived at Location 📍';
     if (s == 'arrived') return 'Upload Product Photo & Enter Customer OTP';
     if (s == 'in_progress' || s == 'in progress') {
-      if (_currentOrder.paymentMethod == 'cash') {
-        if (_currentOrder.paymentStatus == 'paid') {
-          return 'Enter Admin Completion OTP';
-        }
-        if (_currentOrder.serviceFinishedAt != null) {
-          return _currentOrder.cashCollectionReportedAt == null
-              ? 'Report Cash Collection'
-              : 'Awaiting Admin Cash Reconciliation';
-        }
-        return 'Finish & Report Cash Collection';
-      }
       if (_currentOrder.paymentStatus == 'paid') {
         return 'Enter Admin Completion OTP';
       }
@@ -97,16 +86,10 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
           extension['adminOtpVerifiedAt'] == null) {
         return 'Enter Admin Continuation OTP';
       }
-      return 'Finish & Generate Payment QR';
+      return 'Collect Payment';
     }
     if (s == 'payment pending') {
-      if (_currentOrder.paymentMethod == 'cash' &&
-          _currentOrder.paymentStatus != 'paid') {
-        return _currentOrder.cashCollectionReportedAt == null
-            ? 'Report Cash Collection'
-            : 'Awaiting Admin Cash Reconciliation';
-      }
-      return 'View Payment QR';
+      return 'Collect Payment';
     }
     if (s == 'completed') return 'Service Completed 🎉 (Back)';
     if (s == 'cancelled' || s == 'canceled') return 'Booking Cancelled (Back)';
@@ -179,27 +162,10 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
       return;
     }
 
-    if (s == 'payment pending' && _currentOrder.paymentMethod == 'cash') {
-      if (_currentOrder.paymentStatus == 'paid') {
-        await _completePaidCashService();
-      } else if (_currentOrder.cashCollectionReportedAt == null) {
-        await _completeCashService();
-      } else {
-        _notice('Cash report sent. Waiting for administrator reconciliation.');
-      }
-      return;
-    }
-    if (s == 'payment pending') {
+    if (s == 'payment pending' ||
+        ((s == 'in_progress' || s == 'in progress') &&
+            _currentOrder.paymentStatus == 'paid')) {
       await _openPaymentQr();
-      return;
-    }
-    if ((s == 'in_progress' || s == 'in progress') &&
-        _currentOrder.paymentStatus == 'paid') {
-      if (_currentOrder.paymentMethod == 'cash') {
-        await _completePaidCashService();
-      } else {
-        await _openPaymentQr();
-      }
       return;
     }
     if (s == 'assigned' || s == 'accepted') {
@@ -273,11 +239,7 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
         if (mounted) setState(() => _updatingProgress = false);
       }
     } else if (s == 'in_progress' || s == 'in progress') {
-      if (_currentOrder.paymentMethod == 'cash') {
-        await _completeCashService();
-      } else {
-        await _openPaymentQr();
-      }
+      await _openPaymentQr();
     }
   }
 
@@ -401,48 +363,6 @@ class _WorkerBookingDetailsScreenState extends State<WorkerBookingDetailsScreen>
         final updated = await api.fetchBookingDetails(widget.order.id);
         if (mounted && updated != null) setState(() => _liveOrder = updated);
         if (mounted) _notice('Failed to report cash collection: $error');
-      }
-    } finally {
-      if (mounted) setState(() => _updatingProgress = false);
-    }
-  }
-
-  Future<void> _completePaidCashService() async {
-    final otp = await _askForAdminOtp(
-      title: 'Complete the service',
-      message:
-          'Payment is reconciled. Call your administrator and enter the service-completion OTP.',
-    );
-    if (!mounted || otp == null) return;
-    final api = _liveApi;
-    setState(() => _updatingProgress = true);
-    try {
-      await api.updateBookingProgress(
-        bookingId: widget.order.id,
-        action: 'complete',
-        otp: otp,
-      );
-      final updated = await api.fetchBookingDetails(widget.order.id);
-      if (mounted) {
-        setState(() {
-          _liveOrder = updated ?? _liveOrder;
-          _localStatus = null;
-        });
-        _notice('Administrator OTP verified. Service completed.');
-      }
-      if (mounted &&
-          updated != null &&
-          updated.status.toLowerCase() == 'completed' &&
-          updated.paymentStatus == 'paid') {
-        await Navigator.of(context).push<void>(
-          SlidePageRoute<void>(
-            page: WorkerPaymentQrScreen(order: updated, operationsApi: api),
-          ),
-        );
-      }
-    } catch (error) {
-      if (mounted) {
-        _notice('Service-completion OTP verification failed: $error');
       }
     } finally {
       if (mounted) setState(() => _updatingProgress = false);

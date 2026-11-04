@@ -403,6 +403,41 @@ class WorkerMobileOperationsApi implements WorkerOperationsApi {
     );
   }
 
+  Future<Map<String, dynamic>> createBookingPaymentLink(String bookingId) async {
+    return _request(
+      'POST',
+      '/mobile/payments/razorpay/create-link',
+      idempotencyKey: 'link_$bookingId',
+      body: {'bookingId': bookingId},
+    );
+  }
+
+  Future<Map<String, dynamic>> simulatePaymentSuccess(String bookingId) async {
+    return _request(
+      'POST',
+      '/mobile/payments/razorpay/simulate-success',
+      idempotencyKey: 'sim_${bookingId}_${DateTime.now().millisecondsSinceEpoch}',
+      body: {'bookingId': bookingId},
+    );
+  }
+
+  Future<Map<String, dynamic>> confirmCashPayment(
+    String bookingId, {
+    String reference = 'Cash Collected by Worker',
+  }) async {
+    final token = await _storage.read();
+    if (token == null) {
+      throw const WorkerAuthException('UNAUTHENTICATED', 'Sign in is required.');
+    }
+    return _request(
+      'POST',
+      '/mobile/worker/bookings/$bookingId/confirm-cash',
+      token: token,
+      idempotencyKey: 'cash_$bookingId',
+      body: {'reference': reference},
+    );
+  }
+
   WorkerDashboardOrder _mapOrder(Map<String, dynamic> doc) {
     final id = '${doc['_id'] ?? ''}';
     final items = doc['items'] as List?;
