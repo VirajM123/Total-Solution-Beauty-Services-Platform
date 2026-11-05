@@ -11,6 +11,7 @@ abstract final class WorkerEnvironment {
   static String get apiBaseUrl {
     const configured = String.fromEnvironment('API_BASE_URL');
     if (configured.isNotEmpty) return configured;
+    if (!kDebugMode) return 'https://salonadminpanel.onrender.com/api';
     if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')) return '';
     return kIsWeb ? 'http://localhost:5001/api' : 'http://10.0.2.2:5001/api';
   }
