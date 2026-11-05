@@ -1,6 +1,6 @@
 {
-    "name": "worker_app",
-    "short_name": "worker_app",
+    "name": "Hi Beauty Delivery Partner",
+    "short_name": "Hi Beauty Delivery Partner",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

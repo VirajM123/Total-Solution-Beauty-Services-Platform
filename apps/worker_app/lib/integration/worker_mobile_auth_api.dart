@@ -272,7 +272,7 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
     await _storage.write(token);
     unawaited(MobilePush.instance?.sync() ?? Future<void>.value());
     final approval = switch ('${data['workerStatus'] ?? 'not_registered'}') {
-      'approved' => WorkerApproval.approved,
+      'approved' || 'active' => WorkerApproval.approved,
       'pending' => WorkerApproval.pending,
       'rejected' => WorkerApproval.rejected,
       'suspended' => WorkerApproval.suspended,
@@ -294,7 +294,7 @@ class WorkerMobileAuthApi implements WorkerAuthApi {
     final profile = data['profile'];
     final approval = profile is Map ? '${profile['status']}' : 'not_registered';
     final state = switch (approval) {
-      'approved' => WorkerApproval.approved,
+      'approved' || 'active' => WorkerApproval.approved,
       'pending' => WorkerApproval.pending,
       'rejected' => WorkerApproval.rejected,
       'suspended' => WorkerApproval.suspended,

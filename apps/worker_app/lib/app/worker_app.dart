@@ -8,7 +8,7 @@ class WorkerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Hi Beauty | Partner',
+      title: 'Hi Beauty Delivery Partner',
       debugShowCheckedModeBanner: false,
 
       theme: ThemeData(

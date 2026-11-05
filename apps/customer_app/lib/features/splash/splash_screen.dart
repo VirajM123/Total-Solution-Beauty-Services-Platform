@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/route_names.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/constants/pinkora_brand.dart';
+import '../../integration/customer_auth_api.dart';
 import '../shared/brand_mark.dart';
 import '../shared/floral_background.dart';
 
@@ -19,8 +20,17 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _timer = Timer(const Duration(seconds: 2), () {
-        if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+      _timer = Timer(const Duration(seconds: 2), () async {
+        if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+        try {
+          final token = await SecureCustomerTokenStorage().read();
+          if (!mounted) return;
+          if (token != null && token.trim().isNotEmpty) {
+            Navigator.of(context).pushReplacementNamed(RouteNames.home);
+            return;
+          }
+        } catch (_) {}
+        if (mounted) {
           Navigator.of(context).pushReplacementNamed(RouteNames.onboarding);
         }
       });
